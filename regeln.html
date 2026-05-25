@@ -208,6 +208,95 @@
     padding-top: 1px;
   }
 
+  /* Points visualization */
+  .points-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 920px) { .points-grid { grid-template-columns: 1fr; } }
+  .points-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 1.6rem;
+    box-shadow: var(--shadow-sm);
+    position: relative; overflow: hidden;
+  }
+  .points-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--c, var(--primary));
+  }
+  .points-card .pc-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 1.1rem;
+  }
+  .points-card .pc-head h3 {
+    font-family: var(--font-display); font-weight: 800;
+    font-size: 1.25rem; letter-spacing: 0.04em; text-transform: uppercase;
+    line-height: 1;
+  }
+  .points-card .pc-head .sub {
+    font-family: var(--font-mono); font-size: 0.66rem;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--c, var(--primary));
+  }
+  .points-card .pc-total {
+    font-family: var(--font-mono); font-size: 0.72rem;
+    color: var(--muted); margin-top: 0.85rem;
+    letter-spacing: 0.05em;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+  .points-card .pc-total b {
+    font-family: var(--font-display); font-weight: 800;
+    color: var(--text); font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+
+  .pts-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 42px;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.35rem 0;
+  }
+  .pts-row .rank {
+    font-family: var(--font-mono); font-weight: 500;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+  }
+  .pts-row .bar {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    height: 18px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .pts-row .bar-fill {
+    display: block;
+    height: 100%;
+    width: var(--w, 0%);
+    background: linear-gradient(90deg, var(--c, var(--primary)) 0%, color-mix(in srgb, var(--c, var(--primary)) 70%, transparent) 100%);
+    animation: growBar 0.9s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .pts-row .val {
+    font-family: var(--font-display); font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--c, var(--primary));
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .pts-row.gold .rank, .pts-row.gold .val { color: var(--c, var(--primary)); }
+  .pts-row.gold .rank::before { content: "★ "; color: var(--c, var(--primary)); }
+
   /* CTA */
   .cta-band {
     margin-top: 4rem;
@@ -313,10 +402,67 @@
     </div>
   </section>
 
+  <!-- PUNKTE -->
+  <section class="sec">
+    <div class="sec-head reveal">
+      <div class="eyebrow"><span class="num">02</span> Die Punkte</div>
+      <h2>Wie wird <span class="accent">gezählt.</span></h2>
+      <p>Drei Tabellen, ein Prinzip: höherer Platz = mehr Punkte. Niemand geht leer aus, der Erste kassiert ordentlich.</p>
+    </div>
+
+    <div class="points-grid">
+      <!-- Pro Disziplin (Solo) -->
+      <div class="points-card reveal" style="--c: var(--cool)">
+        <div class="pc-head">
+          <h3>Pro Spiel</h3>
+          <span class="sub">Einzel-Disziplinen</span>
+        </div>
+        <div class="pts-row gold"><span class="rank">01</span><span class="bar"><span class="bar-fill" style="--w:100%"></span></span><span class="val">10</span></div>
+        <div class="pts-row"><span class="rank">02</span><span class="bar"><span class="bar-fill" style="--w:80%"></span></span><span class="val">8</span></div>
+        <div class="pts-row"><span class="rank">03</span><span class="bar"><span class="bar-fill" style="--w:60%"></span></span><span class="val">6</span></div>
+        <div class="pts-row"><span class="rank">04</span><span class="bar"><span class="bar-fill" style="--w:40%"></span></span><span class="val">4</span></div>
+        <div class="pts-row"><span class="rank">05</span><span class="bar"><span class="bar-fill" style="--w:30%"></span></span><span class="val">3</span></div>
+        <div class="pts-row"><span class="rank">06</span><span class="bar"><span class="bar-fill" style="--w:20%"></span></span><span class="val">2</span></div>
+        <div class="pts-row"><span class="rank">07+</span><span class="bar"><span class="bar-fill" style="--w:10%"></span></span><span class="val">1</span></div>
+        <div class="pc-total">GeoGuessr · Haxball · Chess · Brawlhalla · <b>vier Disziplinen</b></div>
+      </div>
+
+      <!-- Team (Fall Guys) -->
+      <div class="points-card reveal" style="--c: var(--d-fall)">
+        <div class="pc-head">
+          <h3>Pro Team</h3>
+          <span class="sub">Fall Guys · Squads</span>
+        </div>
+        <div class="pts-row gold"><span class="rank">01</span><span class="bar"><span class="bar-fill" style="--w:100%"></span></span><span class="val">10</span></div>
+        <div class="pts-row"><span class="rank">02</span><span class="bar"><span class="bar-fill" style="--w:80%"></span></span><span class="val">8</span></div>
+        <div class="pts-row"><span class="rank">03</span><span class="bar"><span class="bar-fill" style="--w:60%"></span></span><span class="val">6</span></div>
+        <div class="pts-row"><span class="rank">04+</span><span class="bar"><span class="bar-fill" style="--w:40%"></span></span><span class="val">4</span></div>
+        <div class="pc-total">Jedes Team-Mitglied bekommt <b>dieselben Punkte</b> wie das Squad.</div>
+      </div>
+
+      <!-- Saisonpunkte -->
+      <div class="points-card reveal" style="--c: var(--primary)">
+        <div class="pc-head">
+          <h3>Pro Abend</h3>
+          <span class="sub">Saisonpunkte</span>
+        </div>
+        <div class="pts-row gold"><span class="rank">01</span><span class="bar"><span class="bar-fill" style="--w:100%"></span></span><span class="val">25</span></div>
+        <div class="pts-row"><span class="rank">02</span><span class="bar"><span class="bar-fill" style="--w:72%"></span></span><span class="val">18</span></div>
+        <div class="pts-row"><span class="rank">03</span><span class="bar"><span class="bar-fill" style="--w:60%"></span></span><span class="val">15</span></div>
+        <div class="pts-row"><span class="rank">04</span><span class="bar"><span class="bar-fill" style="--w:48%"></span></span><span class="val">12</span></div>
+        <div class="pts-row"><span class="rank">05</span><span class="bar"><span class="bar-fill" style="--w:40%"></span></span><span class="val">10</span></div>
+        <div class="pts-row"><span class="rank">06</span><span class="bar"><span class="bar-fill" style="--w:32%"></span></span><span class="val">8</span></div>
+        <div class="pts-row"><span class="rank">07</span><span class="bar"><span class="bar-fill" style="--w:24%"></span></span><span class="val">6</span></div>
+        <div class="pts-row"><span class="rank">08+</span><span class="bar"><span class="bar-fill" style="--w:16%"></span></span><span class="val">4</span></div>
+        <div class="pc-total">Krone-Träger:in: <b>×0.8</b> auf alle Saisonpunkte des Abends.</div>
+      </div>
+    </div>
+  </section>
+
   <!-- LINEUP -->
   <section class="sec">
     <div class="sec-head reveal">
-      <div class="eyebrow"><span class="num">02</span> Das Line-up</div>
+      <div class="eyebrow"><span class="num">03</span> Das Line-up</div>
       <h2>Fünf Spiele, <span class="accent">ein Abend.</span></h2>
       <p>Vier Einzeldisziplinen plus ein Teamspiel — Browser &amp; ein paar Downloads, alles kostenlos.</p>
     </div>
@@ -373,7 +519,7 @@
   <!-- TWISTS -->
   <section class="sec">
     <div class="sec-head reveal">
-      <div class="eyebrow"><span class="num">03</span> Die Twists</div>
+      <div class="eyebrow"><span class="num">04</span> Die Twists</div>
       <h2>Was den Bash <span class="accent">besonders macht.</span></h2>
       <p>Drei Mechaniken sorgen dafür, dass es bis zum Schluss spannend und fair bleibt.</p>
     </div>
@@ -399,7 +545,7 @@
   <!-- KLEINGEDRUCKTES -->
   <section class="sec">
     <div class="sec-head reveal">
-      <div class="eyebrow"><span class="num">04</span> Zum Nachschlagen</div>
+      <div class="eyebrow"><span class="num">05</span> Zum Nachschlagen</div>
       <h2>Das <span class="accent">Kleingedruckte.</span></h2>
       <p>Die Feinregeln im Wortlaut — für den Zweifelsfall.</p>
     </div>

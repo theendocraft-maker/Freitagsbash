@@ -7,7 +7,209 @@
 <link rel="stylesheet" href="styles.css">
 <script>document.documentElement.classList.add('js');</script>
 <style>
-  /* Page-local */
+  /* === Live broadcast hero === */
+  .live-hero {
+    background: var(--surface);
+    border: 1px solid var(--alert-line);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 2rem;
+    position: relative; overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.25rem;
+  }
+  .live-hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 50% 100% at 0% 0%, var(--alert-soft), transparent 65%),
+      radial-gradient(ellipse 50% 100% at 100% 100%, var(--primary-soft), transparent 65%);
+  }
+  .lh-inner { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto; gap: 1.25rem; align-items: center; }
+  @media (max-width: 720px) { .lh-inner { grid-template-columns: 1fr; } }
+  .lh-meta { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); margin-top: 0.4rem; }
+  .lh-meta b { color: var(--text); font-weight: 500; }
+  .lh-title {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: clamp(2rem, 5vw, 3rem); line-height: 0.9;
+    letter-spacing: 0.005em; text-transform: uppercase;
+    margin-top: 0.6rem;
+  }
+  .lh-title .alert { color: var(--alert); }
+  .lh-progress {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .lh-progress .big {
+    display: block;
+    font-family: var(--font-display); font-weight: 900;
+    font-size: clamp(2.4rem, 5vw, 3.4rem); line-height: 0.9;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.005em;
+  }
+  .lh-progress .big .of { color: var(--muted); font-weight: 500; }
+
+  /* Discipline progress strip */
+  .disc-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+  .disc-pill {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 0.85rem;
+    display: flex; align-items: center; gap: 0.55rem;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .disc-pill .glyph {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: 0.78rem; letter-spacing: 0.04em;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .disc-pill .nm {
+    font-family: var(--font-mono);
+    font-size: 0.74rem; letter-spacing: 0.06em;
+    color: var(--muted);
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .disc-pill .mark {
+    font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;
+    color: var(--muted);
+    width: 18px; text-align: center;
+  }
+  .disc-pill.done { border-color: var(--primary-line); background: var(--primary-soft); }
+  .disc-pill.done .glyph { background: var(--primary); color: var(--bg); }
+  .disc-pill.done .nm { color: var(--text); }
+  .disc-pill.done .mark { color: var(--primary); }
+  .disc-pill.now { border-color: var(--alert-line); background: var(--alert-soft); }
+  .disc-pill.now .glyph { background: var(--alert); color: white; }
+  .disc-pill.now .nm { color: var(--text); }
+  .disc-pill.now .mark { color: var(--alert); }
+  .disc-pill.now::after {
+    content: ""; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--alert); margin-left: 0.2rem;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @media (max-width: 720px) {
+    .disc-strip { grid-template-columns: repeat(5, 1fr); gap: 0.35rem; }
+    .disc-pill { padding: 0.55rem 0.5rem; flex-direction: column; gap: 0.3rem; text-align: center; }
+    .disc-pill .nm { font-size: 0.6rem; }
+  }
+
+  /* === Matrix scoreboard === */
+  .scoreboard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .sb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  .sb-table th, .sb-table td {
+    padding: 0.85rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+  }
+  .sb-table tr:last-child td { border-bottom: none; }
+  .sb-table th {
+    background: var(--bg-2);
+    font-family: var(--font-mono);
+    font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.85rem 0.7rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .sb-table th.disc.now { color: var(--alert); }
+  .sb-table th.disc.done { color: var(--primary); }
+  .sb-table th.rank-col, .sb-table td.rank-col { text-align: center; width: 56px; }
+  .sb-table th.player-col, .sb-table td.player-col { text-align: left; padding-left: 1.25rem; }
+  .sb-table th.total-col, .sb-table td.total-col { text-align: right; padding-right: 1.25rem; width: 80px; }
+  .sb-table th.wins-col, .sb-table td.wins-col { text-align: right; width: 60px; padding-right: 1.25rem; }
+  .sb-table td.disc { color: var(--muted); }
+  .sb-table td.disc.scored { color: var(--text); font-weight: 500; }
+  .sb-table td.disc.win { color: var(--primary); font-weight: 600; }
+  .sb-table tr.tier-1 td.total-col { color: var(--primary); font-weight: 700; font-size: 1.2rem; }
+  .sb-table tr.tier-1 .rank-pill { background: var(--primary); color: var(--bg); border-color: var(--primary); }
+  .sb-table tr.tier-2 td.total-col { color: var(--text); font-weight: 700; font-size: 1.1rem; }
+  .sb-table tr.tier-3 td.total-col { color: var(--text-soft); font-weight: 600; font-size: 1.05rem; }
+  .sb-table td.total-col { color: var(--text-soft); font-weight: 600; }
+  .sb-table td.wins-col { color: var(--muted); }
+  .sb-table tr.tier-1 td.wins-col { color: var(--primary); }
+
+  .rank-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    font-family: var(--font-display); font-weight: 900;
+    font-size: 1rem;
+    color: var(--text-soft);
+  }
+  .rank-pill.tier-2 { color: var(--text); border-color: var(--text-soft); }
+  .rank-pill.tier-3 { color: var(--d-bra); border-color: var(--d-bra); }
+
+  .sb-player { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
+  .sb-avatar {
+    width: 34px; height: 34px; border-radius: 8px;
+    flex-shrink: 0;
+    background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700;
+    color: var(--bg);
+  }
+  .sb-name { font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 0.4rem; }
+  .sb-name .veto-flag {
+    display: inline-flex; align-items: center; gap: 0.2rem;
+    padding: 1px 5px;
+    font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+    border: 1px solid var(--primary-line);
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+
+  .sb-empty {
+    padding: 3rem 1.5rem; text-align: center;
+    color: var(--muted); font-size: 0.92rem; line-height: 1.6;
+  }
+
+  /* Mobile: hide discipline columns, keep total */
+  @media (max-width: 760px) {
+    .sb-table th.disc, .sb-table td.disc { display: none; }
+    .sb-table th.player-col, .sb-table td.player-col { padding-left: 0.8rem; }
+  }
+
+  /* Demo banner */
+  .demo-banner {
+    background: var(--primary-soft);
+    border: 1px solid var(--primary-line);
+    color: var(--primary);
+    font-family: var(--font-mono); font-size: 0.72rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    text-align: center;
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 1rem;
+  }
+  .demo-banner a { color: var(--primary); text-decoration: underline; }
+
+  /* === Veto card (unchanged) === */
   .veto-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -86,19 +288,28 @@
     </div>
   </section>
 
-  <!-- LIVE -->
+  <!-- LIVE BROADCAST -->
   <section class="sec" id="live" style="display:none">
-    <div class="sec-head">
-      <span class="live-badge"><span class="dot"></span> Live</span>
-      <h2>Aktuelle <span class="alert">Wertung</span></h2>
-      <p id="liveSub">—</p>
+    <div id="demoBanner" class="demo-banner" style="display:none">
+      ⚡ Demo-Vorschau · so sieht's live aus · <a href="abend.html">echte Ansicht</a>
     </div>
-    <div class="leaderboard">
-      <div class="lb-header">
-        <div>#</div><div>Spieler</div>
-        <div style="text-align:right">Punkte</div>
-        <div style="text-align:right">Siege</div>
+
+    <div class="live-hero">
+      <div class="lh-inner">
+        <div>
+          <span class="live-badge"><span class="dot"></span> Live</span>
+          <div class="lh-meta"><b id="liveEventName">—</b> · <span id="liveEventDate">—</span></div>
+          <div class="lh-title">Jetzt: <span class="alert" id="liveCurrent">—</span></div>
+        </div>
+        <div class="lh-progress">
+          <span class="big"><span id="liveDoneCount">0</span><span class="of">/<span id="liveTotalCount">5</span></span></span>
+          Disziplinen
+        </div>
       </div>
+      <div class="disc-strip" id="liveDiscStrip"></div>
+    </div>
+
+    <div class="scoreboard">
       <div id="liveBody"></div>
     </div>
   </section>
@@ -164,18 +375,61 @@
   const pad2 = n => String(n).padStart(2,'0');
 
   const VDISCS = [
-    { kind:'geoguessr', name:'GeoGuessr',       icon:'GEO' },
-    { kind:'haxball',   name:'Haxball',         icon:'HAX' },
-    { kind:'chess',     name:'Chess.com Blitz', icon:'CHE' },
-    { kind:'brawlhalla',name:'Brawlhalla',      icon:'BRA' },
-    { kind:'fallguys',  name:'Fall Guys',       icon:'FAL' }
+    { kind:'geoguessr', name:'GeoGuessr',       short:'GEO' },
+    { kind:'haxball',   name:'Haxball',         short:'HAX' },
+    { kind:'chess',     name:'Chess Blitz',     short:'CHE' },
+    { kind:'brawlhalla',name:'Brawlhalla',      short:'BRA' },
+    { kind:'fallguys',  name:'Fall Guys',       short:'FAL' }
   ];
-  const discName = k => (VDISCS.find(d => d.kind === k) || {}).name || k;
-  const discIcon = k => (VDISCS.find(d => d.kind === k) || {}).icon || '—';
+  const discName  = k => (VDISCS.find(d => d.kind === k) || {}).name  || k;
+  const discShort = k => (VDISCS.find(d => d.kind === k) || {}).short || '—';
+
+  // ===== DEMO MODE =====
+  const isDemo = new URLSearchParams(location.search).get('demo') === '1';
+
+  function demoData() {
+    const players = [
+      { id:'p1', name:'Cleverbot', cry:'Eine 0 ist auch ein Ergebnis' },
+      { id:'p2', name:'Jabba',     cry:'Erste Sahne' },
+      { id:'p3', name:'Sparky',    cry:'Heute geht alles' },
+      { id:'p4', name:'Ryze',      cry:'Auf den letzten Drücker' },
+      { id:'p5', name:'Pixie',     cry:'Glück gehört dazu' },
+      { id:'p6', name:'Tank',      cry:'Slow and steady' },
+    ];
+    const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live' };
+    const disciplines = VDISCS.map((d,i) => ({ id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1 }));
+    // First three disciplines have results (GeoGuessr, Haxball, Chess done; Brawlhalla now; Fall Guys upcoming)
+    const placements = {
+      geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
+      haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
+      chess:     { p1:2, p2:4, p3:1, p4:3, p5:6, p6:5 },
+    };
+    const SOLO = [10,8,6,4,3,2,1];
+    const soloPts = r => SOLO[Math.min(r, SOLO.length) - 1] || 0;
+    const results = [];
+    Object.entries(placements).forEach(([kind, byPid]) => {
+      const disc = disciplines.find(d => d.kind === kind);
+      Object.entries(byPid).forEach(([pid, place]) => {
+        results.push({ id:`r-${kind}-${pid}`, discipline_id:disc.id, player_id:pid, placement:place, points:soloPts(place), team:null });
+      });
+    });
+    const vetoes = [{ event_id:'e1', player_id:'p4', discipline_kind:'fallguys' }];
+    return { players, event, disciplines, results, vetoes };
+  }
 
   let evPlayers = [], liveEvent = null, upcomingEvent = null, evVetoes = [];
 
   async function refreshEvents() {
+    if (isDemo) {
+      const d = demoData();
+      evPlayers = d.players;
+      liveEvent = d.event;
+      upcomingEvent = null;
+      document.getElementById('demoBanner').style.display = 'block';
+      await renderLiveFromData(d.disciplines, d.results, d.vetoes);
+      await renderVeto();
+      return;
+    }
     const [{ data: pl }, { data: evs }] = await Promise.all([
       sb.from('players').select('*').order('joined', { ascending: true }),
       sb.from('events').select('*').order('event_date', { ascending: true })
@@ -190,44 +444,134 @@
   async function renderLive() {
     const sec = document.getElementById('live');
     if (!liveEvent) { sec.style.display = 'none'; return; }
-    sec.style.display = 'block';
-    const { data: discs } = await sb.from('disciplines').select('*').eq('event_id', liveEvent.id);
-    const dList = discs || [];
+    const { data: discs }  = await sb.from('disciplines').select('*').eq('event_id', liveEvent.id);
+    const dList = (discs || []).sort((a,b) => (a.position||0) - (b.position||0));
     const dIds = dList.map(d => d.id);
     let results = [];
     if (dIds.length) { const { data } = await sb.from('results').select('*').in('discipline_id', dIds); results = data || []; }
     const { data: vts } = await sb.from('vetoes').select('*').eq('event_id', liveEvent.id);
-    const vetoBy = {}; (vts || []).forEach(v => vetoBy[v.player_id] = v.discipline_kind);
-    const pidSet = new Set(results.map(r => r.player_id));
-    const byId = id => evPlayers.find(p => p.id === id);
-    const rows = [...pidSet].map(pid => {
-      let pts = 0, wins = 0;
-      dList.forEach(d => {
-        const r = results.find(x => x.discipline_id === d.id && x.player_id === pid);
-        if (r && r.points) pts += parseFloat(r.points);
-        if (r && parseInt(r.placement) === 1) wins++;
-      });
-      return { player: byId(pid), pts, wins, veto: vetoBy[pid] };
-    }).filter(r => r.player);
-    rows.sort((a,b) => (b.pts-a.pts) || (b.wins-a.wins));
-    const dWith = new Set(results.map(r => r.discipline_id));
-    document.getElementById('liveSub').textContent = `${liveEvent.name} · ${dWith.size}/${dList.length || 5} Disziplinen gewertet`;
-    const body = document.getElementById('liveBody');
-    if (rows.length === 0) { body.innerHTML = '<div class="lb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>'; return; }
-    const ranks = ['gold','silver','bronze'];
-    let rank = 0, lp = -1, lw = -1;
-    rows.forEach((r,i) => { if (r.pts !== lp || r.wins !== lw) rank = i+1; r.rank = rank; lp = r.pts; lw = r.wins; });
-    body.innerHTML = rows.map((r,i) => {
-      const av = r.player.avatar_url ? `background-image:url(${r.player.avatar_url});` : `background:${grad(i)}`;
-      const vetoTag = r.veto ? `<span class="lb-veto">🃏 ${discIcon(r.veto)}</span>` : '';
-      return `<div class="lb-row"><div class="lb-rank ${ranks[r.rank-1]||''} tnum">${pad2(r.rank)}</div><div class="lb-player"><div class="lb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div><div><div class="lb-name">${r.player.name}${vetoTag}</div></div></div><div class="lb-pts">${r.pts}</div><div class="lb-w">${r.wins ? ('×'+r.wins) : '—'}</div></div>`;
+    await renderLiveFromData(dList, results, vts || []);
+  }
+
+  async function renderLiveFromData(dList, results, vetoes) {
+    document.getElementById('live').style.display = 'block';
+    // Sort disciplines by their canonical position (matching VDISCS order)
+    const orderedDiscs = VDISCS.map(vd => {
+      const found = dList.find(d => d.kind === vd.kind);
+      return found || { id: `missing-${vd.kind}`, kind: vd.kind, name: vd.name };
+    });
+
+    // Build veto map
+    const vetoBy = {}; vetoes.forEach(v => vetoBy[v.player_id] = v.discipline_kind);
+
+    // Per-player per-discipline points
+    const byPid = {}; // pid -> { points: { discId: pts }, placements: { discId: place }, total, wins }
+    results.forEach(r => {
+      if (!byPid[r.player_id]) byPid[r.player_id] = { points: {}, placements: {}, total: 0, wins: 0 };
+      const p = parseFloat(r.points) || 0;
+      byPid[r.player_id].points[r.discipline_id] = p;
+      byPid[r.player_id].placements[r.discipline_id] = parseInt(r.placement) || null;
+      byPid[r.player_id].total += p;
+      if (parseInt(r.placement) === 1) byPid[r.player_id].wins++;
+    });
+
+    // Which disciplines have results in (= "done")
+    const discDone = {};
+    orderedDiscs.forEach(d => {
+      discDone[d.id] = results.some(r => r.discipline_id === d.id && r.points);
+    });
+    const doneCount = Object.values(discDone).filter(Boolean).length;
+    const totalCount = orderedDiscs.length || 5;
+
+    // Current discipline = first not-done one, in order
+    const currentDisc = orderedDiscs.find(d => !discDone[d.id]) || null;
+
+    // Header info
+    document.getElementById('liveEventName').textContent = liveEvent.name;
+    document.getElementById('liveEventDate').textContent = new Date(liveEvent.event_date).toLocaleDateString('de-DE', { day:'2-digit', month:'long', year:'numeric' });
+    document.getElementById('liveCurrent').textContent = currentDisc ? currentDisc.name : 'Alle Disziplinen durch';
+    document.getElementById('liveDoneCount').textContent = doneCount;
+    document.getElementById('liveTotalCount').textContent = totalCount;
+
+    // Discipline strip
+    const strip = document.getElementById('liveDiscStrip');
+    strip.innerHTML = orderedDiscs.map(d => {
+      const done = discDone[d.id];
+      const isCurrent = currentDisc && d.id === currentDisc.id;
+      const cls = done ? 'done' : (isCurrent ? 'now' : '');
+      const mark = done ? '✓' : (isCurrent ? '●' : '–');
+      return `<div class="disc-pill ${cls}"><span class="glyph">${discShort(d.kind)}</span><span class="nm">${d.name}</span><span class="mark">${mark}</span></div>`;
     }).join('');
+
+    // Scoreboard
+    const rows = evPlayers
+      .map(p => ({ player: p, ...(byPid[p.id] || { points:{}, placements:{}, total:0, wins:0 }), veto: vetoBy[p.id] }))
+      .filter(r => r.total > 0 || results.some(x => x.player_id === r.player.id));
+
+    rows.sort((a,b) => (b.total - a.total) || (b.wins - a.wins));
+    // Tiered rank (handles ties)
+    let rank = 0, lp = -1, lw = -1;
+    rows.forEach((r,i) => { if (r.total !== lp || r.wins !== lw) rank = i+1; r.rank = rank; lp = r.total; lw = r.wins; });
+
+    const body = document.getElementById('liveBody');
+    if (rows.length === 0) {
+      body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
+      return;
+    }
+
+    // Build table
+    const headCells = [
+      '<th class="rank-col">#</th>',
+      '<th class="player-col">Spieler</th>',
+      ...orderedDiscs.map(d => {
+        const done = discDone[d.id];
+        const isCurrent = currentDisc && d.id === currentDisc.id;
+        const cls = done ? 'disc done' : (isCurrent ? 'disc now' : 'disc');
+        return `<th class="${cls}">${discShort(d.kind)}</th>`;
+      }),
+      '<th class="total-col">Total</th>',
+      '<th class="wins-col">×1</th>',
+    ].join('');
+
+    const rowsHtml = rows.map((r,i) => {
+      const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
+      const av = r.player.avatar_url
+        ? `background-image:url(${r.player.avatar_url});`
+        : `background:${grad(i)}`;
+      const cells = orderedDiscs.map(d => {
+        const p = r.points[d.id];
+        const pl = r.placements[d.id];
+        if (p == null) return '<td class="disc">—</td>';
+        const cls = pl === 1 ? 'disc scored win' : 'disc scored';
+        return `<td class="${cls}">${p}</td>`;
+      }).join('');
+      return `
+        <tr class="${tier}">
+          <td class="rank-col"><span class="rank-pill ${tier}">${pad2(r.rank)}</span></td>
+          <td class="player-col">
+            <div class="sb-player">
+              <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
+              <div class="sb-name">${r.player.name}${r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : ''}</div>
+            </div>
+          </td>
+          ${cells}
+          <td class="total-col">${r.total}</td>
+          <td class="wins-col">${r.wins ? '×' + r.wins : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    body.innerHTML = `<table class="sb-table"><thead><tr>${headCells}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
   }
 
   async function renderVeto() {
     const open = document.getElementById('vetoOpen');
     const closed = document.getElementById('vetoClosed');
     const closedText = document.getElementById('vetoClosedText');
+    if (isDemo) {
+      open.style.display = 'none'; closed.style.display = 'block';
+      closedText.textContent = 'Demo-Modus — Veto ist hier deaktiviert.';
+      return;
+    }
     if (!upcomingEvent) {
       open.style.display = 'none'; closed.style.display = 'block';
       closedText.textContent = liveEvent
@@ -279,12 +623,14 @@
   });
 
   refreshEvents();
-  sb.channel('abend-live')
-    .on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => refreshEvents())
-    .on('postgres_changes', { event:'*', schema:'public', table:'results' }, () => refreshEvents())
-    .on('postgres_changes', { event:'*', schema:'public', table:'event_participation' }, () => refreshEvents())
-    .on('postgres_changes', { event:'*', schema:'public', table:'vetoes' }, () => refreshEvents())
-    .subscribe();
+  if (!isDemo) {
+    sb.channel('abend-live')
+      .on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => refreshEvents())
+      .on('postgres_changes', { event:'*', schema:'public', table:'results' }, () => refreshEvents())
+      .on('postgres_changes', { event:'*', schema:'public', table:'event_participation' }, () => refreshEvents())
+      .on('postgres_changes', { event:'*', schema:'public', table:'vetoes' }, () => refreshEvents())
+      .subscribe();
+  }
 
   const prog = document.getElementById('scrollProg');
   const onScroll = () => { const h=document.documentElement; const max=h.scrollHeight-h.clientHeight; prog.style.transform='scaleX('+(max>0?h.scrollTop/max:0)+')'; };
