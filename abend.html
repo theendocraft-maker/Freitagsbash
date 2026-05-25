@@ -7,12 +7,19 @@
 <link rel="stylesheet" href="styles.css">
 <script>document.documentElement.classList.add('js');</script>
 <style>
-  /* === Live broadcast hero === */
+  /* === Hide intro & veto when live === */
+  body.is-live .intro-section,
+  body.is-live #veto { display: none; }
+  body.is-live main.wrap { padding-top: 1.5rem; }
+
+  /* ============================
+     LIVE BROADCAST — top of page
+     ============================ */
   .live-hero {
     background: var(--surface);
     border: 1px solid var(--alert-line);
     border-radius: var(--radius-lg);
-    padding: 1.75rem 2rem;
+    padding: 2rem 2.5rem 2.25rem;
     position: relative; overflow: hidden;
     box-shadow: var(--shadow);
     margin-bottom: 1.25rem;
@@ -21,61 +28,174 @@
     content: ""; position: absolute; inset: 0; pointer-events: none;
     background:
       radial-gradient(ellipse 50% 100% at 0% 0%, var(--alert-soft), transparent 65%),
-      radial-gradient(ellipse 50% 100% at 100% 100%, var(--primary-soft), transparent 65%);
+      radial-gradient(ellipse 60% 100% at 100% 100%, var(--primary-soft), transparent 65%);
   }
-  .lh-inner { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto; gap: 1.25rem; align-items: center; }
-  @media (max-width: 720px) { .lh-inner { grid-template-columns: 1fr; } }
-  .lh-meta { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); margin-top: 0.4rem; }
-  .lh-meta b { color: var(--text); font-weight: 500; }
-  .lh-title {
-    font-family: var(--font-display); font-weight: 900;
-    font-size: clamp(2rem, 5vw, 3rem); line-height: 0.9;
-    letter-spacing: 0.005em; text-transform: uppercase;
-    margin-top: 0.6rem;
+
+  /* Top row: LIVE badge + event meta */
+  .lh-top {
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 1rem; flex-wrap: wrap;
+    margin-bottom: 1.25rem;
   }
-  .lh-title .alert { color: var(--alert); }
-  .lh-progress {
-    text-align: right;
-    font-family: var(--font-mono);
-    font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
+  .lh-event-meta {
+    font-family: var(--font-mono); font-size: 0.78rem;
+    letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--muted);
+    text-align: right;
   }
-  .lh-progress .big {
+  .lh-event-meta b { color: var(--text); font-weight: 500; }
+
+  /* The big LIVE badge */
+  .live-badge-big {
+    display: inline-flex; align-items: center; gap: 0.7rem;
+    background: var(--alert-soft);
+    border: 1px solid var(--alert-line);
+    color: var(--alert);
+    font-family: var(--font-display); font-weight: 900;
+    font-size: 1.15rem; letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.5rem 1rem 0.45rem;
+    border-radius: 999px;
+  }
+  .live-badge-big .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--alert);
+    box-shadow: 0 0 0 0 var(--alert);
+    animation: ringPulse 1.6s ease-out infinite;
+  }
+  @keyframes ringPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(255,61,110,0.7); }
+    70%  { box-shadow: 0 0 0 10px rgba(255,61,110,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,61,110,0); }
+  }
+
+  /* Now-playing block */
+  .lh-now {
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem; align-items: end;
+  }
+  @media (max-width: 720px) { .lh-now { grid-template-columns: 1fr; } }
+
+  .lh-now-title-wrap { min-width: 0; }
+
+  .lh-now-label {
+    font-family: var(--font-mono); font-size: 0.72rem;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--alert);
+    margin-bottom: 0.4rem;
+  }
+  .lh-now-title {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: clamp(2.6rem, 7.5vw, 5.2rem); line-height: 0.84;
+    letter-spacing: 0.005em; text-transform: uppercase;
+    color: var(--text);
+    word-break: break-word;
+    hyphens: auto;
+  }
+  .lh-now-mode {
+    margin-top: 0.6rem;
+    font-family: var(--font-mono); font-size: 0.78rem;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-soft);
+  }
+  .lh-now-mode .glyph {
+    display: inline-block;
+    margin-right: 0.4rem;
+    padding: 2px 7px;
+    background: var(--alert);
+    color: white;
+    border-radius: 4px;
+    font-family: var(--font-display); font-weight: 800;
+    font-size: 0.75rem; letter-spacing: 0.06em;
+  }
+
+  /* Progress ring */
+  .lh-progress-wrap {
+    position: relative;
+    width: 96px; height: 96px;
+    flex-shrink: 0;
+  }
+  .progress-ring {
+    width: 96px; height: 96px;
+    transform: rotate(-90deg);
+  }
+  .progress-ring .track { fill: none; stroke: var(--border-strong); stroke-width: 2.5; }
+  .progress-ring .bar   { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dashoffset 0.6s cubic-bezier(.2,.8,.2,1); }
+  .progress-ring-text {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    pointer-events: none;
+  }
+  .progress-ring-text b {
     display: block;
     font-family: var(--font-display); font-weight: 900;
-    font-size: clamp(2.4rem, 5vw, 3.4rem); line-height: 0.9;
+    font-size: 1.6rem; line-height: 1;
     color: var(--text);
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.005em;
   }
-  .lh-progress .big .of { color: var(--muted); font-weight: 500; }
+  .progress-ring-text b .of { color: var(--muted); font-weight: 500; }
+  .progress-ring-text small {
+    margin-top: 6px;
+    font-family: var(--font-mono); font-size: 0.54rem;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
 
-  /* Discipline progress strip */
+  /* Next discipline tease */
+  .lh-next {
+    position: relative; z-index: 1;
+    margin-top: 1.5rem;
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-family: var(--font-mono); font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .lh-next b { color: var(--text-soft); font-weight: 500; }
+  .lh-next .arrow { color: var(--primary); }
+  .lh-next .next-glyph {
+    font-family: var(--font-display); font-weight: 800;
+    font-size: 0.75rem; letter-spacing: 0.06em;
+    padding: 3px 7px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    border-radius: 4px;
+  }
+  .lh-next.done { color: var(--primary); }
+  .lh-next.done b { color: var(--primary); }
+
+  /* Discipline progress strip — more compact */
   .disc-strip {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: repeat(5, 1fr);
     gap: 0.5rem;
-    margin-top: 1.25rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
   }
   .disc-pill {
     background: var(--bg-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    padding: 0.7rem 0.85rem;
-    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.55rem 0.8rem;
+    display: flex; align-items: center; gap: 0.5rem;
     transition: border-color 0.2s, background 0.2s;
+    min-width: 0;
   }
   .disc-pill .glyph {
     font-family: var(--font-display); font-weight: 900;
-    font-size: 0.78rem; letter-spacing: 0.04em;
+    font-size: 0.7rem; letter-spacing: 0.04em;
     padding: 3px 6px;
     border-radius: 4px;
     background: var(--surface-2);
     color: var(--muted);
+    flex-shrink: 0;
   }
   .disc-pill .nm {
     font-family: var(--font-mono);
-    font-size: 0.74rem; letter-spacing: 0.06em;
+    font-size: 0.7rem; letter-spacing: 0.05em;
     color: var(--muted);
     flex: 1; min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -83,7 +203,8 @@
   .disc-pill .mark {
     font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;
     color: var(--muted);
-    width: 18px; text-align: center;
+    width: 14px; text-align: center;
+    flex-shrink: 0;
   }
   .disc-pill.done { border-color: var(--primary-line); background: var(--primary-soft); }
   .disc-pill.done .glyph { background: var(--primary); color: var(--bg); }
@@ -93,18 +214,15 @@
   .disc-pill.now .glyph { background: var(--alert); color: white; }
   .disc-pill.now .nm { color: var(--text); }
   .disc-pill.now .mark { color: var(--alert); }
-  .disc-pill.now::after {
-    content: ""; width: 7px; height: 7px; border-radius: 50%;
-    background: var(--alert); margin-left: 0.2rem;
-    animation: pulse 1.2s ease-in-out infinite;
-  }
   @media (max-width: 720px) {
-    .disc-strip { grid-template-columns: repeat(5, 1fr); gap: 0.35rem; }
-    .disc-pill { padding: 0.55rem 0.5rem; flex-direction: column; gap: 0.3rem; text-align: center; }
-    .disc-pill .nm { font-size: 0.6rem; }
+    .disc-pill { padding: 0.45rem 0.45rem; flex-direction: column; gap: 0.25rem; text-align: center; }
+    .disc-pill .nm { font-size: 0.58rem; }
+    .disc-pill .mark { width: auto; }
   }
 
-  /* === Matrix scoreboard === */
+  /* ============================
+     SCOREBOARD — broadcast-sized
+     ============================ */
   .scoreboard {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -117,82 +235,173 @@
     border-collapse: collapse;
     font-variant-numeric: tabular-nums;
   }
-  .sb-table th, .sb-table td {
-    padding: 0.85rem 1rem;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-    font-family: var(--font-mono);
-    font-size: 0.95rem;
-  }
-  .sb-table tr:last-child td { border-bottom: none; }
   .sb-table th {
     background: var(--bg-2);
-    font-family: var(--font-mono);
-    font-size: 0.68rem; font-weight: 600;
+    font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600;
     letter-spacing: 0.16em; text-transform: uppercase;
     color: var(--muted);
-    padding: 0.85rem 0.7rem;
+    padding: 0.9rem 0.7rem;
     border-bottom: 1px solid var(--border);
+    text-align: center;
   }
   .sb-table th.disc.now { color: var(--alert); }
   .sb-table th.disc.done { color: var(--primary); }
-  .sb-table th.rank-col, .sb-table td.rank-col { text-align: center; width: 56px; }
-  .sb-table th.player-col, .sb-table td.player-col { text-align: left; padding-left: 1.25rem; }
-  .sb-table th.total-col, .sb-table td.total-col { text-align: right; padding-right: 1.25rem; width: 80px; }
-  .sb-table th.wins-col, .sb-table td.wins-col { text-align: right; width: 60px; padding-right: 1.25rem; }
-  .sb-table td.disc { color: var(--muted); }
-  .sb-table td.disc.scored { color: var(--text); font-weight: 500; }
-  .sb-table td.disc.win { color: var(--primary); font-weight: 600; }
-  .sb-table tr.tier-1 td.total-col { color: var(--primary); font-weight: 700; font-size: 1.2rem; }
-  .sb-table tr.tier-1 .rank-pill { background: var(--primary); color: var(--bg); border-color: var(--primary); }
-  .sb-table tr.tier-2 td.total-col { color: var(--text); font-weight: 700; font-size: 1.1rem; }
-  .sb-table tr.tier-3 td.total-col { color: var(--text-soft); font-weight: 600; font-size: 1.05rem; }
-  .sb-table td.total-col { color: var(--text-soft); font-weight: 600; }
-  .sb-table td.wins-col { color: var(--muted); }
-  .sb-table tr.tier-1 td.wins-col { color: var(--primary); }
+  .sb-table th.rank-col { width: 80px; }
+  .sb-table th.player-col { text-align: left; padding-left: 1.5rem; }
+  .sb-table th.total-col { text-align: right; padding-right: 1.5rem; width: 100px; }
+  .sb-table th.wins-col { text-align: right; padding-right: 1.5rem; width: 70px; }
 
+  .sb-table td {
+    padding: 1.1rem 0.7rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    transition: background 0.4s;
+  }
+  .sb-table tr:last-child td { border-bottom: none; }
+  .sb-table td.rank-col { width: 80px; }
+  .sb-table td.player-col { text-align: left; padding-left: 1.5rem; }
+  .sb-table td.total-col { text-align: right; padding-right: 1.5rem; }
+  .sb-table td.wins-col { text-align: right; padding-right: 1.5rem; }
+  .sb-table td.disc { color: var(--muted); font-size: 1.05rem; }
+  .sb-table td.disc.scored { color: var(--text); font-weight: 500; }
+  .sb-table td.disc.win { color: var(--primary); font-weight: 700; position: relative; }
+  .sb-table td.disc.win::after {
+    content: ""; position: absolute;
+    left: 50%; bottom: 8px;
+    transform: translateX(-50%);
+    width: 24px; height: 2px;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+
+  /* Tier styling */
+  .sb-table tr.tier-1 {
+    background: linear-gradient(90deg, var(--primary-soft), transparent 60%);
+  }
+  .sb-table tr.tier-1 td.player-col { position: relative; }
+  .sb-table tr.tier-1 td.player-col::before {
+    content: ""; position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--primary);
+  }
+  .sb-table tr.tier-1 td.total-col { color: var(--primary); font-weight: 800; font-size: 1.5rem; }
+  .sb-table tr.tier-1 td.wins-col { color: var(--primary); font-weight: 600; }
+  .sb-table tr.tier-2 td.total-col { color: var(--text); font-weight: 700; font-size: 1.3rem; }
+  .sb-table tr.tier-3 td.total-col { color: var(--text); font-weight: 600; font-size: 1.2rem; }
+  .sb-table td.total-col { color: var(--text-soft); font-weight: 600; font-size: 1.1rem; }
+  .sb-table td.wins-col { color: var(--muted); }
+
+  /* Row flash on score change */
+  .sb-table tr.flash td { background: var(--primary-soft); }
+
+  /* Rank pill — bigger now */
   .rank-pill {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 38px; height: 38px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     border: 1.5px solid var(--border-strong);
     font-family: var(--font-display); font-weight: 900;
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: var(--text-soft);
+    font-variant-numeric: tabular-nums;
   }
-  .rank-pill.tier-2 { color: var(--text); border-color: var(--text-soft); }
-  .rank-pill.tier-3 { color: var(--d-bra); border-color: var(--d-bra); }
+  .sb-table tr.tier-1 .rank-pill { background: var(--primary); color: var(--bg); border-color: var(--primary); box-shadow: 0 0 18px -4px var(--primary); }
+  .sb-table tr.tier-2 .rank-pill { color: var(--text); border-color: var(--text-soft); }
+  .sb-table tr.tier-3 .rank-pill { color: var(--d-bra); border-color: var(--d-bra); }
 
-  .sb-player { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
+  /* Rank delta indicator */
+  .rank-delta {
+    display: inline-flex; align-items: center; gap: 1px;
+    margin-left: 0.35rem;
+    font-family: var(--font-mono); font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1.2;
+  }
+  .rank-delta.up   { color: var(--primary); background: var(--primary-soft); }
+  .rank-delta.down { color: var(--alert);   background: var(--alert-soft); }
+  .rank-delta.same { color: var(--faint); }
+  .rank-delta.new  { color: var(--cool); background: var(--cool-soft); }
+
+  /* Player cell */
+  .sb-player { display: flex; align-items: center; gap: 0.95rem; min-width: 0; }
   .sb-avatar {
-    width: 34px; height: 34px; border-radius: 8px;
+    width: 40px; height: 40px; border-radius: 9px;
     flex-shrink: 0;
     background-size: cover; background-position: center;
     display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700;
+    font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700;
     color: var(--bg);
   }
-  .sb-name { font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; color: var(--text); display: flex; align-items: center; gap: 0.4rem; }
-  .sb-name .veto-flag {
-    display: inline-flex; align-items: center; gap: 0.2rem;
-    padding: 1px 5px;
-    font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500;
-    letter-spacing: 0.08em;
-    color: var(--primary);
-    border: 1px solid var(--primary-line);
-    border-radius: 3px;
+  .sb-name {
+    font-family: var(--font-display); font-weight: 800;
+    font-size: 1.15rem; letter-spacing: 0.02em;
+    color: var(--text);
+    display: flex; align-items: center; gap: 0.5rem;
     text-transform: uppercase;
   }
+  .sb-name .veto-flag {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 3px 7px;
+    font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--primary);
+    background: var(--primary-soft);
+    border: 1px solid var(--primary-line);
+    border-radius: 4px;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+  .sb-cry {
+    font-family: var(--font-body); font-style: italic;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 1px;
+    display: none; /* hidden by default — turn on for ultra-broadcast feel */
+  }
+  .sb-table tr.tier-1 .sb-name { font-size: 1.3rem; }
 
-  .sb-empty {
-    padding: 3rem 1.5rem; text-align: center;
-    color: var(--muted); font-size: 0.92rem; line-height: 1.6;
+  /* Point delta flash badge */
+  .pts-flash {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 1px 6px;
+    background: var(--primary);
+    color: var(--bg);
+    font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 3px;
+    animation: flashPop 2.2s ease-out forwards;
+    vertical-align: middle;
+  }
+  @keyframes flashPop {
+    0%   { transform: scale(0.6); opacity: 0; }
+    15%  { transform: scale(1.15); opacity: 1; }
+    25%  { transform: scale(1); }
+    80%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-6px); }
   }
 
-  /* Mobile: hide discipline columns, keep total */
+  /* Empty state */
+  .sb-empty {
+    padding: 4rem 1.5rem; text-align: center;
+    color: var(--muted); font-size: 0.95rem; line-height: 1.6;
+  }
+
+  /* Mobile: smarter — keep last completed + total, hide rest */
   @media (max-width: 760px) {
-    .sb-table th.disc, .sb-table td.disc { display: none; }
-    .sb-table th.player-col, .sb-table td.player-col { padding-left: 0.8rem; }
+    .sb-table th.disc:not(.now):not(.last-done), .sb-table td.disc:not(.now):not(.last-done) { display: none; }
+    .sb-table th.player-col, .sb-table td.player-col { padding-left: 0.9rem; }
+    .sb-table th.total-col, .sb-table td.total-col { padding-right: 0.9rem; width: 80px; }
+    .sb-table th.wins-col, .sb-table td.wins-col { display: none; }
+    .sb-name { font-size: 1rem; }
+    .sb-table tr.tier-1 .sb-name { font-size: 1.1rem; }
+    .sb-table tr.tier-1 td.total-col { font-size: 1.3rem; }
   }
 
   /* Demo banner */
@@ -208,6 +417,22 @@
     margin-bottom: 1rem;
   }
   .demo-banner a { color: var(--primary); text-decoration: underline; }
+  .demo-controls {
+    margin-top: 0.5rem;
+    display: inline-flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center;
+  }
+  .demo-controls button {
+    background: var(--bg-2);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    font-family: var(--font-mono); font-size: 0.7rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .demo-controls button:hover { border-color: var(--primary); color: var(--primary); }
 
   /* === Veto card (unchanged) === */
   .veto-card {
@@ -280,7 +505,8 @@
 </header>
 
 <main class="wrap">
-  <section class="sec">
+  <!-- INTRO (hidden when live) -->
+  <section class="sec intro-section">
     <div class="sec-head reveal">
       <div class="eyebrow"><span class="num">→</span> Der Spielabend</div>
       <h2>Der <span class="accent">Abend.</span></h2>
@@ -289,23 +515,44 @@
   </section>
 
   <!-- LIVE BROADCAST -->
-  <section class="sec" id="live" style="display:none">
+  <section class="sec" id="live" style="display:none; padding-top: 1.5rem;">
     <div id="demoBanner" class="demo-banner" style="display:none">
       ⚡ Demo-Vorschau · so sieht's live aus · <a href="abend.html">echte Ansicht</a>
+      <div class="demo-controls">
+        <button id="demoStep0">Vor dem Start</button>
+        <button id="demoStep1">Nach 1 Spiel</button>
+        <button id="demoStep2">Nach 2 Spielen</button>
+        <button id="demoStep3">Nach 3 Spielen</button>
+        <button id="demoStep4">Nach 4 Spielen</button>
+      </div>
     </div>
 
     <div class="live-hero">
-      <div class="lh-inner">
-        <div>
-          <span class="live-badge"><span class="dot"></span> Live</span>
-          <div class="lh-meta"><b id="liveEventName">—</b> · <span id="liveEventDate">—</span></div>
-          <div class="lh-title">Jetzt: <span class="alert" id="liveCurrent">—</span></div>
+      <div class="lh-top">
+        <span class="live-badge-big"><span class="dot"></span> Live</span>
+        <div class="lh-event-meta"><b id="liveEventName">—</b> · <span id="liveEventDate">—</span></div>
+      </div>
+
+      <div class="lh-now">
+        <div class="lh-now-title-wrap">
+          <div class="lh-now-label">Jetzt im Spiel</div>
+          <div class="lh-now-title" id="liveCurrent">—</div>
+          <div class="lh-now-mode" id="liveCurrentMode" style="display:none;"><span class="glyph">—</span> <span id="liveCurrentModeText"></span></div>
         </div>
-        <div class="lh-progress">
-          <span class="big"><span id="liveDoneCount">0</span><span class="of">/<span id="liveTotalCount">5</span></span></span>
-          Disziplinen
+        <div class="lh-progress-wrap">
+          <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
+            <circle class="track" cx="18" cy="18" r="15.9"></circle>
+            <circle id="progressBar" class="bar" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
+          </svg>
+          <div class="progress-ring-text">
+            <b><span id="liveDoneCount">0</span><span class="of">/<span id="liveTotalCount">5</span></span></b>
+            <small>Disziplinen</small>
+          </div>
         </div>
       </div>
+
+      <div class="lh-next" id="liveNext">—</div>
+
       <div class="disc-strip" id="liveDiscStrip"></div>
     </div>
 
@@ -314,7 +561,7 @@
     </div>
   </section>
 
-  <!-- VETO -->
+  <!-- VETO (hidden when live) -->
   <section class="sec" id="veto">
     <div class="sec-head reveal">
       <div class="eyebrow"><span class="num">🃏</span> Joker</div>
@@ -375,19 +622,22 @@
   const pad2 = n => String(n).padStart(2,'0');
 
   const VDISCS = [
-    { kind:'geoguessr', name:'GeoGuessr',       short:'GEO' },
-    { kind:'haxball',   name:'Haxball',         short:'HAX' },
-    { kind:'chess',     name:'Chess Blitz',     short:'CHE' },
-    { kind:'brawlhalla',name:'Brawlhalla',      short:'BRA' },
-    { kind:'fallguys',  name:'Fall Guys',       short:'FAL' }
+    { kind:'geoguessr', name:'GeoGuessr',   short:'GEO', mode:'Einzeln · No Move' },
+    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter' },
+    { kind:'chess',     name:'Chess Blitz', short:'CHE', mode:'Arena 3+2' },
+    { kind:'brawlhalla',name:'Brawlhalla',  short:'BRA', mode:'Free For All' },
+    { kind:'fallguys',  name:'Fall Guys',   short:'FAL', mode:'Team · Squads' }
   ];
   const discName  = k => (VDISCS.find(d => d.kind === k) || {}).name  || k;
   const discShort = k => (VDISCS.find(d => d.kind === k) || {}).short || '—';
+  const discMode  = k => (VDISCS.find(d => d.kind === k) || {}).mode  || '';
 
   // ===== DEMO MODE =====
-  const isDemo = new URLSearchParams(location.search).get('demo') === '1';
+  const params = new URLSearchParams(location.search);
+  const isDemo = params.get('demo') === '1';
+  let demoStep = parseInt(params.get('step')) || 3; // default: 3 disciplines done
 
-  function demoData() {
+  function demoData(step) {
     const players = [
       { id:'p1', name:'Cleverbot', cry:'Eine 0 ist auch ein Ergebnis' },
       { id:'p2', name:'Jabba',     cry:'Erste Sahne' },
@@ -398,16 +648,28 @@
     ];
     const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live' };
     const disciplines = VDISCS.map((d,i) => ({ id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1 }));
-    // First three disciplines have results (GeoGuessr, Haxball, Chess done; Brawlhalla now; Fall Guys upcoming)
-    const placements = {
-      geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
-      haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
-      chess:     { p1:2, p2:4, p3:1, p4:3, p5:6, p6:5 },
-    };
+    const placements = [
+      // After GeoGuessr
+      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 } },
+      // After Haxball
+      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
+        haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 } },
+      // After Chess
+      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
+        haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
+        chess:     { p1:2, p2:4, p3:1, p4:3, p5:6, p6:5 } },
+      // After Brawlhalla
+      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
+        haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
+        chess:     { p1:2, p2:4, p3:1, p4:3, p5:6, p6:5 },
+        brawlhalla:{ p1:4, p2:3, p3:5, p4:1, p5:2, p6:6 } },
+    ];
+    const placementSet = step === 0 ? {} : placements[Math.min(step, placements.length) - 1];
+
     const SOLO = [10,8,6,4,3,2,1];
     const soloPts = r => SOLO[Math.min(r, SOLO.length) - 1] || 0;
     const results = [];
-    Object.entries(placements).forEach(([kind, byPid]) => {
+    Object.entries(placementSet).forEach(([kind, byPid]) => {
       const disc = disciplines.find(d => d.kind === kind);
       Object.entries(byPid).forEach(([pid, place]) => {
         results.push({ id:`r-${kind}-${pid}`, discipline_id:disc.id, player_id:pid, placement:place, points:soloPts(place), team:null });
@@ -418,14 +680,17 @@
   }
 
   let evPlayers = [], liveEvent = null, upcomingEvent = null, evVetoes = [];
+  let lastSnapshot = {}; // pid -> { rank, total }
+  let demoFirstRender = true;
 
   async function refreshEvents() {
     if (isDemo) {
-      const d = demoData();
+      const d = demoData(demoStep);
       evPlayers = d.players;
       liveEvent = d.event;
       upcomingEvent = null;
       document.getElementById('demoBanner').style.display = 'block';
+      document.body.classList.add('is-live');
       await renderLiveFromData(d.disciplines, d.results, d.vetoes);
       await renderVeto();
       return;
@@ -438,6 +703,7 @@
     const events = evs || [];
     liveEvent = events.find(e => e.status === 'live') || null;
     upcomingEvent = events.filter(e => e.status === 'draft').sort((a,b)=>String(a.event_date).localeCompare(String(b.event_date)))[0] || null;
+    document.body.classList.toggle('is-live', !!liveEvent);
     await Promise.all([renderLive(), renderVeto()]);
   }
 
@@ -455,17 +721,17 @@
 
   async function renderLiveFromData(dList, results, vetoes) {
     document.getElementById('live').style.display = 'block';
-    // Sort disciplines by their canonical position (matching VDISCS order)
+
+    // Sort disciplines by canonical VDISCS order
     const orderedDiscs = VDISCS.map(vd => {
       const found = dList.find(d => d.kind === vd.kind);
       return found || { id: `missing-${vd.kind}`, kind: vd.kind, name: vd.name };
     });
 
-    // Build veto map
     const vetoBy = {}; vetoes.forEach(v => vetoBy[v.player_id] = v.discipline_kind);
 
-    // Per-player per-discipline points
-    const byPid = {}; // pid -> { points: { discId: pts }, placements: { discId: place }, total, wins }
+    // Per-player aggregates
+    const byPid = {};
     results.forEach(r => {
       if (!byPid[r.player_id]) byPid[r.player_id] = { points: {}, placements: {}, total: 0, wins: 0 };
       const p = parseFloat(r.points) || 0;
@@ -475,23 +741,52 @@
       if (parseInt(r.placement) === 1) byPid[r.player_id].wins++;
     });
 
-    // Which disciplines have results in (= "done")
+    // Which disciplines are "done"
     const discDone = {};
     orderedDiscs.forEach(d => {
       discDone[d.id] = results.some(r => r.discipline_id === d.id && r.points);
     });
     const doneCount = Object.values(discDone).filter(Boolean).length;
     const totalCount = orderedDiscs.length || 5;
-
-    // Current discipline = first not-done one, in order
     const currentDisc = orderedDiscs.find(d => !discDone[d.id]) || null;
+    const currentIdx = currentDisc ? orderedDiscs.findIndex(d => d.id === currentDisc.id) : -1;
+    const nextDisc = currentIdx >= 0 && currentIdx + 1 < orderedDiscs.length ? orderedDiscs[currentIdx + 1] : null;
+    const lastDoneId = [...orderedDiscs].reverse().find(d => discDone[d.id])?.id;
 
-    // Header info
+    // === Hero header ===
     document.getElementById('liveEventName').textContent = liveEvent.name;
     document.getElementById('liveEventDate').textContent = new Date(liveEvent.event_date).toLocaleDateString('de-DE', { day:'2-digit', month:'long', year:'numeric' });
-    document.getElementById('liveCurrent').textContent = currentDisc ? currentDisc.name : 'Alle Disziplinen durch';
+
+    if (currentDisc) {
+      document.getElementById('liveCurrent').textContent = currentDisc.name.toUpperCase();
+      const modeEl = document.getElementById('liveCurrentMode');
+      modeEl.style.display = 'block';
+      modeEl.querySelector('.glyph').textContent = discShort(currentDisc.kind);
+      document.getElementById('liveCurrentModeText').textContent = discMode(currentDisc.kind);
+    } else {
+      document.getElementById('liveCurrent').textContent = 'ABEND DURCH';
+      document.getElementById('liveCurrentMode').style.display = 'none';
+    }
+
     document.getElementById('liveDoneCount').textContent = doneCount;
     document.getElementById('liveTotalCount').textContent = totalCount;
+
+    // Progress ring
+    const pct = (doneCount / totalCount) * 100;
+    document.getElementById('progressBar').setAttribute('stroke-dashoffset', String(100 - pct));
+
+    // Next discipline tease
+    const nextEl = document.getElementById('liveNext');
+    if (nextDisc) {
+      nextEl.classList.remove('done');
+      nextEl.innerHTML = `<span class="arrow">→</span> Als nächstes <span class="next-glyph">${discShort(nextDisc.kind)}</span> <b>${nextDisc.name}</b> <span style="color:var(--muted)">· ${discMode(nextDisc.kind)}</span>`;
+    } else if (currentDisc) {
+      nextEl.classList.remove('done');
+      nextEl.innerHTML = `<span class="arrow">→</span> Letzte Disziplin <b>${currentDisc.name}</b>`;
+    } else {
+      nextEl.classList.add('done');
+      nextEl.innerHTML = `✓ Alle Disziplinen abgeschlossen — Wertung steht.`;
+    }
 
     // Discipline strip
     const strip = document.getElementById('liveDiscStrip');
@@ -503,64 +798,102 @@
       return `<div class="disc-pill ${cls}"><span class="glyph">${discShort(d.kind)}</span><span class="nm">${d.name}</span><span class="mark">${mark}</span></div>`;
     }).join('');
 
-    // Scoreboard
+    // === Scoreboard rows ===
     const rows = evPlayers
       .map(p => ({ player: p, ...(byPid[p.id] || { points:{}, placements:{}, total:0, wins:0 }), veto: vetoBy[p.id] }))
       .filter(r => r.total > 0 || results.some(x => x.player_id === r.player.id));
 
     rows.sort((a,b) => (b.total - a.total) || (b.wins - a.wins));
-    // Tiered rank (handles ties)
     let rank = 0, lp = -1, lw = -1;
-    rows.forEach((r,i) => { if (r.total !== lp || r.wins !== lw) rank = i+1; r.rank = rank; lp = r.total; lw = r.wins; });
+    rows.forEach((r,i) => {
+      if (r.total !== lp || r.wins !== lw) rank = i+1;
+      r.rank = rank; lp = r.total; lw = r.wins;
+      // Deltas against last snapshot
+      const prev = lastSnapshot[r.player.id];
+      if (!prev) {
+        // First time seeing this player — only flag NEW if there's already action on the board
+        r.delta = { kind: rows.length > 0 && doneCount > 0 && !demoFirstRender ? 'new' : 'first', value: 0 };
+        r.pointsDelta = 0;
+      } else {
+        const dRank = prev.rank - r.rank; // positive = improved
+        const dPts  = r.total - prev.total;
+        r.pointsDelta = dPts;
+        if (dRank > 0) r.delta = { kind:'up',   value: dRank };
+        else if (dRank < 0) r.delta = { kind:'down', value: -dRank };
+        else r.delta = { kind:'same', value: 0 };
+      }
+    });
 
     const body = document.getElementById('liveBody');
     if (rows.length === 0) {
       body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
-      return;
+    } else {
+      const headCells = [
+        '<th class="rank-col">#</th>',
+        '<th class="player-col">Spieler</th>',
+        ...orderedDiscs.map(d => {
+          const done = discDone[d.id];
+          const isCurrent = currentDisc && d.id === currentDisc.id;
+          const isLastDone = d.id === lastDoneId;
+          const cls = ['disc'];
+          if (done) cls.push('done');
+          if (isCurrent) cls.push('now');
+          if (isLastDone) cls.push('last-done');
+          return `<th class="${cls.join(' ')}">${discShort(d.kind)}</th>`;
+        }),
+        '<th class="total-col">Total</th>',
+        '<th class="wins-col">×1</th>',
+      ].join('');
+
+      const rowsHtml = rows.map((r,i) => {
+        const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
+        const flash = r.pointsDelta > 0 && !demoFirstRender ? ' flash' : '';
+        const av = r.player.avatar_url
+          ? `background-image:url(${r.player.avatar_url});`
+          : `background:${grad(i)}`;
+        const cells = orderedDiscs.map(d => {
+          const p = r.points[d.id];
+          const pl = r.placements[d.id];
+          const done = discDone[d.id];
+          const isCurrent = currentDisc && d.id === currentDisc.id;
+          const isLastDone = d.id === lastDoneId;
+          const cls = ['disc'];
+          if (p != null) cls.push('scored');
+          if (pl === 1) cls.push('win');
+          if (isCurrent) cls.push('now');
+          if (isLastDone) cls.push('last-done');
+          return `<td class="${cls.join(' ')}">${p != null ? p : '—'}</td>`;
+        }).join('');
+        let deltaBadge = '';
+        if (r.delta.kind === 'up')   deltaBadge = `<span class="rank-delta up">▲${r.delta.value}</span>`;
+        if (r.delta.kind === 'down') deltaBadge = `<span class="rank-delta down">▼${r.delta.value}</span>`;
+        if (r.delta.kind === 'new')  deltaBadge = `<span class="rank-delta new">NEU</span>`;
+        const pointsFlash = r.pointsDelta > 0 && !demoFirstRender ? `<span class="pts-flash">+${r.pointsDelta}</span>` : '';
+        return `
+          <tr class="${tier}${flash}" data-pid="${r.player.id}">
+            <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span>${deltaBadge}</td>
+            <td class="player-col">
+              <div class="sb-player">
+                <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
+                <div>
+                  <div class="sb-name">${r.player.name}${r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : ''}${pointsFlash}</div>
+                </div>
+              </div>
+            </td>
+            ${cells}
+            <td class="total-col">${r.total}</td>
+            <td class="wins-col">${r.wins ? '×' + r.wins : '—'}</td>
+          </tr>`;
+      }).join('');
+
+      body.innerHTML = `<table class="sb-table"><thead><tr>${headCells}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
     }
 
-    // Build table
-    const headCells = [
-      '<th class="rank-col">#</th>',
-      '<th class="player-col">Spieler</th>',
-      ...orderedDiscs.map(d => {
-        const done = discDone[d.id];
-        const isCurrent = currentDisc && d.id === currentDisc.id;
-        const cls = done ? 'disc done' : (isCurrent ? 'disc now' : 'disc');
-        return `<th class="${cls}">${discShort(d.kind)}</th>`;
-      }),
-      '<th class="total-col">Total</th>',
-      '<th class="wins-col">×1</th>',
-    ].join('');
-
-    const rowsHtml = rows.map((r,i) => {
-      const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
-      const av = r.player.avatar_url
-        ? `background-image:url(${r.player.avatar_url});`
-        : `background:${grad(i)}`;
-      const cells = orderedDiscs.map(d => {
-        const p = r.points[d.id];
-        const pl = r.placements[d.id];
-        if (p == null) return '<td class="disc">—</td>';
-        const cls = pl === 1 ? 'disc scored win' : 'disc scored';
-        return `<td class="${cls}">${p}</td>`;
-      }).join('');
-      return `
-        <tr class="${tier}">
-          <td class="rank-col"><span class="rank-pill ${tier}">${pad2(r.rank)}</span></td>
-          <td class="player-col">
-            <div class="sb-player">
-              <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
-              <div class="sb-name">${r.player.name}${r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : ''}</div>
-            </div>
-          </td>
-          ${cells}
-          <td class="total-col">${r.total}</td>
-          <td class="wins-col">${r.wins ? '×' + r.wins : '—'}</td>
-        </tr>`;
-    }).join('');
-
-    body.innerHTML = `<table class="sb-table"><thead><tr>${headCells}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
+    // Update snapshot AFTER rendering so deltas next time are vs this state
+    const newSnapshot = {};
+    rows.forEach(r => { newSnapshot[r.player.id] = { rank: r.rank, total: r.total }; });
+    lastSnapshot = newSnapshot;
+    demoFirstRender = false;
   }
 
   async function renderVeto() {
@@ -621,6 +954,18 @@
       setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1500);
     } catch (ex) { alert('Konnte Veto nicht speichern: ' + (ex.message || ex)); btn.textContent = old; btn.disabled = false; }
   });
+
+  // Demo step controls
+  if (isDemo) {
+    [0,1,2,3,4].forEach(step => {
+      const btn = document.getElementById(`demoStep${step}`);
+      if (btn) btn.addEventListener('click', () => {
+        demoStep = step;
+        // DON'T reset demoFirstRender so we get flashes / deltas on subsequent steps
+        refreshEvents();
+      });
+    });
+  }
 
   refreshEvents();
   if (!isDemo) {
