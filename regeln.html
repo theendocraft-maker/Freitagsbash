@@ -26,7 +26,7 @@
   /* Nav */
   header { border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(8,8,13,0.8); z-index: 50; backdrop-filter: blur(14px); }
   .nav-inner { max-width: var(--wrap); margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
-  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.15em; color: var(--accent); line-height: 1; }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.15em; color: var(--accent); line-height: 1; text-decoration: none; }
   .logo span { color: var(--text); opacity: 0.45; font-size: 0.7rem; letter-spacing: 0.25em; display: block; font-family: 'DM Mono', monospace; margin-top: 2px; }
   .nav-links { display: flex; align-items: center; gap: 1.6rem; }
   .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.85rem; letter-spacing: 0.04em; transition: color 0.2s; font-weight: 500; }
@@ -202,10 +202,11 @@
 
 <header>
   <div class="nav-inner">
-    <div class="logo">Freitags Bash<span>SAISON 1 · 2026</span></div>
+    <a href="index.html" class="logo">Freitags Bash<span>SAISON 1 · 2026</span></a>
     <div class="nav-links">
-      <a href="index.html#leaderboard" class="hide-sm">Rangliste</a>
-      <a href="abend.html" class="hide-sm">Abend</a>
+      <a href="index.html" class="hide-sm">Start</a>
+      <a href="index.html#leaderboard" class="hide-sm">Saison</a>
+      <a href="abend.html" class="hide-sm">Spielabend</a>
       <a href="regeln.html" class="active">Regeln</a>
       <a href="anmelden.html" class="nav-cta">Anmelden</a>
     </div>
@@ -353,9 +354,11 @@
 
 <footer>
   <div class="footer-inner">
-    <div class="logo">Freitags Bash<span>SAISON 1 · 2026</span></div>
+    <a href="index.html" class="logo">Freitags Bash<span>SAISON 1 · 2026</span></a>
     <nav>
-      <a href="index.html#leaderboard">Rangliste</a>
+      <a href="index.html">Start</a>
+      <a href="index.html#leaderboard">Saison</a>
+      <a href="abend.html">Spielabend</a>
       <a href="regeln.html">Regeln</a>
       <a href="anmelden.html">Anmelden</a>
     </nav>
