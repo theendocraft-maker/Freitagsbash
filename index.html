@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freitags Bash</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #ffffff0f;
+    --accent: #f5c842;
+    --accent2: #ff5c5c;
+    --accent3: #5cefff;
+    --neon: #5cefff;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --danger: #ff5c5c;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(10,10,15,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.14em;
+    color: var(--text);
+  }
+  .nav-logo span { color: var(--accent); }
+
+  .nav-links { display: flex; gap: 2rem; list-style: none; align-items: center; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; letter-spacing: 0.04em; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--accent); }
+
+  .player-count-badge {
+    background: rgba(245,200,66,0.1);
+    border: 1px solid rgba(245,200,66,0.28);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    user-select: none;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    text-align: center;
+    padding: 2rem;
+    padding-top: 80px;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 25%, rgba(245,200,66,0.09) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 20% 80%, rgba(92,239,255,0.05) 0%, transparent 50%);
+  }
+
+  .grid-lines {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(245,200,66,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,200,66,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridMove 20s linear infinite;
+  }
+
+  @keyframes gridMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(60px); }
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(245,200,66,0.1);
+    border: 1px solid rgba(245,200,66,0.25);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(4rem, 14vw, 9rem);
+    font-weight: 400;
+    line-height: 0.88;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.3em;
+    position: relative;
+  }
+
+  .hero-title .line1 { display: block; color: var(--text); }
+  .hero-title .line2 {
+    display: block;
+    color: var(--accent);
+    filter: drop-shadow(0 0 40px rgba(245,200,66,0.3));
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--muted);
+    margin-bottom: 2.5rem;
+    max-width: 440px;
+    line-height: 1.7;
+    position: relative;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0f; border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer; transition: all 0.2s;
+    text-decoration: none;
+    box-shadow: 0 4px 24px rgba(245,200,66,0.22);
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,200,66,0.32); }
+
+  .btn-ghost {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 0.85rem 2rem;
+    border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; text-decoration: none;
+  }
+
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .countdown-wrap { margin-top: 4rem; position: relative; }
+  .countdown-label { font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+
+  .countdown { display: flex; gap: 1rem; justify-content: center; }
+
+  .cd-unit { display: flex; flex-direction: column; align-items: center; }
+
+  .cd-num {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    width: 64px; height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  .cd-lbl { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.4rem; }
+
+  .event-banner {
+    margin-top: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(92,239,255,0.06);
+    border: 1px solid rgba(92,239,255,0.18);
+    color: var(--accent3);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.4rem 1.1rem;
+    border-radius: 999px;
+  }
+
+  /* SECTIONS */
+  section { max-width: 900px; margin: 0 auto; padding: 5rem 2rem; }
+
+  .section-eyebrow { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.6rem; }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    font-weight: 400; letter-spacing: 0.04em;
+    margin-bottom: 1rem; line-height: 1;
+  }
+
+  .section-title span { color: var(--accent); }
+
+  .section-desc { color: var(--muted); max-width: 520px; line-height: 1.7; font-size: 0.95rem; }
+
+  /* Leaderboard */
+  .leaderboard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-top: 2.5rem;
+  }
+
+  .lb-header {
+    display: grid;
+    grid-template-columns: 48px 1fr 80px 80px;
+    padding: 0.85rem 1.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem; font-weight: 500;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lb-row {
+    display: grid;
+    grid-template-columns: 48px 1fr 80px 80px;
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    transition: background 0.15s;
+  }
+
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface2); }
+
+  .lb-rank { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 0.04em; color: var(--muted); }
+  .lb-rank.gold { color: #f5c842; }
+  .lb-rank.silver { color: #c0c0c0; }
+  .lb-rank.bronze { color: #cd7f32; }
+
+  .lb-player { display: flex; align-items: center; gap: 0.75rem; }
+
+  .lb-avatar {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 700; color: #0a0a0f; flex-shrink: 0;
+  }
+
+  .lb-name { font-weight: 600; font-size: 0.9rem; }
+  .lb-cry { font-size: 0.72rem; color: var(--muted); font-style: italic; margin-top: 1px; }
+  .lb-pts { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--accent); font-size: 1rem; text-align: right; }
+  .lb-w { color: var(--muted); font-size: 0.82rem; text-align: right; font-family: 'DM Mono', monospace; }
+  .lb-empty { padding: 3rem; text-align: center; color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
+
+  /* Players */
+  .players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-top: 2.5rem;
+  }
+
+  .player-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: fadeUp 0.35s ease forwards;
+    position: relative;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .player-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .pc-avatar {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 700; color: #0a0a0f;
+    margin: 0 auto 0.75rem;
+  }
+
+  .pc-name { font-weight: 700; font-size: 0.92rem; margin-bottom: 0.35rem; }
+
+  .pc-cry {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.4;
+  }
+
+  .pc-status {
+    display: inline-block;
+    margin-top: 0.65rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    background: rgba(92,239,255,0.1);
+    color: var(--accent3);
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+  }
+
+  .players-empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 2.5rem; font-size: 0.88rem; }
+
+  /* Admin */
+  .admin-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    color: #0a0a0f; text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.45rem 1rem;
+    z-index: 110; cursor: pointer;
+    display: none;
+    box-shadow: 0 2px 12px rgba(255,92,92,0.3);
+  }
+  .admin-banner.show { display: block; }
+  body.admin-mode nav { top: 1.8rem; }
+
+  .pc-delete {
+    position: absolute;
+    top: 0.5rem; right: 0.5rem;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(255,92,92,0.18);
+    color: var(--accent2);
+    border: 1px solid rgba(255,92,92,0.4);
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700;
+    cursor: pointer; line-height: 1; padding: 0;
+    transition: background 0.15s, transform 0.15s, color 0.15s;
+  }
+  body.admin-mode .pc-delete { display: flex; }
+  .pc-delete:hover { background: var(--accent2); color: white; transform: scale(1.1); }
+
+  /* Register */
+  .register-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2.5rem;
+    margin-top: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .register-wrap::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  }
+
+  .reg-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.7rem; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+  .reg-sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 2rem; line-height: 1.55; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 580px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  .form-group.full { grid-column: 1/-1; }
+
+  label { font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+  /* AVATAR UPLOAD */
+  .avatar-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+    padding: 1.25rem;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .avatar-upload-row:hover { border-color: var(--accent); }
+
+  .avatar-preview-circle {
+    width: 64px; height: 64px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .avatar-preview-circle img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+
+  .avatar-upload-row:hover .avatar-preview-circle { border-color: var(--accent); }
+
+  .avatar-upload-info { flex: 1; }
+  .avatar-upload-label { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
+  .avatar-upload-hint  { font-size: 0.72rem; color: var(--muted); }
+
+  input, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    font-family: 'DM Sans', inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    width: 100%;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(245,200,66,0.1);
+  }
+
+  .form-footer {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .submit-btn {
+    background: var(--accent);
+    color: #0a0a0f; border: none;
+    padding: 0.85rem 1.8rem;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    box-shadow: 0 4px 18px rgba(245,200,66,0.2);
+  }
+
+  .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(245,200,66,0.3); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .form-note { font-size: 0.78rem; color: var(--muted); }
+
+  .msg-ok {
+    display: none;
+    background: rgba(92,239,255,0.07);
+    border: 1px solid rgba(92,239,255,0.25);
+    color: var(--accent3);
+    padding: 0.9rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.88rem; font-weight: 500;
+    margin-top: 1rem;
+    align-items: center; gap: 0.5rem;
+  }
+
+  .msg-ok.show { display: flex; }
+
+  .msg-err {
+    display: none;
+    background: rgba(255,92,92,0.08);
+    border: 1px solid rgba(255,92,92,0.25);
+    color: var(--danger);
+    padding: 0.9rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    margin-top: 1rem;
+  }
+
+  .msg-err.show { display: block; }
+
+  footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    border-top: 1px solid var(--border);
+  }
+
+  footer strong { color: var(--accent); font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.08em; font-size: 0.95rem; }
+  footer a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  footer a:hover { color: var(--accent); }
+
+  @media (max-width: 600px) {
+    .nav-links { gap: 1.1rem; }
+    .lb-header, .lb-row { grid-template-columns: 40px 1fr 60px; }
+    .lb-w { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="admin-banner" id="adminBanner">⚠️ Admin-Modus aktiv · Klick hier zum Beenden</div>
+
+<nav>
+  <div class="nav-logo">FREITAGS <span>BASH</span></div>
+  <ul class="nav-links">
+    <li><a href="#leaderboard">Rangliste</a></li>
+    <li><a href="regeln.html">Regeln</a></li>
+    <li><a href="#register">Anmelden</a></li>
+  </ul>
+  <div class="player-count-badge" id="navCount">0 Spieler</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="grid-lines"></div>
+
+  <div class="hero-badge">
+    <div class="badge-dot"></div>
+    1–2× im Monat · Online · Kompetitiv
+  </div>
+
+  <h1 class="hero-title">
+    <span class="line1">FREITAGS</span>
+    <span class="line2">BASH</span>
+  </h1>
+
+  <p class="hero-sub">Fünf Disziplinen. Ein Abend. Einer gewinnt die Krone — bis zum nächsten Mal.</p>
+
+  <div class="hero-cta">
+    <a href="#register" class="btn-primary">🎮 Jetzt anmelden</a>
+    <a href="regeln.html" class="btn-ghost">📋 Regeln ansehen</a>
+  </div>
+
+  <div class="countdown-wrap">
+    <div class="countdown-label">Erster Bash in</div>
+    <div class="countdown">
+      <div class="cd-unit"><div class="cd-num" id="cd-d">--</div><div class="cd-lbl">Tage</div></div>
+      <div class="cd-unit"><div class="cd-num" id="cd-h">--</div><div class="cd-lbl">Std</div></div>
+      <div class="cd-unit"><div class="cd-num" id="cd-m">--</div><div class="cd-lbl">Min</div></div>
+      <div class="cd-unit"><div class="cd-num" id="cd-s">--</div><div class="cd-lbl">Sek</div></div>
+    </div>
+    <div class="event-banner">📅 Freitag, 29. Mai 2026 · 20:00 Uhr</div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<section id="leaderboard" style="padding-top:0">
+  <div class="section-eyebrow">Saisonwertung</div>
+  <h2 class="section-title">Rangliste <span>Saison 1</span></h2>
+
+  <div class="leaderboard">
+    <div class="lb-header">
+      <div>#</div><div>Spieler</div>
+      <div style="text-align:right">Punkte</div>
+      <div style="text-align:right">Siege</div>
+    </div>
+    <div id="lbBody">
+      <div class="lb-empty">Die Saison beginnt am 29. Mai.<br>Meld dich an und sei von Anfang an dabei.</div>
+    </div>
+  </div>
+</section>
+
+<!-- PLAYERS -->
+<section id="players" style="padding-top:0">
+  <div class="section-eyebrow">Teilnehmer</div>
+  <h2 class="section-title">Die <span>Crew</span></h2>
+  <div class="players-grid" id="playersGrid">
+    <div class="players-empty">Noch niemand angemeldet — sei der Erste.</div>
+  </div>
+</section>
+
+<!-- REGISTER -->
+<section id="register" style="padding-top:0">
+  <div class="section-eyebrow">Mitmachen</div>
+  <h2 class="section-title">Anmelden für <span>Saison 1</span></h2>
+
+  <div class="register-wrap">
+    <div class="reg-title">Dein Platz im Turnier</div>
+    <div class="reg-sub">Trag deinen Namen ein und wähle deinen Schlachtruf — der erscheint auf deiner Spielerkarte.<br>Erster Bash: Freitag, 29. Mai 2026 · 20:00 Uhr.</div>
+
+    <form id="regForm">
+
+      <input type="file" id="avatarFile" accept="image/*" style="display:none">
+      <div class="avatar-upload-row" id="avatarUploadRow">
+        <div class="avatar-preview-circle" id="avatarCircle">
+          <span id="avatarPlaceholder">📷</span>
+          <img id="avatarImg" alt="Vorschau">
+        </div>
+        <div class="avatar-upload-info">
+          <div class="avatar-upload-label">Profilbild hochladen</div>
+          <div class="avatar-upload-hint">Optional · JPG oder PNG · wird auf deiner Spielerkarte angezeigt</div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="name">Name / Gamertag *</label>
+          <input type="text" id="name" required maxlength="24" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="cry">Dein Schlachtruf *</label>
+          <input type="text" id="cry" required maxlength="60" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-footer">
+        <button type="submit" class="submit-btn" id="submitBtn">🎮 Anmelden</button>
+        <div class="form-note">Kostenlos · Kein Account nötig</div>
+      </div>
+
+      <div class="msg-ok" id="msgOk">✅ Du bist dabei. Wir sehen uns am 29. Mai.</div>
+      <div class="msg-err" id="msgErr"></div>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <strong>Freitags Bash</strong> · 1–2× im Monat · Online<br>
+  <span style="margin-top:0.4rem;display:block">Saison 1 startet am 29. Mai 2026 · <a href="regeln.html">Regeln ansehen</a></span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ===== SUPABASE CONFIG =====
+  // Trag hier deine Supabase-URL und den anon-public-Key ein (Settings → API):
+  const SUPABASE_URL      = 'https://bvaxeqkfozegeejdimdp.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ===== Countdown to 29 May 2026 20:00 =====
+  const TARGET = new Date('2026-05-29T20:00:00');
+  const pad = n => String(n).padStart(2,'0');
+
+  function tick() {
+    const d = TARGET - new Date();
+    if (d <= 0) { ['d','h','m','s'].forEach(x => document.getElementById('cd-'+x).textContent = '00'); return; }
+    document.getElementById('cd-d').textContent = pad(Math.floor(d/86400000));
+    document.getElementById('cd-h').textContent = pad(Math.floor((d%86400000)/3600000));
+    document.getElementById('cd-m').textContent = pad(Math.floor((d%3600000)/60000));
+    document.getElementById('cd-s').textContent = pad(Math.floor((d%60000)/1000));
+  }
+  tick(); setInterval(tick, 1000);
+
+  // ===== Avatar upload =====
+  let currentAvatarBlob = null;
+
+  function resizeImage(file, size, cb) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const min = Math.min(img.width, img.height);
+        const sx = (img.width  - min) / 2;
+        const sy = (img.height - min) / 2;
+        ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+        canvas.toBlob(blob => cb(blob, canvas.toDataURL('image/jpeg', 0.85)), 'image/jpeg', 0.85);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  document.getElementById('avatarUploadRow').addEventListener('click', () => {
+    document.getElementById('avatarFile').click();
+  });
+
+  document.getElementById('avatarFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    resizeImage(file, 240, (blob, dataUrl) => {
+      currentAvatarBlob = blob;
+      const img = document.getElementById('avatarImg');
+      img.src = dataUrl;
+      img.style.display = 'block';
+      document.getElementById('avatarPlaceholder').style.display = 'none';
+    });
+  });
+
+  // ===== Players =====
+  const COLORS = [
+    ['#f5c842','#ff5c5c'],['#5cefff','#f5c842'],['#ff5c5c','#5cefff'],
+    ['#f5c842','#5cefff'],['#ff5c5c','#f5c842'],['#5cefff','#ff5c5c'],
+    ['#f5c842','#e0a91f'],['#5cefff','#3bb8c9']
+  ];
+  const grad = i => { const c=COLORS[i%COLORS.length]; return `linear-gradient(135deg,${c[0]},${c[1]})`; };
+  const ini = s => s.slice(0,2).toUpperCase();
+
+  let players = [];
+
+  async function loadAndRender() {
+    const { data, error } = await sb.from('players').select('*').order('joined', { ascending: true });
+    if (error) { console.error('Load error:', error); return; }
+    players = data || [];
+    render();
+  }
+
+  function render() {
+    document.getElementById('navCount').textContent = players.length + ' Spieler';
+
+    const grid = document.getElementById('playersGrid');
+    grid.innerHTML = players.length === 0
+      ? '<div class="players-empty">Noch niemand angemeldet — sei der Erste.</div>'
+      : players.map((p,i) => {
+          const avatarStyle = p.avatar_url
+            ? `background-image:url(${p.avatar_url});background-size:cover;background-position:center;`
+            : `background:${grad(i)}`;
+          const avatarContent = p.avatar_url ? '' : ini(p.name);
+          return `
+            <div class="player-card">
+              <button class="pc-delete" onclick="deletePlayer('${p.id}')" title="Löschen">×</button>
+              <div class="pc-avatar" style="${avatarStyle}">${avatarContent}</div>
+              <div class="pc-name">${p.name}</div>
+              <div class="pc-cry">„${p.cry}"</div>
+              <div class="pc-status" style="margin-top:0.5rem">✓ Dabei</div>
+            </div>`;
+        }).join('');
+
+    const lbBody = document.getElementById('lbBody');
+    const ranks = ['gold','silver','bronze'];
+    const icons = ['👑','🥈','🥉'];
+    lbBody.innerHTML = players.length === 0
+      ? '<div class="lb-empty">Die Saison beginnt am 29. Mai.<br>Meld dich an und sei von Anfang an dabei.</div>'
+      : players.map((p,i) => `
+        <div class="lb-row">
+          <div class="lb-rank ${ranks[i]||''}">${icons[i]||(i+1)}</div>
+          <div class="lb-player">
+            <div class="lb-avatar" style="${p.avatar_url ? `background-image:url(${p.avatar_url});background-size:cover;background-position:center;` : `background:${grad(i)}`}">${p.avatar_url ? '' : ini(p.name)}</div>
+            <div>
+              <div class="lb-name">${p.name}</div>
+              <div class="lb-cry">„${p.cry}"</div>
+            </div>
+          </div>
+          <div class="lb-pts">—</div>
+          <div class="lb-w">—</div>
+        </div>`).join('');
+  }
+
+  loadAndRender();
+
+  // Live-Updates: andere Anmeldungen erscheinen sofort ohne Reload
+  sb.channel('players-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => loadAndRender())
+    .subscribe();
+
+  // ===== Submit handler =====
+  document.getElementById('regForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const cry  = document.getElementById('cry').value.trim();
+    const btn  = document.getElementById('submitBtn');
+    const err  = document.getElementById('msgErr');
+
+    err.classList.remove('show');
+
+    if (players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+      err.textContent = '⚠️ Dieser Name ist bereits vergeben.';
+      err.classList.add('show');
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Wird gespeichert…';
+
+    try {
+      let avatarUrl = null;
+      if (currentAvatarBlob) {
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g,'').slice(0, 30) || 'player';
+        const filename = `${Date.now()}-${slug}.jpg`;
+        const { error: upErr } = await sb.storage.from('avatars').upload(filename, currentAvatarBlob, { contentType: 'image/jpeg', cacheControl: '3600' });
+        if (upErr) throw upErr;
+        const { data: pub } = sb.storage.from('avatars').getPublicUrl(filename);
+        avatarUrl = pub.publicUrl;
+      }
+
+      const { error: insErr } = await sb.from('players').insert({ name, cry, avatar_url: avatarUrl });
+      if (insErr) throw insErr;
+
+      document.getElementById('msgOk').classList.add('show');
+      btn.textContent = '✓ Angemeldet';
+      document.getElementById('regForm').reset();
+      currentAvatarBlob = null;
+      document.getElementById('avatarImg').style.display = 'none';
+      document.getElementById('avatarImg').src = '';
+      document.getElementById('avatarPlaceholder').style.display = '';
+      document.getElementById('avatarFile').value = '';
+
+      setTimeout(() => {
+        document.getElementById('msgOk').classList.remove('show');
+        btn.disabled = false; btn.textContent = '🎮 Anmelden';
+      }, 4000);
+    } catch (ex) {
+      console.error('Submit error:', ex);
+      const msg = ex && ex.message ? ex.message : 'Unbekannter Fehler';
+      err.textContent = '⚠️ Speichern fehlgeschlagen: ' + msg;
+      err.classList.add('show');
+      btn.disabled = false; btn.textContent = '🎮 Anmelden';
+    }
+  });
+
+  // Smooth scroll für Anker-Links (nur echte Anker, keine externen Links)
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  });
+
+  // ===== Admin mode =====
+  // Trigger: 5× schnell auf das Spieler-Zähler-Badge oben rechts klicken,
+  // dann Passwort eingeben. Passwort hier ändern, wenn nötig:
+  const ADMIN_PASSWORD = 'freitagsbash';
+
+  let adminClicks = 0;
+  let adminClickTimer = null;
+
+  document.getElementById('navCount').addEventListener('click', () => {
+    if (document.body.classList.contains('admin-mode')) return;
+    adminClicks++;
+    clearTimeout(adminClickTimer);
+    adminClickTimer = setTimeout(() => { adminClicks = 0; }, 2000);
+    if (adminClicks >= 5) {
+      adminClicks = 0;
+      const pw = prompt('Admin-Passwort?');
+      if (pw === ADMIN_PASSWORD) {
+        document.body.classList.add('admin-mode');
+        document.getElementById('adminBanner').classList.add('show');
+      } else if (pw !== null) {
+        alert('Falsches Passwort.');
+      }
+    }
+  });
+
+  document.getElementById('adminBanner').addEventListener('click', () => {
+    document.body.classList.remove('admin-mode');
+    document.getElementById('adminBanner').classList.remove('show');
+  });
+
+  // Globale Lösch-Funktion (wird von onclick auf den Karten aufgerufen)
+  window.deletePlayer = async function(id) {
+    const player = players.find(p => p.id === id);
+    if (!player) return;
+    if (!confirm(`„${player.name}" wirklich löschen?`)) return;
+
+    // Avatar aus Storage löschen, wenn vorhanden
+    if (player.avatar_url) {
+      const filename = player.avatar_url.split('/').pop();
+      if (filename) {
+        const { error: stErr } = await sb.storage.from('avatars').remove([filename]);
+        if (stErr) console.warn('Storage delete failed:', stErr);
+      }
+    }
+
+    // Datenbank-Zeile löschen — Realtime triggert dann re-render bei allen Tabs
+    const { error } = await sb.from('players').delete().eq('id', id);
+    if (error) {
+      alert('Fehler beim Löschen: ' + error.message);
+      console.error(error);
+    }
+  };
+</script>
+</body>
+</html>

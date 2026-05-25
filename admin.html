@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freitags Bash · Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #ffffff0f;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --accent: #f5c842;
+    --accent2: #ff5c5c;
+    --accent3: #5cefff;
+    --neon: #5cefff;
+    --danger: #ff5c5c;
+    --warn: #f5c842;
+    --ok: #5cefff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* Nav */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(8,8,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(42,42,74,0.5);
+  }
+  .nav-logo { font-family: 'Bebas Neue', sans-serif; font-weight: 400; letter-spacing: 0.12em; font-size: 1.4rem; }
+  .nav-logo span { color: var(--danger); }
+  .nav-back { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.15s; }
+  .nav-back:hover { color: var(--text); }
+
+  main {
+    max-width: 1100px; margin: 0 auto;
+    padding: 2.5rem 2rem 6rem;
+  }
+
+  /* Login overlay */
+  .login-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    width: 100%; max-width: 360px;
+    text-align: center;
+  }
+  .login-card h1 { font-size: 1.3rem; margin-bottom: 0.4rem; }
+  .login-card p { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .login-input {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.8rem 1rem; color: var(--text); font-size: 0.95rem;
+    margin-bottom: 0.8rem;
+    transition: border-color 0.15s;
+  }
+  .login-input:focus { outline: none; border-color: var(--accent); }
+  .login-error { color: var(--danger); font-size: 0.8rem; min-height: 1.2rem; }
+
+  /* Typography */
+  h1.page-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; font-weight: 400; letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+  .eyebrow { color: var(--accent); font-family: 'DM Mono', monospace; font-weight: 500; font-size: 0.68rem; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .page-desc { color: var(--muted); font-size: 0.92rem; margin-bottom: 2rem; }
+
+  /* Buttons */
+  button, .btn {
+    font-family: inherit; cursor: pointer; border: none;
+    font-weight: 700; letter-spacing: 0.02em;
+    transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0f; padding: 0.85rem 1.5rem;
+    border-radius: 999px; font-size: 0.92rem;
+  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(245,200,66,0.28); }
+  .btn-ghost {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border);
+    padding: 0.65rem 1.2rem; border-radius: 999px; font-size: 0.85rem;
+  }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn-danger {
+    background: rgba(239,68,68,0.12); color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.3);
+    padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8rem;
+  }
+  .btn-danger:hover:not(:disabled) { background: var(--danger); color: white; }
+
+  /* Event list */
+  .event-list-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .event-cards { display: grid; gap: 1rem; }
+  .event-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.4rem 1.6rem;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+  }
+  .event-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .event-card-left h3 { font-size: 1.05rem; margin-bottom: 0.2rem; }
+  .event-card-meta { color: var(--muted); font-size: 0.78rem; }
+  .status-pill {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.2rem 0.6rem; border-radius: 999px;
+  }
+  .status-pill.draft { background: rgba(107,114,128,0.15); color: var(--muted); }
+  .status-pill.live { background: rgba(245,158,11,0.15); color: var(--warn); }
+  .status-pill.finalized { background: rgba(92,239,255,0.12); color: var(--neon); }
+  .empty-state {
+    text-align: center; padding: 4rem 2rem;
+    background: var(--surface); border: 1px dashed var(--border);
+    border-radius: 12px; color: var(--muted);
+  }
+
+  /* Event detail */
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+  .back-link { color: var(--muted); text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; margin-bottom: 1rem; cursor: pointer; }
+  .back-link:hover { color: var(--text); }
+
+  .section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.6rem 1.8rem; margin-bottom: 1.5rem;
+  }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; font-weight: 400; letter-spacing: 0.05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .section-desc { color: var(--muted); font-size: 0.82rem; margin-bottom: 1rem; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
+  .form-group label { display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .form-group input, .form-group select {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.9rem; font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+  select { background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 16px; padding-right: 2rem; appearance: none; }
+
+  /* Participants */
+  .participants-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.5rem;
+  }
+  .participant-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    display: flex; align-items: center; gap: 0.5rem;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    font-size: 0.85rem;
+  }
+  .participant-toggle:hover { border-color: var(--accent); }
+  .participant-toggle.checked {
+    background: rgba(92,239,255,0.08);
+    border-color: rgba(92,239,255,0.4);
+  }
+  .participant-toggle .check {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: 1.5px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; color: white;
+  }
+  .participant-toggle.checked .check {
+    background: var(--neon); border-color: var(--neon); color: var(--bg);
+  }
+
+  /* Disciplines */
+  .disciplines-stack { display: grid; gap: 1rem; }
+  .discipline-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+  }
+  .discipline-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 1.4rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .discipline-head:hover { background: rgba(255,255,255,0.02); }
+  .discipline-head-left { display: flex; align-items: center; gap: 0.7rem; }
+  .discipline-icon { font-size: 1.3rem; }
+  .discipline-title { font-weight: 800; font-size: 0.98rem; }
+  .discipline-body {
+    padding: 0 1.4rem 1.4rem;
+    border-top: 1px solid var(--border);
+  }
+  .discipline-body.collapsed { display: none; }
+  .chevron { color: var(--muted); transition: transform 0.2s; font-size: 0.8rem; }
+  .discipline-card.open .chevron { transform: rotate(180deg); }
+
+  .result-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    align-items: center; gap: 1rem;
+    padding: 0.7rem 0; border-bottom: 1px solid rgba(42,42,74,0.4);
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-name { font-weight: 600; font-size: 0.92rem; }
+  .result-input {
+    width: 60px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.45rem 0.6rem; color: var(--text); font-size: 0.9rem;
+    text-align: center; font-family: 'Courier New', monospace; font-weight: 700;
+  }
+  .result-input:focus { outline: none; border-color: var(--accent); }
+  .result-points { font-family: 'Courier New', monospace; font-weight: 700; color: var(--accent); min-width: 50px; text-align: right; font-size: 0.95rem; }
+  .tier-buttons { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .tier-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); padding: 0.35rem 0.6rem;
+    border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.04em; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tier-btn:hover { border-color: var(--accent); color: var(--text); }
+  .tier-btn.selected { background: var(--accent); border-color: var(--accent); color: white; }
+  .team-buttons { display: flex; gap: 0.3rem; }
+  .team-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); width: 32px; height: 32px;
+    border-radius: 6px; font-size: 0.85rem; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .team-btn:hover { border-color: var(--accent); color: var(--text); }
+  .team-btn.selected-t1 { background: rgba(245,200,66,0.18); border-color: var(--accent); color: var(--accent); }
+  .team-btn.selected-t2 { background: rgba(92,239,255,0.18); border-color: #5cefff; color: #5cefff; }
+  .team-btn.selected-t3 { background: rgba(255,92,92,0.18); border-color: var(--accent2); color: var(--accent2); }
+
+  .haxball-step { margin-top: 0.5rem; }
+  .haxball-step-title {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem;
+    padding-top: 0.6rem; border-top: 1px solid rgba(42,42,74,0.5);
+  }
+  .team-rank-row {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(42,42,74,0.3);
+  }
+  .team-rank-row:last-child { border-bottom: none; }
+  .team-badge {
+    display: inline-block; padding: 0.25rem 0.7rem;
+    border-radius: 6px; font-size: 0.78rem; font-weight: 700;
+  }
+  .team-badge.t1 { background: rgba(245,200,66,0.18); color: var(--accent); }
+  .team-badge.t2 { background: rgba(92,239,255,0.18); color: #5cefff; }
+  .team-badge.t3 { background: rgba(255,92,92,0.18); color: var(--accent2); }
+  .team-members { color: var(--muted); font-size: 0.8rem; flex: 1; }
+  .team-rank-input {
+    width: 50px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.35rem 0.4rem; color: var(--text); font-size: 0.85rem;
+    text-align: center; font-family: 'Courier New', monospace; font-weight: 700;
+  }
+
+  .validation-hint {
+    font-size: 0.72rem; color: var(--warn);
+    margin-top: 0.5rem;
+    display: none;
+  }
+  .validation-hint.show { display: block; }
+
+  /* Overview table */
+  .overview-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .overview-table th, .overview-table td {
+    padding: 0.7rem 0.5rem; text-align: left;
+    border-bottom: 1px solid rgba(42,42,74,0.4);
+  }
+  .overview-table th {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .overview-table td.num { text-align: right; font-family: 'Courier New', monospace; font-weight: 700; }
+  .overview-table tr.leader td { background: rgba(245,158,11,0.06); }
+  .crown-badge {
+    display: inline-block; margin-left: 0.4rem;
+    font-size: 0.65rem; color: var(--warn);
+    background: rgba(245,158,11,0.15);
+    padding: 0.1rem 0.4rem; border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Finalize bar */
+  .finalize-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 1rem; flex-wrap: wrap;
+    padding: 1.5rem 1.8rem;
+    background: linear-gradient(135deg, rgba(245,200,66,0.08), rgba(255,92,92,0.08));
+    border: 1px solid rgba(245,200,66,0.3);
+    border-radius: 14px;
+  }
+  .finalize-info { color: var(--muted); font-size: 0.85rem; }
+  .finalize-info strong { color: var(--text); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.8rem 1.3rem;
+    font-size: 0.85rem; z-index: 200;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+  .toast.ok { border-color: var(--neon); color: var(--neon); }
+</style>
+</head>
+<body>
+
+<!-- Login Overlay -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <h1>🔒 Admin-Bereich</h1>
+    <p>Passwort eingeben, um den Abend zu tracken.</p>
+    <input type="password" class="login-input" id="loginPw" placeholder="Passwort" autofocus>
+    <button class="btn-primary" id="loginBtn" style="width:100%">Anmelden</button>
+    <div class="login-error" id="loginErr"></div>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-logo">FREITAGS BASH · <span>ADMIN</span></div>
+  <a href="index.html" class="nav-back">← Hauptseite</a>
+</nav>
+
+<main id="adminMain" style="display:none">
+
+  <!-- Event List View -->
+  <div id="eventListView">
+    <div class="eyebrow">Saison 1</div>
+    <h1 class="page-title">Abende</h1>
+    <p class="page-desc">Pro Abend werden 5 Disziplinen gespielt. Beim Abschließen werden Saisonpunkte automatisch berechnet (mit Krone-Bürde und Streicher).</p>
+
+    <div class="event-list-header">
+      <div></div>
+      <button class="btn-primary" id="newEventBtn">+ Neuer Abend</button>
+    </div>
+
+    <div class="event-cards" id="eventCards"></div>
+  </div>
+
+  <!-- Event Detail View -->
+  <div id="eventDetailView" style="display:none">
+    <a class="back-link" id="backLink">← Alle Abende</a>
+
+    <div class="detail-header">
+      <div>
+        <div class="eyebrow" id="detailEyebrow">Abend</div>
+        <h1 class="page-title" id="detailTitle">—</h1>
+      </div>
+      <div>
+        <span class="status-pill" id="detailStatus">draft</span>
+      </div>
+    </div>
+
+    <!-- Setup -->
+    <div class="section">
+      <div class="section-title">⚙️ Setup</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Datum</label>
+          <input type="date" id="setupDate">
+        </div>
+        <div class="form-group">
+          <label>Veranstalter (für Abend 1: Krone)</label>
+          <select id="setupHost"></select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:0.5rem">
+        <label>Teilnehmer</label>
+        <div class="participants-grid" id="participantsGrid"></div>
+      </div>
+    </div>
+
+    <!-- Disciplines -->
+    <div class="section">
+      <div class="section-title">🎯 Disziplinen</div>
+      <p class="section-desc">Klick auf eine Disziplin zum Auf-/Zuklappen. Eingaben werden automatisch gespeichert.</p>
+      <div class="disciplines-stack" id="disciplinesStack"></div>
+    </div>
+
+    <!-- Overview -->
+    <div class="section">
+      <div class="section-title">📊 Abendwertung (Vorschau)</div>
+      <p class="section-desc">Live berechnet aus allen Disziplinen, in denen Punkte vergeben sind. Wird beim Abschließen festgeschrieben.</p>
+      <table class="overview-table" id="overviewTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Spieler</th>
+            <th class="num">Disziplin-Pkt</th>
+            <th class="num">Saisonpunkte (Vorschau)</th>
+          </tr>
+        </thead>
+        <tbody id="overviewBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Finalize -->
+    <div class="finalize-bar">
+      <div class="finalize-info">
+        <strong>Abend abschließen?</strong><br>
+        Danach werden Saisonpunkte in die Tabelle geschrieben und der Abend gilt als fertig.
+      </div>
+      <button class="btn-primary" id="finalizeBtn">🏆 Abend abschließen</button>
+    </div>
+
+    <div style="margin-top:2rem; text-align:right">
+      <button class="btn-danger" id="deleteEventBtn">🗑️ Diesen Abend löschen</button>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ===== Config (selbe wie friday-bash.html) =====
+  const SUPABASE_URL      = 'https://bvaxeqkfozegeejdimdp.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
+  const ADMIN_PASSWORD = 'freitagsbash';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ===== Disziplin-Definitionen =====
+  const DISCIPLINES = [
+    { kind: 'geoguessr', name: 'GeoGuessr',              icon: '🌍', type: 'solo' },
+    { kind: 'haxball',   name: 'Haxball',                icon: '⚽', type: 'team' },
+    { kind: 'chess',     name: 'Chess.com Blitz',        icon: '♟️', type: 'solo' },
+    { kind: 'brawlhalla', name: 'Brawlhalla',            icon: '⚔️', type: 'solo' },
+    { kind: 'fallguys',  name: 'Fall Guys',              icon: '🫘', type: 'fallguys' }
+  ];
+
+  const SOLO_POINTS     = [10, 8, 6, 4, 3, 2, 1]; // Platz 1..7+, 7+ alle 1
+  const HAXBALL_POINTS  = [9, 6, 3, 1, 1];        // Teamrang 1..N, alles ab 4 nur noch 1
+  const FALLGUYS_TIERS  = [
+    { tier: 1, label: '🏆 Show',    points: 10 },
+    { tier: 2, label: 'Finale',     points: 7 },
+    { tier: 3, label: 'Halbfinale', points: 5 },
+    { tier: 4, label: 'R2–3',       points: 3 },
+    { tier: 5, label: 'R1',         points: 1 }
+  ];
+  const SEASON_PTS_BY_RANK = [25, 18, 15, 12, 10, 8, 6, 4]; // Platz 1..8+
+
+  // ===== State =====
+  let players = [];                  // alle registrierten Spieler
+  let events = [];                   // alle Abende
+  let currentEvent = null;           // aktuell geöffneter Abend
+  let currentDisciplines = [];       // 5 Disziplinen des aktuellen Abends
+  let currentResults = {};           // { disciplineId: { playerId: resultRow } }
+  let currentParticipantIds = new Set();
+
+  // ===== Helpers =====
+  const $ = id => document.getElementById(id);
+  const fmtDate = d => new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
+  const round = n => Math.round(n);
+
+  function toast(msg, kind = '') {
+    const el = $('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  function soloPoints(rank) {
+    if (!rank || rank < 1) return 0;
+    return SOLO_POINTS[Math.min(rank, SOLO_POINTS.length) - 1];
+  }
+  function haxballPoints(teamRank) {
+    if (!teamRank || teamRank < 1) return 0;
+    return HAXBALL_POINTS[Math.min(teamRank, HAXBALL_POINTS.length) - 1];
+  }
+  function fallguysPoints(tier) {
+    const t = FALLGUYS_TIERS.find(x => x.tier === tier);
+    return t ? t.points : 0;
+  }
+  function seasonPointsByRank(rank) {
+    if (!rank || rank < 1) return 0;
+    return SEASON_PTS_BY_RANK[Math.min(rank, SEASON_PTS_BY_RANK.length) - 1];
+  }
+
+  // ===== Login =====
+  function tryLogin() {
+    const pw = $('loginPw').value;
+    if (pw === ADMIN_PASSWORD) {
+      sessionStorage.setItem('fbAdmin', '1');
+      $('loginOverlay').style.display = 'none';
+      $('adminMain').style.display = 'block';
+      init();
+    } else {
+      $('loginErr').textContent = 'Falsches Passwort.';
+      $('loginPw').value = '';
+      $('loginPw').focus();
+    }
+  }
+  $('loginBtn').addEventListener('click', tryLogin);
+  $('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+  if (sessionStorage.getItem('fbAdmin') === '1') {
+    $('loginOverlay').style.display = 'none';
+    $('adminMain').style.display = 'block';
+    init();
+  }
+
+  // ===== Init / Load =====
+  async function init() {
+    await loadPlayers();
+    await loadEvents();
+    renderEventList();
+  }
+
+  async function loadPlayers() {
+    const { data, error } = await sb.from('players').select('*').order('name');
+    if (error) { console.error(error); toast('Fehler: Spieler laden', 'error'); return; }
+    players = data || [];
+  }
+
+  async function loadEvents() {
+    const { data, error } = await sb.from('events').select('*').order('event_date', { ascending: true });
+    if (error) { console.error(error); toast('Fehler: Abende laden', 'error'); return; }
+    events = data || [];
+  }
+
+  // ===== Event-Liste rendern =====
+  function renderEventList() {
+    const wrap = $('eventCards');
+    if (events.length === 0) {
+      wrap.innerHTML = `<div class="empty-state">Noch kein Abend angelegt. Klick auf <strong>"+ Neuer Abend"</strong>, um zu starten.</div>`;
+      return;
+    }
+    wrap.innerHTML = events.map(ev => `
+      <div class="event-card" onclick="openEvent('${ev.id}')">
+        <div class="event-card-left">
+          <h3>${ev.name}</h3>
+          <div class="event-card-meta">${fmtDate(ev.event_date)}</div>
+        </div>
+        <span class="status-pill ${ev.status}">${ev.status === 'finalized' ? '✓ Abgeschlossen' : ev.status === 'live' ? 'Läuft' : 'Entwurf'}</span>
+      </div>
+    `).join('');
+  }
+
+  // ===== Neuer Abend =====
+  $('newEventBtn').addEventListener('click', async () => {
+    const num = events.length + 1;
+    const name = prompt('Name für den Abend?', `Abend ${num}`);
+    if (!name) return;
+    const today = new Date().toISOString().slice(0,10);
+    const date = prompt('Datum (YYYY-MM-DD)?', num === 1 ? '2026-05-29' : today);
+    if (!date) return;
+
+    // Event anlegen
+    const { data: seasonRow } = await sb.from('seasons').select('id').eq('is_active', true).single();
+    if (!seasonRow) { toast('Keine aktive Saison gefunden', 'error'); return; }
+
+    const { data: newEv, error } = await sb.from('events')
+      .insert({ season_id: seasonRow.id, name, event_date: date, status: 'draft' })
+      .select().single();
+    if (error) { console.error(error); toast('Fehler beim Anlegen', 'error'); return; }
+
+    // 5 Disziplinen anlegen
+    const discRows = DISCIPLINES.map((d, i) => ({
+      event_id: newEv.id, kind: d.kind, name: d.name, position: i + 1
+    }));
+    const { error: dErr } = await sb.from('disciplines').insert(discRows);
+    if (dErr) { console.error(dErr); toast('Fehler bei Disziplinen', 'error'); return; }
+
+    await loadEvents();
+    openEvent(newEv.id);
+    toast('Abend angelegt', 'ok');
+  });
+
+  // ===== Event öffnen =====
+  window.openEvent = async function(id) {
+    currentEvent = events.find(e => e.id === id);
+    if (!currentEvent) { toast('Abend nicht gefunden', 'error'); return; }
+
+    // Disziplinen laden
+    const { data: dData } = await sb.from('disciplines')
+      .select('*').eq('event_id', id).order('position');
+    currentDisciplines = dData || [];
+
+    // Ergebnisse laden
+    const dIds = currentDisciplines.map(d => d.id);
+    currentResults = {};
+    currentDisciplines.forEach(d => currentResults[d.id] = {});
+    if (dIds.length > 0) {
+      const { data: rData } = await sb.from('results').select('*').in('discipline_id', dIds);
+      (rData || []).forEach(r => {
+        currentResults[r.discipline_id][r.player_id] = r;
+      });
+    }
+
+    // Teilnehmer laden
+    const { data: pData } = await sb.from('event_participation')
+      .select('*').eq('event_id', id);
+    currentParticipantIds = new Set((pData || []).filter(p => p.attended).map(p => p.player_id));
+
+    // Wenn noch keine Teilnehmer eingetragen sind, alle vorauswählen (Default)
+    if ((pData || []).length === 0) {
+      currentParticipantIds = new Set(players.map(p => p.id));
+    }
+
+    $('eventListView').style.display = 'none';
+    $('eventDetailView').style.display = 'block';
+    renderDetail();
+    window.scrollTo(0, 0);
+  };
+
+  $('backLink').addEventListener('click', () => {
+    $('eventDetailView').style.display = 'none';
+    $('eventListView').style.display = 'block';
+    currentEvent = null;
+    loadEvents().then(renderEventList);
+  });
+
+  // ===== Detail rendern =====
+  function renderDetail() {
+    $('detailEyebrow').textContent = 'Saison 1';
+    $('detailTitle').textContent = currentEvent.name;
+    const stPill = $('detailStatus');
+    stPill.className = 'status-pill ' + currentEvent.status;
+    stPill.textContent = currentEvent.status === 'finalized' ? '✓ Abgeschlossen' : currentEvent.status === 'live' ? 'Läuft' : 'Entwurf';
+
+    $('setupDate').value = currentEvent.event_date;
+    const hostSel = $('setupHost');
+    hostSel.innerHTML = '<option value="">— niemand —</option>' +
+      players.map(p => `<option value="${p.id}" ${currentEvent.host_player_id === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
+
+    // Teilnehmer-Toggles
+    const pg = $('participantsGrid');
+    pg.innerHTML = players.map(p => {
+      const checked = currentParticipantIds.has(p.id);
+      return `
+        <div class="participant-toggle ${checked ? 'checked' : ''}" onclick="toggleParticipant('${p.id}')">
+          <div class="check">${checked ? '✓' : ''}</div>
+          <div>${p.name}</div>
+        </div>`;
+    }).join('');
+
+    // Disziplinen
+    renderDisciplines();
+    renderOverview();
+  }
+
+  // Setup Updates
+  $('setupDate').addEventListener('change', async () => {
+    const v = $('setupDate').value;
+    await sb.from('events').update({ event_date: v }).eq('id', currentEvent.id);
+    currentEvent.event_date = v;
+    toast('Datum gespeichert', 'ok');
+  });
+  $('setupHost').addEventListener('change', async () => {
+    const v = $('setupHost').value || null;
+    await sb.from('events').update({ host_player_id: v }).eq('id', currentEvent.id);
+    currentEvent.host_player_id = v;
+    renderOverview();
+  });
+
+  // ===== Teilnehmer toggeln =====
+  window.toggleParticipant = async function(playerId) {
+    if (currentParticipantIds.has(playerId)) {
+      currentParticipantIds.delete(playerId);
+    } else {
+      currentParticipantIds.add(playerId);
+    }
+    renderDetail();
+  };
+
+  // ===== Disziplinen rendern =====
+  function renderDisciplines() {
+    const wrap = $('disciplinesStack');
+    wrap.innerHTML = currentDisciplines.map((d, idx) => {
+      const def = DISCIPLINES.find(x => x.kind === d.kind) || { icon: '🎮', name: d.name, type: 'solo' };
+      const open = idx === 0; // erste offen by default
+      return `
+        <div class="discipline-card ${open ? 'open' : ''}" data-disc="${d.id}">
+          <div class="discipline-head" onclick="toggleDiscipline('${d.id}')">
+            <div class="discipline-head-left">
+              <span class="discipline-icon">${def.icon}</span>
+              <span class="discipline-title">${d.name}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.7rem">
+              <span class="status-pill ${d.status === 'done' ? 'finalized' : 'draft'}">${d.status === 'done' ? '✓' : '—'}</span>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="discipline-body ${open ? '' : 'collapsed'}" id="dbody-${d.id}">
+            ${renderDisciplineBody(d, def)}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderDisciplineBody(d, def) {
+    const participants = players.filter(p => currentParticipantIds.has(p.id));
+    if (participants.length === 0) return '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
+    if (def.type === 'solo')     return renderSoloBody(d, participants);
+    if (def.type === 'team')     return renderTeamBody(d, participants);
+    if (def.type === 'fallguys') return renderFallguysBody(d, participants);
+    return '';
+  }
+
+  // --- Solo: Platz pro Spieler ---
+  function renderSoloBody(d, participants) {
+    const rows = participants.map(p => {
+      const r = currentResults[d.id]?.[p.id];
+      const placement = r?.placement || '';
+      const pts = soloPoints(r?.placement);
+      return `
+        <div class="result-row">
+          <div class="result-name">${p.name}</div>
+          <input type="number" min="1" class="result-input" value="${placement}" placeholder="—"
+                 onchange="setSoloPlacement('${d.id}','${p.id}',this.value)">
+          <div class="result-points">${pts ? '+' + pts : '—'}</div>
+        </div>`;
+    }).join('');
+    return `
+      <div style="padding-top:1rem">
+        <p class="section-desc">Platzierung 1..n eintragen (jede nur einmal).</p>
+        ${rows}
+        <div class="validation-hint" id="vhint-${d.id}"></div>
+      </div>`;
+  }
+
+  // --- Haxball: Team + Teamrang ---
+  function renderTeamBody(d, participants) {
+    // Step 1: Teams zuweisen (1/2/3)
+    const teamRows = participants.map(p => {
+      const r = currentResults[d.id]?.[p.id];
+      const team = r?.team || 0;
+      return `
+        <div class="result-row" style="grid-template-columns:1fr auto">
+          <div class="result-name">${p.name}</div>
+          <div class="team-buttons">
+            ${[1,2,3].map(t => `
+              <button class="team-btn ${team === t ? 'selected-t'+t : ''}" onclick="setHaxballTeam('${d.id}','${p.id}',${t})">${t}</button>
+            `).join('')}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Step 2: Team-Reihenfolge (zeige nur Teams mit Mitgliedern)
+    const teamsInUse = [1,2,3].filter(t =>
+      participants.some(p => currentResults[d.id]?.[p.id]?.team === t)
+    );
+    let teamRankBlock = '';
+    if (teamsInUse.length >= 2) {
+      teamRankBlock = `
+        <div class="haxball-step">
+          <div class="haxball-step-title">Team-Reihenfolge (Platz 1 = Sieger)</div>
+          ${teamsInUse.map(t => {
+            const members = participants.filter(p => currentResults[d.id]?.[p.id]?.team === t);
+            // Rang ist auf den Result-Rows der Teammitglieder gespeichert (placement)
+            const placement = members[0] ? (currentResults[d.id][members[0].id]?.placement || '') : '';
+            const pts = haxballPoints(parseInt(placement));
+            return `
+              <div class="team-rank-row">
+                <span class="team-badge t${t}">Team ${t}</span>
+                <span class="team-members">${members.map(m => m.name).join(', ') || '(leer)'}</span>
+                <input type="number" min="1" max="${teamsInUse.length}" class="team-rank-input"
+                       value="${placement}" placeholder="—"
+                       onchange="setHaxballTeamRank('${d.id}',${t},this.value)">
+                <span class="result-points">${pts ? '+' + pts : '—'}</span>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    return `
+      <div style="padding-top:1rem">
+        <p class="section-desc">Schritt 1: Jeden Spieler einem Team zuordnen. Schritt 2: Team-Reihenfolge eintragen.</p>
+        <div class="haxball-step-title" style="border-top:none;padding-top:0">Teams zuweisen</div>
+        ${teamRows}
+        ${teamRankBlock}
+      </div>`;
+  }
+
+  // --- Fall Guys: Tier pro Spieler ---
+  function renderFallguysBody(d, participants) {
+    const rows = participants.map(p => {
+      const r = currentResults[d.id]?.[p.id];
+      const tier = r?.fallguys_tier || 0;
+      const pts = fallguysPoints(tier);
+      return `
+        <div class="result-row" style="grid-template-columns:1fr auto auto">
+          <div class="result-name">${p.name}</div>
+          <div class="tier-buttons">
+            ${FALLGUYS_TIERS.map(t => `
+              <button class="tier-btn ${tier === t.tier ? 'selected' : ''}"
+                      onclick="setFallguysTier('${d.id}','${p.id}',${t.tier})">${t.label}</button>
+            `).join('')}
+          </div>
+          <div class="result-points">${pts ? '+' + pts : '—'}</div>
+        </div>`;
+    }).join('');
+    return `
+      <div style="padding-top:1rem">
+        <p class="section-desc">Beste Platzierung aus zwei Sessions pro Spieler.</p>
+        ${rows}
+      </div>`;
+  }
+
+  // ===== Discipline expand/collapse =====
+  window.toggleDiscipline = function(id) {
+    const card = document.querySelector(`.discipline-card[data-disc="${id}"]`);
+    const body = $(`dbody-${id}`);
+    if (!card || !body) return;
+    card.classList.toggle('open');
+    body.classList.toggle('collapsed');
+  };
+
+  // ===== Result-Updates =====
+  async function upsertResult(disciplineId, playerId, patch) {
+    const existing = currentResults[disciplineId][playerId];
+    const points = computePoints(disciplineId, playerId, { ...existing, ...patch });
+    const row = { discipline_id: disciplineId, player_id: playerId, ...patch, points };
+
+    if (existing && existing.id) {
+      const { data, error } = await sb.from('results').update(row).eq('id', existing.id).select().single();
+      if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+      currentResults[disciplineId][playerId] = data;
+    } else {
+      const { data, error } = await sb.from('results').insert(row).select().single();
+      if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+      currentResults[disciplineId][playerId] = data;
+    }
+  }
+
+  function computePoints(disciplineId, playerId, rowData) {
+    const disc = currentDisciplines.find(d => d.id === disciplineId);
+    const def = DISCIPLINES.find(x => x.kind === disc.kind) || { type: 'solo' };
+    if (def.type === 'solo')     return soloPoints(rowData.placement);
+    if (def.type === 'team')     return haxballPoints(rowData.placement);
+    if (def.type === 'fallguys') return fallguysPoints(rowData.fallguys_tier);
+    return 0;
+  }
+
+  window.setSoloPlacement = async function(discId, playerId, value) {
+    const placement = parseInt(value) || null;
+    await upsertResult(discId, playerId, { placement });
+    renderDisciplineBodyFor(discId);
+    renderOverview();
+  };
+
+  window.setHaxballTeam = async function(discId, playerId, team) {
+    const cur = currentResults[discId][playerId];
+    const newTeam = cur?.team === team ? null : team;
+    // Wenn Team geändert wird, placement (= Teamrang) zurücksetzen
+    await upsertResult(discId, playerId, { team: newTeam, placement: null });
+    renderDisciplineBodyFor(discId);
+    renderOverview();
+  };
+
+  window.setHaxballTeamRank = async function(discId, team, value) {
+    const rank = parseInt(value) || null;
+    const participants = players.filter(p => currentParticipantIds.has(p.id));
+    const teamMembers = participants.filter(p => currentResults[discId]?.[p.id]?.team === team);
+    for (const m of teamMembers) {
+      await upsertResult(discId, m.id, { placement: rank, team });
+    }
+    renderDisciplineBodyFor(discId);
+    renderOverview();
+  };
+
+  window.setFallguysTier = async function(discId, playerId, tier) {
+    const cur = currentResults[discId][playerId];
+    const newTier = cur?.fallguys_tier === tier ? null : tier;
+    await upsertResult(discId, playerId, { fallguys_tier: newTier });
+    renderDisciplineBodyFor(discId);
+    renderOverview();
+  };
+
+  function renderDisciplineBodyFor(discId) {
+    const d = currentDisciplines.find(x => x.id === discId);
+    if (!d) return;
+    const def = DISCIPLINES.find(x => x.kind === d.kind) || { icon: '🎮', name: d.name, type: 'solo' };
+    const body = $(`dbody-${discId}`);
+    if (body) body.innerHTML = renderDisciplineBody(d, def);
+  }
+
+  // ===== Overview =====
+  function renderOverview() {
+    const participants = players.filter(p => currentParticipantIds.has(p.id));
+    // Disziplinpunkte je Spieler aufsummieren
+    const totals = participants.map(p => {
+      let pts = 0;
+      currentDisciplines.forEach(d => {
+        const r = currentResults[d.id]?.[p.id];
+        if (r && r.points) pts += parseFloat(r.points);
+      });
+      return { player: p, eveningPoints: pts };
+    });
+
+    // Sortieren, Rang vergeben
+    totals.sort((a,b) => b.eveningPoints - a.eveningPoints);
+    let rank = 0, lastPts = -1, sameRankCount = 0;
+    totals.forEach((t, i) => {
+      if (t.eveningPoints !== lastPts) { rank = i + 1; sameRankCount = 1; }
+      else { sameRankCount++; }
+      t.rank = rank;
+      lastPts = t.eveningPoints;
+    });
+
+    // Krone-Faktor: Veranstalter an Abend 1, sonst Leader
+    const isFirstEvent = (events.findIndex(e => e.id === currentEvent.id) === 0)
+                        || events.filter(e => e.id !== currentEvent.id && e.status === 'finalized').length === 0;
+    let crownPlayerId = null;
+    if (isFirstEvent) {
+      crownPlayerId = currentEvent.host_player_id || null;
+    } else {
+      // Leader vor diesem Abend = höchste season_points-Summe aus früheren finalized Events (mit Streicher)
+      crownPlayerId = computeLeaderBeforeEvent(currentEvent.id);
+    }
+
+    // Rendern
+    const tbody = $('overviewBody');
+    if (totals.length === 0 || totals.every(t => t.eveningPoints === 0)) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">Noch keine Ergebnisse eingetragen.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = totals.map(t => {
+      const basePts = seasonPointsByRank(t.rank);
+      const factor = (t.player.id === crownPlayerId) ? 0.8 : 1.0;
+      const seasonPts = round(basePts * factor);
+      const crown = (t.player.id === crownPlayerId) ? `<span class="crown-badge">👑 KRONE ×0.8</span>` : '';
+      return `
+        <tr class="${t.rank === 1 ? 'leader' : ''}">
+          <td>${t.rank}</td>
+          <td>${t.player.name}${crown}</td>
+          <td class="num">${t.eveningPoints}</td>
+          <td class="num">${seasonPts}${factor < 1 ? ` <span style="color:var(--muted);font-weight:400">(${basePts}×0.8)</span>` : ''}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  function computeLeaderBeforeEvent(eventId) {
+    // Sortiere events nach Datum, finde die index des aktuellen
+    const sorted = [...events].sort((a,b) => a.event_date.localeCompare(b.event_date));
+    const idx = sorted.findIndex(e => e.id === eventId);
+    const priorFinalized = sorted.slice(0, idx).filter(e => e.status === 'finalized');
+    if (priorFinalized.length === 0) return null;
+    // Aggregiere event_participation aller bisherigen Events
+    // (wird async geladen — hier vereinfacht: wir laden die Daten nicht erneut, sondern fallen auf null zurück)
+    // → in einer späteren Version: nachladen. Für MVP: nur erster Abend hat Krone.
+    return null;
+  }
+
+  // ===== Finalize =====
+  $('finalizeBtn').addEventListener('click', async () => {
+    if (currentEvent.status === 'finalized') {
+      if (!confirm('Dieser Abend wurde bereits abgeschlossen. Erneut neu berechnen?')) return;
+    } else {
+      if (!confirm(`„${currentEvent.name}" abschließen? Die Saisonpunkte werden festgeschrieben.`)) return;
+    }
+
+    const participants = players.filter(p => currentParticipantIds.has(p.id));
+
+    // Disziplinpunkte je Spieler
+    const totals = participants.map(p => {
+      let pts = 0;
+      currentDisciplines.forEach(d => {
+        const r = currentResults[d.id]?.[p.id];
+        if (r && r.points) pts += parseFloat(r.points);
+      });
+      return { player: p, eveningPoints: pts };
+    });
+
+    // Sortieren, Rang vergeben (Gleichstand → gleicher Rang)
+    totals.sort((a,b) => b.eveningPoints - a.eveningPoints);
+    let rank = 0, lastPts = -1;
+    totals.forEach((t, i) => {
+      if (t.eveningPoints !== lastPts) { rank = i + 1; }
+      t.rank = rank;
+      lastPts = t.eveningPoints;
+    });
+
+    // Leader/Host bestimmen
+    const sorted = [...events].sort((a,b) => a.event_date.localeCompare(b.event_date));
+    const idx = sorted.findIndex(e => e.id === currentEvent.id);
+    const isFirstEvent = idx === 0 || sorted.slice(0, idx).filter(e => e.status === 'finalized').length === 0;
+
+    let crownPlayerId = null;
+    if (isFirstEvent) {
+      crownPlayerId = currentEvent.host_player_id || null;
+    } else {
+      crownPlayerId = await loadLeaderBeforeEvent(currentEvent.id);
+    }
+
+    // Alte event_participation für diesen Abend löschen, dann neu schreiben
+    await sb.from('event_participation').delete().eq('event_id', currentEvent.id);
+
+    const rows = totals.map(t => {
+      const basePts = seasonPointsByRank(t.rank);
+      const isCrown = (t.player.id === crownPlayerId);
+      const factor = isCrown ? 0.8 : 1.0;
+      const seasonPts = round(basePts * factor);
+      return {
+        event_id: currentEvent.id,
+        player_id: t.player.id,
+        attended: true,
+        evening_points: t.eveningPoints,
+        evening_rank: t.rank,
+        season_points: seasonPts,
+        was_leader_at_start: isCrown && !isFirstEvent,
+        was_host: isCrown && isFirstEvent,
+        penalty_factor: factor
+      };
+    });
+
+    // Nicht-Teilnehmer auch eintragen (für Streicher-Logik wichtig)
+    const nonParticipants = players.filter(p => !currentParticipantIds.has(p.id));
+    nonParticipants.forEach(p => rows.push({
+      event_id: currentEvent.id,
+      player_id: p.id,
+      attended: false,
+      evening_points: 0,
+      evening_rank: null,
+      season_points: 0,
+      was_leader_at_start: false,
+      was_host: false,
+      penalty_factor: 1.0
+    }));
+
+    const { error: epErr } = await sb.from('event_participation').insert(rows);
+    if (epErr) { console.error(epErr); toast('Fehler beim Speichern', 'error'); return; }
+
+    // Status auf finalized setzen
+    await sb.from('events').update({ status: 'finalized' }).eq('id', currentEvent.id);
+    currentEvent.status = 'finalized';
+
+    toast('✓ Abend abgeschlossen — Saisonpunkte geschrieben', 'ok');
+    renderDetail();
+  });
+
+  async function loadLeaderBeforeEvent(eventId) {
+    const sorted = [...events].sort((a,b) => a.event_date.localeCompare(b.event_date));
+    const idx = sorted.findIndex(e => e.id === eventId);
+    const priorIds = sorted.slice(0, idx).filter(e => e.status === 'finalized').map(e => e.id);
+    if (priorIds.length === 0) return null;
+    const { data } = await sb.from('event_participation')
+      .select('player_id, season_points, event_id')
+      .in('event_id', priorIds);
+    if (!data || data.length === 0) return null;
+
+    // Pro Spieler die season_points sammeln, dann Streicher anwenden
+    const byPlayer = {};
+    data.forEach(r => {
+      if (!byPlayer[r.player_id]) byPlayer[r.player_id] = [];
+      byPlayer[r.player_id].push(parseFloat(r.season_points));
+    });
+    const totals = Object.entries(byPlayer).map(([pid, pts]) => {
+      // Sort descending, drop the lowest (streicher)
+      const sortedPts = [...pts].sort((a,b) => b - a);
+      const total = sortedPts.slice(0, -1).reduce((s,n) => s+n, 0); // ohne den letzten
+      // Aber wenn nur 1 Wert da ist, gibt's keinen Streicher (sonst hätte er 0)
+      const finalTotal = sortedPts.length === 1 ? sortedPts[0] : total;
+      return { pid, total: finalTotal };
+    });
+    totals.sort((a,b) => b.total - a.total);
+    return totals[0]?.pid || null;
+  }
+
+  // ===== Abend löschen =====
+  $('deleteEventBtn').addEventListener('click', async () => {
+    if (!confirm(`„${currentEvent.name}" und alle Ergebnisse wirklich löschen?`)) return;
+    const { error } = await sb.from('events').delete().eq('id', currentEvent.id);
+    if (error) { toast('Löschen fehlgeschlagen', 'error'); return; }
+    toast('Abend gelöscht', 'ok');
+    $('eventDetailView').style.display = 'none';
+    $('eventListView').style.display = 'block';
+    await loadEvents();
+    renderEventList();
+  });
+</script>
+</body>
+</html>

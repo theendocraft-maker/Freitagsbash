@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freitags Bash · Regeln</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #ffffff0f;
+    --accent: #f5c842;
+    --accent2: #ff5c5c;
+    --accent3: #5cefff;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --crown: #f5c842;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+  }
+
+  .logo span {
+    color: var(--text);
+    opacity: 0.5;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    display: block;
+    font-family: 'DM Mono', monospace;
+    margin-top: -4px;
+  }
+
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    margin-left: 2rem;
+    transition: color 0.2s;
+    font-weight: 500;
+  }
+  nav a:hover, nav a.active { color: var(--accent); }
+
+  /* Hero */
+  .hero {
+    padding: 5rem 2rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    line-height: 0.92;
+    letter-spacing: 0.05em;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    max-width: 560px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  /* Divider */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent) 30%, transparent);
+    margin: 3rem auto;
+    max-width: 900px;
+    opacity: 0.25;
+  }
+
+  /* Main content */
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem 6rem;
+  }
+
+  /* Section label */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section-label::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: var(--border);
+  }
+
+  /* Struktur-Block */
+  .struktur-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 3rem;
+  }
+
+  @media (max-width: 600px) {
+    .struktur-grid { grid-template-columns: 1fr; }
+  }
+
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .info-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+
+  .info-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .info-card p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .info-card .big-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--text);
+    line-height: 1;
+    opacity: 0.15;
+    position: absolute;
+    right: 1rem;
+    bottom: 0.5rem;
+  }
+
+  /* Punktetabelle */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 0.85rem 1.25rem;
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 0.85rem 1.25rem;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:hover td { background: var(--surface2); }
+
+  .place-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  .p1 { color: #f5c842; }
+  .p2 { color: #c0c0c0; }
+  .p3 { color: #cd7f32; }
+
+  .pts {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  /* Spiele-Karten */
+  .games-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 3rem;
+  }
+
+  .game-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1.5rem;
+    align-items: start;
+    transition: border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .game-card:hover {
+    border-color: var(--accent);
+  }
+
+  .game-icon {
+    font-size: 2rem;
+    width: 3rem;
+    text-align: center;
+    padding-top: 0.1rem;
+  }
+
+  .game-info h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.3rem;
+    color: var(--text);
+  }
+
+  .game-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .tag-einzel { background: #5cefff18; color: var(--accent3); border: 1px solid #5cefff30; }
+  .tag-team { background: #ff5c5c18; color: var(--accent2); border: 1px solid #ff5c5c30; }
+
+  .game-info p {
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .game-info ul {
+    list-style: none;
+    margin-top: 0.5rem;
+  }
+
+  .game-info ul li {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    padding-left: 1rem;
+    position: relative;
+  }
+
+  .game-info ul li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    opacity: 0.5;
+  }
+
+  .game-pts-box {
+    text-align: right;
+    min-width: 80px;
+  }
+
+  .game-pts-box .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+
+  .game-pts-box .pts-scale {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    line-height: 1.4;
+  }
+
+  /* Saison-Note */
+  .saison-note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    padding: 1.25rem 1.5rem;
+    margin-top: 1rem;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .saison-note strong { color: var(--text); }
+
+  /* Special-Rule-Karten (Streicher + Krone) */
+  .rule-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 3rem;
+  }
+
+  @media (max-width: 600px) {
+    .rule-grid { grid-template-columns: 1fr; }
+  }
+
+  .rule-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .rule-card .rule-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  .rule-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+  }
+
+  .rule-card.streicher h3 { color: var(--accent3); }
+  .rule-card.krone h3 { color: var(--accent2); }
+
+  .rule-card.streicher { border-top: 2px solid var(--accent3); }
+  .rule-card.krone { border-top: 2px solid var(--accent2); }
+
+  .rule-card p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
+  }
+
+  .rule-card p:last-child { margin-bottom: 0; }
+  .rule-card strong { color: var(--text); }
+
+  .rule-formula {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    color: var(--accent);
+    margin-top: 0.5rem;
+    display: inline-block;
+  }
+
+  /* Preis */
+  .preis-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preis-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, #f5c84215 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .preis-card .crown {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .preis-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .preis-card p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .preis-pills {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1.25rem;
+  }
+
+  .pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    font-size: 0.82rem;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* WIP Banner */
+  .wip-banner {
+    background: #f5c84210;
+    border: 1px dashed #f5c84240;
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.5s ease forwards;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    Freitags Bash
+    <span>SAISON 1 · 2026</span>
+  </div>
+  <nav>
+    <a href="index.html#leaderboard">Rangliste</a>
+    <a href="regeln.html" class="active">Regeln</a>
+    <a href="index.html#register">Anmelden</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <div class="hero-eyebrow">📋 Regelwerk · Version 1.0</div>
+  <h1>So läuft der <em>Bash.</em></h1>
+  <p>Fünf Disziplinen. Ein Abend. Einer gewinnt die Krone — bis zum nächsten Mal. Hier findest du alles was du wissen musst.</p>
+</div>
+
+<div class="section-divider"></div>
+
+<main>
+
+  <div class="wip-banner">⚙ VORSCHAU · Spieleranzahl wird noch finalisiert — Haxball-Format folgt</div>
+
+  <!-- Struktur -->
+  <div class="section-label">01 — Die Struktur</div>
+  <div class="struktur-grid fade-in">
+    <div class="info-card">
+      <h3>Der Abend</h3>
+      <p>Fünf Disziplinen hintereinander. Jedes Spiel gibt <strong style="color:var(--text)">Disziplinpunkte</strong>. Wer am Ende die meisten hat, gewinnt den Abend.</p>
+      <div class="big-num">01</div>
+    </div>
+    <div class="info-card">
+      <h3>Die Saison</h3>
+      <p>Die Abendplatzierung bringt <strong style="color:var(--text)">Saisonpunkte</strong>. Über mehrere Events hinweg entsteht eine Gesamtrangliste — am Ende steht der Saisonchampion.</p>
+      <div class="big-num">02</div>
+    </div>
+    <div class="info-card">
+      <h3>Teams</h3>
+      <p>Bei Teamspielen werden die Gruppen <strong style="color:var(--text)">per Los</strong> bestimmt — jeden Abend neu. Kein Einfluss, maximale Fairness.</p>
+      <div class="big-num">03</div>
+    </div>
+    <div class="info-card">
+      <h3>Comeback</h3>
+      <p>Verpasste Abende sind kein K.o.: Ein <strong style="color:var(--text)">Streichresultat</strong> pro Saison und die <strong style="color:var(--text)">Krone als Bürde</strong> halten das Feld eng. Details in Abschnitt 04.</p>
+      <div class="big-num">04</div>
+    </div>
+  </div>
+
+  <!-- Disziplinpunkte -->
+  <div class="section-label">02 — Disziplinpunkte</div>
+  <div class="table-wrap fade-in" style="margin-bottom: 0.75rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Platzierung</th>
+          <th>Punkte</th>
+          <th>Gilt für</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="place-badge p1">🥇 1. Platz</span></td>
+          <td><span class="pts">10</span></td>
+          <td style="color:var(--muted); font-size:0.85rem;">Alle Einzeldisziplinen</td>
+        </tr>
+        <tr>
+          <td><span class="place-badge p2">🥈 2. Platz</span></td>
+          <td><span class="pts">8</span></td>
+          <td style="color:var(--muted); font-size:0.85rem;"></td>
+        </tr>
+        <tr>
+          <td><span class="place-badge p3">🥉 3. Platz</span></td>
+          <td><span class="pts">6</span></td>
+          <td style="color:var(--muted); font-size:0.85rem;"></td>
+        </tr>
+        <tr>
+          <td>4. Platz</td>
+          <td><span class="pts">4</span></td>
+          <td style="color:var(--muted); font-size:0.85rem;"></td>
+        </tr>
+        <tr>
+          <td>5. Platz</td>
+          <td><span class="pts">3</span></td>
+          <td style="color:var(--muted); font-size:0.85rem;"></td>
+        </tr>
+        <tr>
+          <td>6. Platz</td>
+          <td><span class="pts">2</span></td>
+          <td style="color:var(--muted); font-size:0.85rem;"></td>
+        </tr>
+        <tr>
+          <td>7.+ Platz</td>
+          <td><span class="pts">1</span></td>
+          <td style="color:var(--muted); font-size:0.85rem;">Niemand geht leer aus</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="saison-note fade-in" style="margin-bottom: 3rem;">
+    Bei <strong>Haxball</strong> (Teamspiel) erhalten alle Teammitglieder dieselben Disziplinpunkte nach Teamergebnis: <strong>Siegerteam 9 Pkt · 2. Team 6 Pkt · 3. Team 3 Pkt</strong>. Rotierende Spieler erhalten den Schnitt ihres Einsatz-Teams.
+  </div>
+
+  <!-- Saisonpunkte -->
+  <div class="section-label">03 — Saisonpunkte</div>
+  <div class="table-wrap fade-in" style="margin-bottom: 0.75rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Abendplatzierung</th>
+          <th>Saisonpunkte</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="place-badge p1">🥇 1. Platz</span></td><td><span class="pts">25</span></td></tr>
+        <tr><td><span class="place-badge p2">🥈 2. Platz</span></td><td><span class="pts">18</span></td></tr>
+        <tr><td><span class="place-badge p3">🥉 3. Platz</span></td><td><span class="pts">15</span></td></tr>
+        <tr><td>4. Platz</td><td><span class="pts">12</span></td></tr>
+        <tr><td>5. Platz</td><td><span class="pts">10</span></td></tr>
+        <tr><td>6. Platz</td><td><span class="pts">8</span></td></tr>
+        <tr><td>7. Platz</td><td><span class="pts">6</span></td></tr>
+        <tr><td>8.+ Platz</td><td><span class="pts">4</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="saison-note fade-in" style="margin-bottom: 3rem;">
+    Die Saisonpunkte aller Abende werden <strong>aufsummiert</strong> (abzüglich Streichresultat). Wer am Ende der Saison oben steht, ist <strong>Freitags Bash Champion</strong>.
+  </div>
+
+  <!-- Spezialregeln -->
+  <div class="section-label">04 — Comeback & Krone</div>
+  <div class="rule-grid fade-in">
+    <div class="rule-card streicher">
+      <span class="rule-icon">♻️</span>
+      <h3>Streichresultat</h3>
+      <p>Jeder Spieler hat pro Saison <strong>einen Streicher</strong> — der <strong>schlechteste Abend</strong> wird aus der Saisonwertung gestrichen, egal wie viele Abende gespielt werden.</p>
+      <p>Wer einen Abend <strong>verpasst</strong>, bekommt dort 0 Punkte — und genau das wird dann automatisch sein Streicher. Ein verpasster Abend tut also nicht weh.</p>
+    </div>
+    <div class="rule-card krone">
+      <span class="rule-icon">👑</span>
+      <h3>Krone als Bürde</h3>
+      <p>Wer einen Abend als <strong>Tabellenführer</strong> beginnt, spielt mit Handicap: seine an diesem Abend erspielten Saisonpunkte zählen nur mit <strong>Faktor ×0,8</strong>.</p>
+      <p>Disziplin- und Abendwertung bleiben fair — nur die Saisonpunkte des Leaders schrumpfen. So bleibt die Spitze in Reichweite.</p>
+      <span class="rule-formula">Saisonpunkte = Platzpunkte × 0,8</span>
+    </div>
+  </div>
+  <div class="saison-note fade-in" style="margin-bottom: 3rem;">
+    <strong>Abend 1:</strong> Es gibt noch keinen Tabellenführer — deshalb trägt am ersten Abend der <strong>Veranstalter</strong> die Krone-Bürde (×0,8). Ab Abend 2 trifft sie immer den aktuell Führenden.
+  </div>
+
+  <!-- Spiele -->
+  <div class="section-label">05 — Die Disziplinen</div>
+  <div class="games-grid">
+
+    <div class="game-card fade-in">
+      <div class="game-icon">🌍</div>
+      <div class="game-info">
+        <h3>GeoGuessr</h3>
+        <span class="game-tag tag-einzel">Einzelspieler</span>
+        <ul>
+          <li>Alle spielen denselben Challenge-Link gleichzeitig</li>
+          <li>5 Runden · 2 Minuten pro Runde · kein Bewegen (No Move)</li>
+          <li>Gesamtpunktzahl (max. 25.000) ergibt das Ranking</li>
+          <li>Thema: World / Europe / Deutschland — wird je Abend festgelegt</li>
+        </ul>
+      </div>
+      <div class="game-pts-box">
+        <div class="label">Punkte</div>
+        <div class="pts-scale">10<br>8<br>6<br>4<br>3<br>2<br>1</div>
+      </div>
+    </div>
+
+    <div class="game-card fade-in">
+      <div class="game-icon">⚽</div>
+      <div class="game-info">
+        <h3>Haxball</h3>
+        <span class="game-tag tag-team">Teamspiel</span>
+        <ul>
+          <li>Teams werden per Los bestimmt — jeden Abend neu</li>
+          <li>Format abhängig von Spieleranzahl (3v3 oder 4v4)</li>
+          <li>Round Robin: jedes Team spielt gegen jedes andere</li>
+          <li>Spieldauer: 5 Min pro Match · Sieg = 3 Pkt · Unentschieden = 1 Pkt</li>
+          <li>Teamranking → Siegerteam: 9 Pkt · 2. Team: 6 Pkt · 3. Team: 3 Pkt (jedes Mitglied)</li>
+        </ul>
+      </div>
+      <div class="game-pts-box">
+        <div class="label">Team-Pkt</div>
+        <div class="pts-scale">9<br>6<br>3</div>
+      </div>
+    </div>
+
+    <div class="game-card fade-in">
+      <div class="game-icon">♟️</div>
+      <div class="game-info">
+        <h3>Chess.com Blitz</h3>
+        <span class="game-tag tag-einzel">Einzelspieler</span>
+        <ul>
+          <li>Arena-Modus auf Chess.com — alle joinen per Link, läuft automatisch</li>
+          <li>Zeitformat: 3+2 (3 Minuten + 2 Sekunden Inkrement pro Zug)</li>
+          <li>Arena-Dauer: ca. 20–25 Minuten</li>
+          <li>Automatisches Ranking am Ende der Arena</li>
+        </ul>
+      </div>
+      <div class="game-pts-box">
+        <div class="label">Punkte</div>
+        <div class="pts-scale">10<br>8<br>6<br>4<br>3<br>2<br>1</div>
+      </div>
+    </div>
+
+    <div class="game-card fade-in">
+      <div class="game-icon">⚔️</div>
+      <div class="game-info">
+        <h3>Brawlhalla</h3>
+        <span class="game-tag tag-einzel">Free For All</span>
+        <ul>
+          <li>Alle bis zu 8 Spieler in einem FFA-Match</li>
+          <li>Modus: Stock (Leben) — wer zuerst alle Leben verliert, scheidet aus</li>
+          <li>2–3 Runden, Platzierung wird gemittelt</li>
+          <li>Download ~200 MB · komplett kostenlos</li>
+        </ul>
+      </div>
+      <div class="game-pts-box">
+        <div class="label">Punkte</div>
+        <div class="pts-scale">10<br>8<br>6<br>4<br>3<br>2<br>1</div>
+      </div>
+    </div>
+
+    <div class="game-card fade-in">
+      <div class="game-icon">🫘</div>
+      <div class="game-info">
+        <h3>Fall Guys</h3>
+        <span class="game-tag tag-einzel">Einzelspieler</span>
+        <ul>
+          <li>2 gemeinsame Sessions — alle spielen gleichzeitig</li>
+          <li>Beste Platzierung aus beiden Sessions zählt</li>
+          <li>Show gewonnen → 10 Pkt · Finale → 7 · Halbfinale → 5 · Runde 2–3 → 3 · Runde 1 → 1</li>
+          <li>Gleichstand: beide Spieler erhalten den höheren Wert</li>
+        </ul>
+      </div>
+      <div class="game-pts-box">
+        <div class="label">Punkte</div>
+        <div class="pts-scale">10<br>7<br>5<br>3<br>1</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Preis -->
+  <div class="section-label">06 — Der Saisonpreis</div>
+  <div class="preis-card fade-in">
+    <span class="crown">👑</span>
+    <h3>Saisonsieger</h3>
+    <p>Wer am Ende der Saison die meisten Saisonpunkte gesammelt hat, gewinnt den Freitags Bash Titel — und steht für immer in der Hall of Fame.</p>
+    <div class="preis-pills">
+      <span class="pill">🏆 Hall of Fame Eintrag</span>
+      <span class="pill">🎮 Steam-Guthaben</span>
+      <span class="pill">👑 Champion-Badge</span>
+    </div>
+    <p style="margin-top:1.25rem; font-size:0.8rem; font-family:'DM Mono',monospace; color:var(--muted); letter-spacing:0.05em;">Preisgeld aus freiwilligem Einwurf (5 € pro Spieler) · Details folgen</p>
+  </div>
+
+</main>
+
+</body>
+</html>
