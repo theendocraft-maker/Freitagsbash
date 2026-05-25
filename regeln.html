@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Freitags Bash · Regeln</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -17,9 +18,16 @@
     --text: #e8e8f0;
     --muted: #6b6b80;
     --crown: #f5c842;
+    --geo: #5cefff;
+    --hax: #5cef9e;
+    --che: #f5c842;
+    --bra: #ff8a5c;
+    --fall: #ff7ce0;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
 
   body {
     background: var(--bg);
@@ -40,519 +48,195 @@
     opacity: 0.4;
   }
 
+  /* Scroll-Fortschritt */
+  .scroll-prog {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transform: scaleX(0); transform-origin: left;
+    z-index: 1000;
+  }
+
   /* Header */
   header {
     border-bottom: 1px solid var(--border);
     padding: 1.2rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    z-index: 10;
-    backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0;
+    background: rgba(10,10,15,0.85);
+    z-index: 50; backdrop-filter: blur(12px);
   }
-
-  .logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.6rem;
-    letter-spacing: 0.15em;
-    color: var(--accent);
-  }
-
-  .logo span {
-    color: var(--text);
-    opacity: 0.5;
-    font-size: 0.85rem;
-    letter-spacing: 0.2em;
-    display: block;
-    font-family: 'DM Mono', monospace;
-    margin-top: -4px;
-  }
-
-  nav a {
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 0.85rem;
-    letter-spacing: 0.05em;
-    margin-left: 2rem;
-    transition: color 0.2s;
-    font-weight: 500;
-  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.15em; color: var(--accent); }
+  .logo span { color: var(--text); opacity: 0.5; font-size: 0.85rem; letter-spacing: 0.2em; display: block; font-family: 'DM Mono', monospace; margin-top: -4px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; letter-spacing: 0.05em; margin-left: 2rem; transition: color 0.2s; font-weight: 500; }
   nav a:hover, nav a.active { color: var(--accent); }
+  @media (max-width: 560px) { nav a { margin-left: 1.1rem; } header { padding: 1rem 1.2rem; } }
 
   /* Hero */
-  .hero {
-    padding: 5rem 2rem 3rem;
-    max-width: 900px;
-    margin: 0 auto;
-    position: relative;
-  }
-
-  .hero-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 0.25em;
-    color: var(--accent);
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.1s;
-  }
-
-  .hero h1 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(3.5rem, 10vw, 7rem);
-    line-height: 0.92;
-    letter-spacing: 0.05em;
-    margin-bottom: 1.5rem;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.2s;
-  }
-
+  .hero { padding: 5.5rem 2rem 3rem; max-width: 900px; margin: 0 auto; position: relative; overflow: hidden; }
+  .hero-floaties { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .hero-floaties span { position: absolute; font-size: 2.2rem; opacity: 0.12; animation: float 6s ease-in-out infinite; }
+  .hero-floaties span:nth-child(1) { top: 12%; right: 6%; animation-delay: 0s; }
+  .hero-floaties span:nth-child(2) { top: 55%; right: 18%; animation-delay: 1.2s; font-size: 1.8rem; }
+  .hero-floaties span:nth-child(3) { top: 30%; right: 32%; animation-delay: 2.4s; font-size: 1.4rem; }
+  .hero-floaties span:nth-child(4) { bottom: 8%; right: 2%; animation-delay: 0.6s; }
+  .hero > * { position: relative; z-index: 1; }
+  .hero-eyebrow { font-family: 'DM Mono', monospace; font-size: 0.75rem; letter-spacing: 0.25em; color: var(--accent); text-transform: uppercase; margin-bottom: 1rem; }
+  .hero h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(3.5rem, 10vw, 7rem); line-height: 0.92; letter-spacing: 0.05em; margin-bottom: 1.5rem; }
   .hero h1 em {
     font-style: normal;
-    color: var(--accent);
+    background: linear-gradient(90deg, var(--accent), #ffe08a, var(--accent2), var(--accent));
+    background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 6s linear infinite;
   }
-
-  .hero p {
-    color: var(--muted);
-    font-size: 1.05rem;
-    line-height: 1.7;
-    max-width: 560px;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.3s;
+  .hero p { color: var(--muted); font-size: 1.05rem; line-height: 1.7; max-width: 560px; }
+  .jump-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.75rem; }
+  .jump-nav a {
+    font-family: 'DM Mono', monospace; font-size: 0.72rem; letter-spacing: 0.05em;
+    color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border); background: var(--surface);
+    padding: 0.4rem 0.85rem; border-radius: 999px; transition: all 0.2s;
   }
+  .jump-nav a:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
 
-  /* Divider */
-  .section-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent) 30%, transparent);
-    margin: 3rem auto;
-    max-width: 900px;
-    opacity: 0.25;
-  }
+  .section-divider { height: 1px; background: linear-gradient(90deg, transparent, var(--accent) 30%, transparent); margin: 2.5rem auto; max-width: 900px; opacity: 0.25; }
 
-  /* Main content */
-  main {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 2rem 6rem;
-  }
+  main { max-width: 900px; margin: 0 auto; padding: 0 2rem 6rem; }
 
-  /* Section label */
-  .section-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.3em;
-    color: var(--accent);
-    text-transform: uppercase;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
+  .section-label { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; margin: 3rem 0 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+  .section-label::after { content: ''; height: 1px; flex: 1; background: var(--border); }
+  .lead { color: var(--muted); font-size: 0.95rem; line-height: 1.65; margin-bottom: 1.5rem; max-width: 640px; }
 
-  .section-label::after {
-    content: '';
-    height: 1px;
-    flex: 1;
-    background: var(--border);
-  }
+  /* Struktur */
+  .struktur-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media (max-width: 600px) { .struktur-grid { grid-template-columns: 1fr; } }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; position: relative; overflow: hidden; transition: transform 0.2s, border-color 0.2s; }
+  .info-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .info-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); opacity: 0.6; }
+  .info-card h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
+  .info-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+  .info-card .big-num { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--text); line-height: 1; opacity: 0.12; position: absolute; right: 1rem; bottom: 0.5rem; }
 
-  /* Struktur-Block */
-  .struktur-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 3rem;
-  }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
 
-  @media (max-width: 600px) {
-    .struktur-grid { grid-template-columns: 1fr; }
-  }
+  /* Punkte-Balken */
+  .bars { display: flex; flex-direction: column; gap: 0.55rem; }
+  .bar-row { display: grid; grid-template-columns: 92px 1fr 40px; align-items: center; gap: 0.9rem; }
+  .bar-lbl { font-size: 0.85rem; color: var(--text); display: flex; align-items: center; gap: 0.35rem; }
+  .bar-track { background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; height: 24px; overflow: hidden; }
+  .bar { height: 100%; width: var(--w); border-radius: 999px; background: linear-gradient(90deg, var(--accent), #ffe08a); animation: growBar 1.1s cubic-bezier(.2,.8,.2,1) both; }
+  .bar.s { background: linear-gradient(90deg, #8a8aa0, #d8d8e0); }
+  .bar.b { background: linear-gradient(90deg, #a9743f, #cd7f32); }
+  .bar.team { background: linear-gradient(90deg, var(--accent2), #ffb08a); }
+  .bar-val { font-family: 'DM Mono', monospace; color: var(--accent); font-weight: 500; text-align: right; font-size: 0.95rem; }
 
-  .info-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    position: relative;
-    overflow: hidden;
-  }
+  .note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; padding: 1.1rem 1.4rem; margin-top: 1rem; color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
+  .note strong { color: var(--text); }
+  .note.cyan { border-left-color: var(--accent3); }
 
-  .info-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--accent);
-    opacity: 0.6;
-  }
-
-  .info-card h3 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.3rem;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    margin-bottom: 0.5rem;
-  }
-
-  .info-card p {
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.6;
-  }
-
-  .info-card .big-num {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
-    color: var(--text);
-    line-height: 1;
-    opacity: 0.15;
-    position: absolute;
-    right: 1rem;
-    bottom: 0.5rem;
-  }
-
-  /* Punktetabelle */
-  .table-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  thead tr {
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-  }
-
-  th {
-    padding: 0.85rem 1.25rem;
-    text-align: left;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-
-  td {
-    padding: 0.85rem 1.25rem;
-    font-size: 0.9rem;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-  }
-
-  tr:last-child td { border-bottom: none; }
-
-  tr:hover td { background: var(--surface2); }
-
-  .place-badge {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1rem;
-    letter-spacing: 0.05em;
-  }
-
-  .p1 { color: #f5c842; }
-  .p2 { color: #c0c0c0; }
-  .p3 { color: #cd7f32; }
-
-  .pts {
-    font-family: 'DM Mono', monospace;
-    font-weight: 500;
-    color: var(--accent);
-  }
-
-  /* Spiele-Karten */
-  .games-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 3rem;
-  }
-
-  .game-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.75rem;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 1.5rem;
-    align-items: start;
-    transition: border-color 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .game-card:hover {
-    border-color: var(--accent);
-  }
-
-  .game-icon {
-    font-size: 2rem;
-    width: 3rem;
-    text-align: center;
-    padding-top: 0.1rem;
-  }
-
-  .game-info h3 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.3rem;
-    color: var(--text);
-  }
-
-  .game-tag {
-    display: inline-block;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    margin-bottom: 0.75rem;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-
-  .tag-einzel { background: #5cefff18; color: var(--accent3); border: 1px solid #5cefff30; }
-  .tag-team { background: #ff5c5c18; color: var(--accent2); border: 1px solid #ff5c5c30; }
-
-  .game-info p {
-    color: var(--muted);
-    font-size: 0.88rem;
-    line-height: 1.6;
-  }
-
-  .game-info ul {
-    list-style: none;
-    margin-top: 0.5rem;
-  }
-
-  .game-info ul li {
-    color: var(--muted);
-    font-size: 0.85rem;
-    line-height: 1.8;
-    padding-left: 1rem;
-    position: relative;
-  }
-
-  .game-info ul li::before {
-    content: '—';
-    position: absolute;
-    left: 0;
-    color: var(--accent);
-    opacity: 0.5;
-  }
-
-  .game-pts-box {
-    text-align: right;
-    min-width: 80px;
-  }
-
-  .game-pts-box .label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 0.25rem;
-  }
-
-  .game-pts-box .pts-scale {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem;
-    letter-spacing: 0.05em;
-    color: var(--accent);
-    line-height: 1.4;
-  }
-
-  /* Saison-Note */
-  .saison-note {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: 0 12px 12px 0;
-    padding: 1.25rem 1.5rem;
-    margin-top: 1rem;
-    color: var(--muted);
-    font-size: 0.88rem;
-    line-height: 1.6;
-  }
-
-  .saison-note strong { color: var(--text); }
-
-  /* Special-Rule-Karten (Streicher + Krone) */
-  .rule-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 3rem;
-  }
-
-  @media (max-width: 600px) {
-    .rule-grid { grid-template-columns: 1fr; }
-  }
-
-  .rule-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.75rem;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .rule-card .rule-icon {
-    font-size: 1.8rem;
-    margin-bottom: 0.75rem;
-    display: block;
-  }
-
-  .rule-card h3 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.6rem;
-  }
-
-  .rule-card.streicher h3 { color: var(--accent3); }
-  .rule-card.krone h3 { color: var(--accent2); }
-
-  .rule-card.streicher { border-top: 2px solid var(--accent3); }
-  .rule-card.krone { border-top: 2px solid var(--accent2); }
-
-  .rule-card p {
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.7;
-    margin-bottom: 0.75rem;
-  }
-
+  /* Spezialregeln */
+  .rule-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  @media (max-width: 720px) { .rule-grid { grid-template-columns: 1fr; } }
+  .rule-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.6rem; position: relative; overflow: hidden; transition: transform 0.2s; }
+  .rule-card:hover { transform: translateY(-3px); }
+  .rule-card .rule-icon { font-size: 1.8rem; margin-bottom: 0.6rem; display: block; }
+  .rule-card h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.45rem; letter-spacing: 0.08em; margin-bottom: 0.55rem; }
+  .rule-card p { color: var(--muted); font-size: 0.88rem; line-height: 1.65; margin-bottom: 0.6rem; }
   .rule-card p:last-child { margin-bottom: 0; }
   .rule-card strong { color: var(--text); }
+  .rule-card.streicher { border-top: 2px solid var(--accent3); } .rule-card.streicher h3 { color: var(--accent3); }
+  .rule-card.krone { border-top: 2px solid var(--accent2); } .rule-card.krone h3 { color: var(--accent2); }
+  .rule-card.veto { border-top: 2px solid var(--accent); } .rule-card.veto h3 { color: var(--accent); }
+  .rule-formula { font-family: 'DM Mono', monospace; font-size: 0.8rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.8rem; color: var(--accent); margin-top: 0.4rem; display: inline-block; }
 
-  .rule-formula {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.82rem;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.6rem 0.9rem;
-    color: var(--accent);
-    margin-top: 0.5rem;
-    display: inline-block;
-  }
+  /* Veto-Flow */
+  .flow { display: flex; align-items: stretch; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap; }
+  .flow-step { flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; text-align: center; }
+  .flow-step .fi { font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }
+  .flow-step b { display: block; font-size: 0.88rem; margin-bottom: 0.2rem; }
+  .flow-step small { color: var(--muted); font-size: 0.74rem; line-height: 1.4; display: block; }
+  .flow-arrow { display: flex; align-items: center; color: var(--accent); font-size: 1.3rem; }
+  @media (max-width: 680px) { .flow-arrow { transform: rotate(90deg); justify-content: center; } .flow-step { min-width: 100%; } }
+
+  /* Disziplin-Karten */
+  .disc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 680px) { .disc-grid { grid-template-columns: 1fr; } }
+  .disc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; position: relative; overflow: hidden; transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s; }
+  .disc-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--c); }
+  .disc-card::after { content: ''; position: absolute; top: -60px; right: -60px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle, var(--c), transparent 70%); opacity: 0.1; transition: opacity 0.3s; pointer-events: none; }
+  .disc-card:hover { transform: translateY(-4px); border-color: var(--c); box-shadow: 0 12px 36px -12px var(--c); }
+  .disc-card:hover::after { opacity: 0.22; }
+  .disc-head { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1rem; }
+  .disc-ico { width: 54px; height: 54px; flex-shrink: 0; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; background: color-mix(in srgb, var(--c) 14%, transparent); border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); }
+  .disc-head h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.06em; line-height: 1; }
+  .disc-tag { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); margin-top: 0.25rem; }
+  .disc-pts { margin-left: auto; text-align: right; }
+  .disc-pts b { font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; letter-spacing: 0.05em; color: var(--c); display: block; }
+  .disc-pts small { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .disc-card ul { list-style: none; }
+  .disc-card li { color: var(--muted); font-size: 0.84rem; line-height: 1.75; padding-left: 1.1rem; position: relative; }
+  .disc-card li::before { content: ''; position: absolute; left: 0; top: 0.62em; width: 5px; height: 5px; border-radius: 50%; background: var(--c); }
+  .disc-card strong { color: var(--text); }
+
+  /* Haxball-Trichter */
+  .funnel-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+
+  /* Timeline */
+  .timeline { position: relative; margin-top: 1rem; padding-left: 0.5rem; }
+  .tl-item { display: grid; grid-template-columns: 64px 28px 1fr; align-items: start; gap: 0.5rem; position: relative; padding-bottom: 1.1rem; }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-line { position: absolute; left: 77px; top: 8px; bottom: 0; width: 2px; background: var(--border); }
+  .tl-time { font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--accent); padding-top: 0.05rem; text-align: right; }
+  .tl-dot { display: flex; justify-content: center; padding-top: 0.15rem; z-index: 1; }
+  .tl-dot span { width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); }
+  .tl-item.fin .tl-dot span { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .tl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 1rem; }
+  .tl-card b { font-size: 0.92rem; }
+  .tl-card small { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 0.15rem; }
+  .tl-dur { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); float: right; }
 
   /* Preis */
-  .preis-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
+  .preis-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 2rem; text-align: center; position: relative; overflow: hidden; }
+  .preis-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, #f5c84218 0%, transparent 70%); pointer-events: none; }
+  .preis-card .crown { font-size: 3rem; display: block; margin-bottom: 1rem; animation: float 3s ease-in-out infinite; }
+  .preis-card h3 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
+  .preis-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.7; max-width: 420px; margin: 0 auto; }
+  .preis-pills { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1.25rem; }
+  .pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.4rem 1rem; font-size: 0.82rem; color: var(--text); font-weight: 500; }
 
-  .preis-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 50% 0%, #f5c84215 0%, transparent 70%);
-    pointer-events: none;
-  }
+  /* Feinregeln */
+  .fineprint { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.5rem 1.75rem; }
+  .fineprint .clause { padding: 0.85rem 0; border-bottom: 1px solid var(--border); font-size: 0.87rem; line-height: 1.6; color: var(--muted); display: flex; gap: 0.85rem; }
+  .fineprint .clause:last-child { border-bottom: none; }
+  .fineprint .clause b { color: var(--text); }
+  .fineprint .para { font-family: 'DM Mono', monospace; color: var(--accent); font-size: 0.8rem; flex-shrink: 0; min-width: 2.2rem; }
 
-  .preis-card .crown {
-    font-size: 3rem;
-    display: block;
-    margin-bottom: 1rem;
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .preis-card h3 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    margin-bottom: 0.5rem;
-  }
-
-  .preis-card p {
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.7;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  .preis-pills {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 1.25rem;
-  }
-
-  .pill {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0.4rem 1rem;
-    font-size: 0.82rem;
-    color: var(--text);
-    font-weight: 500;
-  }
-
-  /* WIP Banner */
-  .wip-banner {
-    background: #f5c84210;
-    border: 1px dashed #f5c84240;
-    border-radius: 8px;
-    padding: 0.75rem 1.25rem;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    text-align: center;
-    margin-bottom: 2rem;
-  }
+  /* WIP */
+  .wip-banner { background: #f5c84210; border: 1px dashed #f5c84240; border-radius: 8px; padding: 0.75rem 1.25rem; font-family: 'DM Mono', monospace; font-size: 0.75rem; letter-spacing: 0.1em; color: var(--accent); text-align: center; margin: 2rem 0 0; }
 
   /* Animations */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+  @keyframes shimmer { to { background-position: 300% 0; } }
+  @keyframes growBar { from { width: 0; } }
 
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-  }
+  /* Scroll-Reveal (greift nur mit JS, sonst alles sichtbar) */
+  .js .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.2,.8,.2,1); }
+  .js .reveal.in { opacity: 1; transform: none; }
 
-  .fade-in {
-    opacity: 0;
-    transform: translateY(20px);
-    animation: fadeUp 0.5s ease forwards;
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+    .bar, .hero h1 em, .preis-card .crown, .hero-floaties span { animation: none; }
+    html { scroll-behavior: auto; }
   }
 </style>
 </head>
 <body>
 
+<div class="scroll-prog" id="scrollProg"></div>
+
 <header>
-  <div class="logo">
-    Freitags Bash
-    <span>SAISON 1 · 2026</span>
-  </div>
+  <div class="logo">Freitags Bash<span>SAISON 1 · 2026</span></div>
   <nav>
     <a href="index.html#leaderboard">Rangliste</a>
     <a href="regeln.html" class="active">Regeln</a>
@@ -561,20 +245,26 @@
 </header>
 
 <div class="hero">
+  <div class="hero-floaties" aria-hidden="true"><span>🎮</span><span>🏆</span><span>🃏</span><span>🎲</span></div>
   <div class="hero-eyebrow">📋 Regelwerk · Version 1.0</div>
   <h1>So läuft der <em>Bash.</em></h1>
-  <p>Fünf Disziplinen. Ein Abend. Einer gewinnt die Krone — bis zum nächsten Mal. Hier findest du alles was du wissen musst.</p>
+  <p>Fünf Disziplinen. Ein Abend. Einer gewinnt die Krone — bis zum nächsten Mal. Hier findest du alles, was du wissen musst.</p>
+  <div class="jump-nav">
+    <a href="#punktefluss">Punkte-Fluss</a>
+    <a href="#disziplinen">Disziplinen</a>
+    <a href="#spezial">Krone & Veto</a>
+    <a href="#timeline">Abend-Ablauf</a>
+    <a href="#kleingedrucktes">Kleingedrucktes</a>
+  </div>
 </div>
 
 <div class="section-divider"></div>
 
 <main>
 
-  <div class="wip-banner">⚙ VORSCHAU · Spieleranzahl wird noch finalisiert — Haxball-Format folgt</div>
-
-  <!-- Struktur -->
+  <!-- 01 Struktur -->
   <div class="section-label">01 — Die Struktur</div>
-  <div class="struktur-grid fade-in">
+  <div class="struktur-grid reveal">
     <div class="info-card">
       <h3>Der Abend</h3>
       <p>Fünf Disziplinen hintereinander. Jedes Spiel gibt <strong style="color:var(--text)">Disziplinpunkte</strong>. Wer am Ende die meisten hat, gewinnt den Abend.</p>
@@ -582,7 +272,7 @@
     </div>
     <div class="info-card">
       <h3>Die Saison</h3>
-      <p>Die Abendplatzierung bringt <strong style="color:var(--text)">Saisonpunkte</strong>. Über mehrere Events hinweg entsteht eine Gesamtrangliste — am Ende steht der Saisonchampion.</p>
+      <p>Die Abendplatzierung bringt <strong style="color:var(--text)">Saisonpunkte</strong>. Über mehrere Events entsteht eine Gesamtrangliste — am Ende steht der Champion.</p>
       <div class="big-num">02</div>
     </div>
     <div class="info-card">
@@ -592,96 +282,113 @@
     </div>
     <div class="info-card">
       <h3>Comeback</h3>
-      <p>Verpasste Abende sind kein K.o.: Ein <strong style="color:var(--text)">Streichresultat</strong> pro Saison und die <strong style="color:var(--text)">Krone als Bürde</strong> halten das Feld eng. Details in Abschnitt 04.</p>
+      <p>Verpasste Abende sind kein K.o.: <strong style="color:var(--text)">Streichresultat</strong>, <strong style="color:var(--text)">Krone als Bürde</strong> und <strong style="color:var(--text)">Veto</strong> halten das Feld eng (Abschnitt 05).</p>
       <div class="big-num">04</div>
     </div>
   </div>
 
-  <!-- Disziplinpunkte -->
-  <div class="section-label">02 — Disziplinpunkte</div>
-  <div class="table-wrap fade-in" style="margin-bottom: 0.75rem;">
-    <table>
-      <thead>
-        <tr>
-          <th>Platzierung</th>
-          <th>Punkte</th>
-          <th>Gilt für</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="place-badge p1">🥇 1. Platz</span></td>
-          <td><span class="pts">10</span></td>
-          <td style="color:var(--muted); font-size:0.85rem;">Alle Einzeldisziplinen</td>
-        </tr>
-        <tr>
-          <td><span class="place-badge p2">🥈 2. Platz</span></td>
-          <td><span class="pts">8</span></td>
-          <td style="color:var(--muted); font-size:0.85rem;"></td>
-        </tr>
-        <tr>
-          <td><span class="place-badge p3">🥉 3. Platz</span></td>
-          <td><span class="pts">6</span></td>
-          <td style="color:var(--muted); font-size:0.85rem;"></td>
-        </tr>
-        <tr>
-          <td>4. Platz</td>
-          <td><span class="pts">4</span></td>
-          <td style="color:var(--muted); font-size:0.85rem;"></td>
-        </tr>
-        <tr>
-          <td>5. Platz</td>
-          <td><span class="pts">3</span></td>
-          <td style="color:var(--muted); font-size:0.85rem;"></td>
-        </tr>
-        <tr>
-          <td>6. Platz</td>
-          <td><span class="pts">2</span></td>
-          <td style="color:var(--muted); font-size:0.85rem;"></td>
-        </tr>
-        <tr>
-          <td>7.+ Platz</td>
-          <td><span class="pts">1</span></td>
-          <td style="color:var(--muted); font-size:0.85rem;">Niemand geht leer aus</td>
-        </tr>
-      </tbody>
-    </table>
+  <!-- 02 Punkte-Fluss -->
+  <div class="section-label" id="punktefluss">02 — Der Punkte-Fluss</div>
+  <div class="panel reveal">
+    <svg viewBox="0 0 720 620" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block" role="img" aria-label="Punkte-Fluss: Disziplinpunkte werden zur Abendwertung addiert, die Abendplatzierung gibt Saisonpunkte. Dazu Streicher, Krone und Veto.">
+      <rect x="16" y="16" width="688" height="170" rx="14" fill="var(--surface2)" stroke="var(--border)"/>
+      <rect x="16" y="16" width="4" height="170" rx="2" fill="var(--accent)"/>
+      <text x="42" y="50" font-family="'Bebas Neue',sans-serif" font-size="26" fill="var(--accent)">1</text>
+      <text x="66" y="48" font-family="'DM Mono',monospace" font-size="12" letter-spacing="3" fill="var(--muted)">PRO SPIEL — DISZIPLINPUNKTE</text>
+      <g font-family="'DM Sans',sans-serif">
+        <g><rect x="40" y="74" width="116" height="46" rx="9" fill="var(--surface)" stroke="var(--border)"/><text x="98" y="98" text-anchor="middle" font-size="18">🌍</text><text x="98" y="113" text-anchor="middle" font-size="10" fill="var(--muted)">GeoGuessr</text></g>
+        <g><rect x="171" y="74" width="116" height="46" rx="9" fill="var(--surface)" stroke="var(--border)"/><text x="229" y="98" text-anchor="middle" font-size="18">⚽</text><text x="229" y="113" text-anchor="middle" font-size="10" fill="var(--muted)">Haxball</text></g>
+        <g><rect x="302" y="74" width="116" height="46" rx="9" fill="var(--surface)" stroke="var(--border)"/><text x="360" y="98" text-anchor="middle" font-size="18">♟️</text><text x="360" y="113" text-anchor="middle" font-size="10" fill="var(--muted)">Chess Blitz</text></g>
+        <g><rect x="433" y="74" width="116" height="46" rx="9" fill="var(--surface)" stroke="var(--border)"/><text x="491" y="98" text-anchor="middle" font-size="18">⚔️</text><text x="491" y="113" text-anchor="middle" font-size="10" fill="var(--muted)">Brawlhalla</text></g>
+        <g><rect x="564" y="74" width="116" height="46" rx="9" fill="var(--surface)" stroke="var(--accent2)" opacity="0.95"/><text x="622" y="98" text-anchor="middle" font-size="18">🫘</text><text x="622" y="113" text-anchor="middle" font-size="10" fill="var(--accent2)">Fall Guys · Team</text></g>
+      </g>
+      <text x="40" y="158" font-family="'DM Mono',monospace" font-size="11.5" fill="var(--muted)">Einzel: 10 · 8 · 6 · 4 · 3 · 2 · 1        Fall Guys (Team): 8 · 4 · 2</text>
+      <polygon points="350,190 370,190 360,204" fill="var(--accent)"/>
+      <rect x="16" y="210" width="688" height="92" rx="14" fill="var(--surface2)" stroke="var(--border)"/>
+      <rect x="16" y="210" width="4" height="92" rx="2" fill="var(--accent)"/>
+      <text x="42" y="246" font-family="'Bebas Neue',sans-serif" font-size="26" fill="var(--accent)">2</text>
+      <text x="66" y="244" font-family="'DM Mono',monospace" font-size="12" letter-spacing="3" fill="var(--muted)">ABENDWERTUNG</text>
+      <text x="42" y="278" font-family="'DM Sans',sans-serif" font-size="15" fill="var(--text)">Alle Disziplinpunkte des Abends addiert  →  Platz 1.–8. des Abends</text>
+      <polygon points="350,306 370,306 360,320" fill="var(--accent)"/>
+      <rect x="16" y="326" width="688" height="110" rx="14" fill="var(--surface2)" stroke="var(--border)"/>
+      <rect x="16" y="326" width="4" height="110" rx="2" fill="var(--accent)"/>
+      <text x="42" y="362" font-family="'Bebas Neue',sans-serif" font-size="26" fill="var(--accent)">3</text>
+      <text x="66" y="360" font-family="'DM Mono',monospace" font-size="12" letter-spacing="3" fill="var(--muted)">SAISONPUNKTE</text>
+      <text x="42" y="392" font-family="'DM Sans',sans-serif" font-size="15" fill="var(--text)">Nach Abend-Platz:  25 · 18 · 15 · 12 · 10 · 8 · 6 · 4</text>
+      <text x="42" y="416" font-family="'DM Sans',sans-serif" font-size="15" fill="var(--text)">über die Saison aufsummiert  →  <tspan fill="var(--accent)" font-weight="600">🏆 Champion</tspan></text>
+      <g>
+        <rect x="16" y="462" width="218" height="142" rx="12" fill="var(--surface)" stroke="var(--border)"/>
+        <rect x="16" y="462" width="218" height="3" rx="1.5" fill="var(--accent3)"/>
+        <text x="34" y="500" font-size="24">♻️</text>
+        <text x="34" y="532" font-family="'Bebas Neue',sans-serif" font-size="19" letter-spacing="1" fill="var(--accent3)">STREICHER</text>
+        <text x="34" y="558" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">Dein schlechtester Abend</text>
+        <text x="34" y="574" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">zählt nicht — verpasst =</text>
+        <text x="34" y="590" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">automatisch gestrichen.</text>
+      </g>
+      <g>
+        <rect x="251" y="462" width="218" height="142" rx="12" fill="var(--surface)" stroke="var(--border)"/>
+        <rect x="251" y="462" width="218" height="3" rx="1.5" fill="var(--accent2)"/>
+        <text x="269" y="500" font-size="24">👑</text>
+        <text x="269" y="532" font-family="'Bebas Neue',sans-serif" font-size="19" letter-spacing="1" fill="var(--accent2)">KRONE ×0,8</text>
+        <text x="269" y="558" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">Der Tabellenführer kriegt</text>
+        <text x="269" y="574" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">−20 % auf seine Saison-</text>
+        <text x="269" y="590" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">punkte des Abends.</text>
+      </g>
+      <g>
+        <rect x="486" y="462" width="218" height="142" rx="12" fill="var(--surface)" stroke="var(--border)"/>
+        <rect x="486" y="462" width="218" height="3" rx="1.5" fill="var(--accent)"/>
+        <text x="504" y="500" font-size="24">🃏</text>
+        <text x="504" y="532" font-family="'Bebas Neue',sans-serif" font-size="19" letter-spacing="1" fill="var(--accent)">VETO</text>
+        <text x="504" y="558" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">1× pro Abend: ein Spiel</text>
+        <text x="504" y="574" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">gegen ein Glücks-Mini-</text>
+        <text x="504" y="590" font-family="'DM Sans',sans-serif" font-size="11.5" fill="var(--muted)">spiel tauschen.</text>
+      </g>
+    </svg>
   </div>
 
-  <div class="saison-note fade-in" style="margin-bottom: 3rem;">
-    Bei <strong>Haxball</strong> (Teamspiel) erhalten alle Teammitglieder dieselben Disziplinpunkte nach Teamergebnis: <strong>Siegerteam 9 Pkt · 2. Team 6 Pkt · 3. Team 3 Pkt</strong>. Rotierende Spieler erhalten den Schnitt ihres Einsatz-Teams.
+  <!-- 03 Disziplinpunkte -->
+  <div class="section-label">03 — Disziplinpunkte</div>
+  <div class="panel reveal">
+    <div class="bars">
+      <div class="bar-row"><div class="bar-lbl">🥇 1. Platz</div><div class="bar-track"><div class="bar" style="--w:100%"></div></div><div class="bar-val">10</div></div>
+      <div class="bar-row"><div class="bar-lbl">🥈 2. Platz</div><div class="bar-track"><div class="bar s" style="--w:80%"></div></div><div class="bar-val">8</div></div>
+      <div class="bar-row"><div class="bar-lbl">🥉 3. Platz</div><div class="bar-track"><div class="bar b" style="--w:60%"></div></div><div class="bar-val">6</div></div>
+      <div class="bar-row"><div class="bar-lbl">4. Platz</div><div class="bar-track"><div class="bar" style="--w:40%"></div></div><div class="bar-val">4</div></div>
+      <div class="bar-row"><div class="bar-lbl">5. Platz</div><div class="bar-track"><div class="bar" style="--w:30%"></div></div><div class="bar-val">3</div></div>
+      <div class="bar-row"><div class="bar-lbl">6. Platz</div><div class="bar-track"><div class="bar" style="--w:20%"></div></div><div class="bar-val">2</div></div>
+      <div class="bar-row"><div class="bar-lbl">7.+ Platz</div><div class="bar-track"><div class="bar" style="--w:10%"></div></div><div class="bar-val">1</div></div>
+    </div>
+  </div>
+  <div class="note reveal" style="margin-bottom: 1rem;">Gilt für alle <strong>Einzeldisziplinen</strong> (GeoGuessr, Haxball, Chess, Brawlhalla). <strong>Niemand geht leer aus</strong> — ab Platz 7 gibt's immer noch 1 Punkt.</div>
+  <div class="panel reveal" style="margin-top: 1rem;">
+    <div style="font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.2em; color:var(--accent2); text-transform:uppercase; margin-bottom:0.9rem;">🫘 Fall Guys — Teamwertung</div>
+    <div class="bars">
+      <div class="bar-row"><div class="bar-lbl">1. Team</div><div class="bar-track"><div class="bar team" style="--w:100%"></div></div><div class="bar-val">8</div></div>
+      <div class="bar-row"><div class="bar-lbl">2. Team</div><div class="bar-track"><div class="bar team" style="--w:50%"></div></div><div class="bar-val">4</div></div>
+      <div class="bar-row"><div class="bar-lbl">3. Team</div><div class="bar-track"><div class="bar team" style="--w:25%"></div></div><div class="bar-val">2</div></div>
+    </div>
+    <p style="color:var(--muted); font-size:0.83rem; line-height:1.6; margin-top:0.9rem;">Alle Mitglieder eines Squads bekommen dieselben Punkte (ab 4. Team je 1). Bewusst niedriger als ein Solo-Sieg — geteilter Ruhm plus Losglück.</p>
   </div>
 
-  <!-- Saisonpunkte -->
-  <div class="section-label">03 — Saisonpunkte</div>
-  <div class="table-wrap fade-in" style="margin-bottom: 0.75rem;">
-    <table>
-      <thead>
-        <tr>
-          <th>Abendplatzierung</th>
-          <th>Saisonpunkte</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td><span class="place-badge p1">🥇 1. Platz</span></td><td><span class="pts">25</span></td></tr>
-        <tr><td><span class="place-badge p2">🥈 2. Platz</span></td><td><span class="pts">18</span></td></tr>
-        <tr><td><span class="place-badge p3">🥉 3. Platz</span></td><td><span class="pts">15</span></td></tr>
-        <tr><td>4. Platz</td><td><span class="pts">12</span></td></tr>
-        <tr><td>5. Platz</td><td><span class="pts">10</span></td></tr>
-        <tr><td>6. Platz</td><td><span class="pts">8</span></td></tr>
-        <tr><td>7. Platz</td><td><span class="pts">6</span></td></tr>
-        <tr><td>8.+ Platz</td><td><span class="pts">4</span></td></tr>
-      </tbody>
-    </table>
+  <!-- 04 Saisonpunkte -->
+  <div class="section-label">04 — Saisonpunkte</div>
+  <div class="panel reveal">
+    <div class="bars">
+      <div class="bar-row"><div class="bar-lbl">🥇 1. Platz</div><div class="bar-track"><div class="bar" style="--w:100%"></div></div><div class="bar-val">25</div></div>
+      <div class="bar-row"><div class="bar-lbl">🥈 2. Platz</div><div class="bar-track"><div class="bar s" style="--w:72%"></div></div><div class="bar-val">18</div></div>
+      <div class="bar-row"><div class="bar-lbl">🥉 3. Platz</div><div class="bar-track"><div class="bar b" style="--w:60%"></div></div><div class="bar-val">15</div></div>
+      <div class="bar-row"><div class="bar-lbl">4. Platz</div><div class="bar-track"><div class="bar" style="--w:48%"></div></div><div class="bar-val">12</div></div>
+      <div class="bar-row"><div class="bar-lbl">5. Platz</div><div class="bar-track"><div class="bar" style="--w:40%"></div></div><div class="bar-val">10</div></div>
+      <div class="bar-row"><div class="bar-lbl">6. Platz</div><div class="bar-track"><div class="bar" style="--w:32%"></div></div><div class="bar-val">8</div></div>
+      <div class="bar-row"><div class="bar-lbl">7. Platz</div><div class="bar-track"><div class="bar" style="--w:24%"></div></div><div class="bar-val">6</div></div>
+      <div class="bar-row"><div class="bar-lbl">8.+ Platz</div><div class="bar-track"><div class="bar" style="--w:16%"></div></div><div class="bar-val">4</div></div>
+    </div>
   </div>
+  <div class="note reveal" style="margin-bottom: 1rem;">Die Saisonpunkte aller Abende werden <strong>aufsummiert</strong> (abzüglich Streichresultat). Wer am Ende oben steht, ist <strong>Freitags Bash Champion</strong>.</div>
 
-  <div class="saison-note fade-in" style="margin-bottom: 3rem;">
-    Die Saisonpunkte aller Abende werden <strong>aufsummiert</strong> (abzüglich Streichresultat). Wer am Ende der Saison oben steht, ist <strong>Freitags Bash Champion</strong>.
-  </div>
-
-  <!-- Spezialregeln -->
-  <div class="section-label">04 — Comeback & Krone</div>
-  <div class="rule-grid fade-in">
+  <!-- 05 Spezialregeln -->
+  <div class="section-label" id="spezial">05 — Comeback, Krone & Joker</div>
+  <div class="rule-grid reveal">
     <div class="rule-card streicher">
       <span class="rule-icon">♻️</span>
       <h3>Streichresultat</h3>
@@ -695,111 +402,161 @@
       <p>Disziplin- und Abendwertung bleiben fair — nur die Saisonpunkte des Leaders schrumpfen. So bleibt die Spitze in Reichweite.</p>
       <span class="rule-formula">Saisonpunkte = Platzpunkte × 0,8</span>
     </div>
+    <div class="rule-card veto">
+      <span class="rule-icon">🃏</span>
+      <h3>Das Veto</h3>
+      <p>Einmal pro Abend darf jeder <strong>für sich selbst</strong> eine Disziplin vetoen — ganz ohne Mehrheit. Du spielst diese dann <strong>nicht mit</strong>, sondern machst stattdessen ein <strong>Überraschungs-Minispiel</strong>, das erst am Abend enthüllt wird.</p>
+      <p>Das Ersatzspiel ist <strong>glücksbasiert</strong> und hat seine eigene Wertung. Heißt: du zockst — kann aufgehen, kann nach hinten losgehen. Lohnt sich vor allem für dein schwächstes Spiel.</p>
+    </div>
   </div>
-  <div class="saison-note fade-in" style="margin-bottom: 3rem;">
+
+  <div class="flow reveal" aria-label="Veto-Ablauf">
+    <div class="flow-step"><span class="fi">🃏</span><b>Veto setzen</b><small>vor Spielstart · 1× pro Abend</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="fi">🚪</span><b>Disziplin aussetzen</b><small>du spielst sie nicht mit</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="fi">🎲</span><b>Glücks-Minispiel</b><small>Überraschung am Abend</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="fi">📊</span><b>Punkte mit Risiko</b><small>kann gut oder schlecht laufen</small></div>
+  </div>
+
+  <div class="note reveal" style="margin-top:1.25rem;">
     <strong>Abend 1:</strong> Es gibt noch keinen Tabellenführer — deshalb trägt am ersten Abend der <strong>Veranstalter</strong> die Krone-Bürde (×0,8). Ab Abend 2 trifft sie immer den aktuell Führenden.
   </div>
+  <div class="note cyan reveal" style="margin-top:0.75rem;">
+    <strong>Gleichstand am Abend?</strong> Wer mehr <strong>Disziplin-Siege</strong> (1. Plätze) geholt hat, steht vorn. Ist es danach immer noch gleich, entscheidet ein kurzes <strong>1v1-Stechen in Haxball</strong>.
+  </div>
 
-  <!-- Spiele -->
-  <div class="section-label">05 — Die Disziplinen</div>
-  <div class="games-grid">
+  <!-- 06 Disziplinen -->
+  <div class="section-label" id="disziplinen">06 — Die fünf Disziplinen</div>
+  <div class="disc-grid">
 
-    <div class="game-card fade-in">
-      <div class="game-icon">🌍</div>
-      <div class="game-info">
-        <h3>GeoGuessr</h3>
-        <span class="game-tag tag-einzel">Einzelspieler</span>
-        <ul>
-          <li>Alle spielen denselben Challenge-Link gleichzeitig</li>
-          <li>5 Runden · 2 Minuten pro Runde · kein Bewegen (No Move)</li>
-          <li>Gesamtpunktzahl (max. 25.000) ergibt das Ranking</li>
-          <li>Thema: World / Europe / Deutschland — wird je Abend festgelegt</li>
-        </ul>
+    <div class="disc-card reveal" style="--c:var(--geo)">
+      <div class="disc-head">
+        <div class="disc-ico">🌍</div>
+        <div><h3>GeoGuessr</h3><span class="disc-tag">Einzelspieler</span></div>
+        <div class="disc-pts"><b>10·8·6·4·3·2·1</b><small>Punkte</small></div>
       </div>
-      <div class="game-pts-box">
-        <div class="label">Punkte</div>
-        <div class="pts-scale">10<br>8<br>6<br>4<br>3<br>2<br>1</div>
-      </div>
+      <ul>
+        <li>Alle spielen denselben Challenge-Link gleichzeitig</li>
+        <li>5 Runden · 2 Min pro Runde · kein Bewegen (<strong>No Move</strong>)</li>
+        <li>Gesamtpunktzahl (max. 25.000) ergibt das Ranking</li>
+        <li>Thema World / Europe / Deutschland — je Abend festgelegt</li>
+      </ul>
     </div>
 
-    <div class="game-card fade-in">
-      <div class="game-icon">⚽</div>
-      <div class="game-info">
-        <h3>Haxball</h3>
-        <span class="game-tag tag-team">Teamspiel</span>
-        <ul>
-          <li>Teams werden per Los bestimmt — jeden Abend neu</li>
-          <li>Format abhängig von Spieleranzahl (3v3 oder 4v4)</li>
-          <li>Round Robin: jedes Team spielt gegen jedes andere</li>
-          <li>Spieldauer: 5 Min pro Match · Sieg = 3 Pkt · Unentschieden = 1 Pkt</li>
-          <li>Teamranking → Siegerteam: 9 Pkt · 2. Team: 6 Pkt · 3. Team: 3 Pkt (jedes Mitglied)</li>
-        </ul>
+    <div class="disc-card reveal" style="--c:var(--hax)">
+      <div class="disc-head">
+        <div class="disc-ico">⚽</div>
+        <div><h3>Haxball</h3><span class="disc-tag">Einzel · K.o.-Trichter</span></div>
+        <div class="disc-pts"><b>10·8·6·4·3·2·1</b><small>Punkte</small></div>
       </div>
-      <div class="game-pts-box">
-        <div class="label">Team-Pkt</div>
-        <div class="pts-scale">9<br>6<br>3</div>
-      </div>
+      <ul>
+        <li>Schrumpf-Turnier: große Teams per Los → immer kleiner → <strong>1v1-Finale</strong></li>
+        <li>Runde 1 in Teams (5-Min-Matches), Schwächste scheiden aus</li>
+        <li>Weitergekommene neu verlost ins 2v2, danach 1v1-Finale</li>
+        <li>Skaliert mit der Spielerzahl (siehe Trichter unten)</li>
+        <li>Es zählt die <strong>Endplatzierung</strong> wie eine Einzeldisziplin</li>
+      </ul>
     </div>
 
-    <div class="game-card fade-in">
-      <div class="game-icon">♟️</div>
-      <div class="game-info">
-        <h3>Chess.com Blitz</h3>
-        <span class="game-tag tag-einzel">Einzelspieler</span>
-        <ul>
-          <li>Arena-Modus auf Chess.com — alle joinen per Link, läuft automatisch</li>
-          <li>Zeitformat: 3+2 (3 Minuten + 2 Sekunden Inkrement pro Zug)</li>
-          <li>Arena-Dauer: ca. 20–25 Minuten</li>
-          <li>Automatisches Ranking am Ende der Arena</li>
-        </ul>
+    <div class="disc-card reveal" style="--c:var(--che)">
+      <div class="disc-head">
+        <div class="disc-ico">♟️</div>
+        <div><h3>Chess.com Blitz</h3><span class="disc-tag">Einzelspieler</span></div>
+        <div class="disc-pts"><b>10·8·6·4·3·2·1</b><small>Punkte</small></div>
       </div>
-      <div class="game-pts-box">
-        <div class="label">Punkte</div>
-        <div class="pts-scale">10<br>8<br>6<br>4<br>3<br>2<br>1</div>
-      </div>
+      <ul>
+        <li><strong>Arena-Modus</strong> — alle joinen per Link, läuft automatisch</li>
+        <li>Zeitformat 3+2 (3 Min + 2 Sek Inkrement pro Zug)</li>
+        <li>Arena-Dauer ca. 20–25 Minuten</li>
+        <li>Automatisches Ranking am Ende der Arena</li>
+      </ul>
     </div>
 
-    <div class="game-card fade-in">
-      <div class="game-icon">⚔️</div>
-      <div class="game-info">
-        <h3>Brawlhalla</h3>
-        <span class="game-tag tag-einzel">Free For All</span>
-        <ul>
-          <li>Alle bis zu 8 Spieler in einem FFA-Match</li>
-          <li>Modus: Stock (Leben) — wer zuerst alle Leben verliert, scheidet aus</li>
-          <li>2–3 Runden, Platzierung wird gemittelt</li>
-          <li>Download ~200 MB · komplett kostenlos</li>
-        </ul>
+    <div class="disc-card reveal" style="--c:var(--bra)">
+      <div class="disc-head">
+        <div class="disc-ico">⚔️</div>
+        <div><h3>Brawlhalla</h3><span class="disc-tag">Free For All</span></div>
+        <div class="disc-pts"><b>10·8·6·4·3·2·1</b><small>Punkte</small></div>
       </div>
-      <div class="game-pts-box">
-        <div class="label">Punkte</div>
-        <div class="pts-scale">10<br>8<br>6<br>4<br>3<br>2<br>1</div>
-      </div>
+      <ul>
+        <li>Alle bis zu 8 Spieler in einem FFA-Match</li>
+        <li>Modus <strong>Stock</strong> — wer zuerst alle Leben verliert, scheidet aus</li>
+        <li>2–3 Runden, Platzierung wird gemittelt</li>
+        <li>Download ~200 MB · komplett kostenlos</li>
+      </ul>
     </div>
 
-    <div class="game-card fade-in">
-      <div class="game-icon">🫘</div>
-      <div class="game-info">
-        <h3>Fall Guys</h3>
-        <span class="game-tag tag-einzel">Einzelspieler</span>
-        <ul>
-          <li>2 gemeinsame Sessions — alle spielen gleichzeitig</li>
-          <li>Beste Platzierung aus beiden Sessions zählt</li>
-          <li>Show gewonnen → 10 Pkt · Finale → 7 · Halbfinale → 5 · Runde 2–3 → 3 · Runde 1 → 1</li>
-          <li>Gleichstand: beide Spieler erhalten den höheren Wert</li>
-        </ul>
+    <div class="disc-card reveal" style="--c:var(--fall)">
+      <div class="disc-head">
+        <div class="disc-ico">🫘</div>
+        <div><h3>Fall Guys</h3><span class="disc-tag">Teamspiel · Squads</span></div>
+        <div class="disc-pts"><b>8·4·2</b><small>Team-Pkt</small></div>
       </div>
-      <div class="game-pts-box">
-        <div class="label">Punkte</div>
-        <div class="pts-scale">10<br>7<br>5<br>3<br>1</div>
-      </div>
+      <ul>
+        <li>Squads per Los — jeden Abend neu, für den Teamspirit</li>
+        <li>2 gemeinsame Sessions, das beste Team-Ergebnis zählt</li>
+        <li>Alle im Squad bekommen dieselben Punkte nach Team-Platz</li>
+        <li>Squad-Größe je nach Spielerzahl (2–3 Teams)</li>
+      </ul>
+    </div>
+
+    <div class="disc-card reveal" style="--c:var(--accent); display:flex; flex-direction:column; justify-content:center; text-align:center;">
+      <div style="font-size:2.4rem; margin-bottom:0.6rem;">🎲</div>
+      <h3 style="font-family:'Bebas Neue',sans-serif; font-size:1.4rem; letter-spacing:0.06em; margin-bottom:0.4rem;">+ Geheim-Joker</h3>
+      <p style="color:var(--muted); font-size:0.84rem; line-height:1.6;">Wer ein Veto setzt, spielt statt der Disziplin ein Überraschungs-Minispiel. Welches? Das erfährst du erst am Abend.</p>
     </div>
 
   </div>
 
-  <!-- Preis -->
-  <div class="section-label">06 — Der Saisonpreis</div>
-  <div class="preis-card fade-in">
+  <!-- Haxball-Trichter -->
+  <div class="section-label">⚽ Haxball: der K.o.-Trichter</div>
+  <div class="funnel-wrap reveal">
+    <svg viewBox="0 0 720 400" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block" role="img" aria-label="Haxball-Ablauf: Teams per Los, dann 2v2, dann 1v1-Finale.">
+      <!-- Stufe 1 -->
+      <rect x="90" y="24" width="540" height="68" rx="12" fill="var(--surface2)" stroke="var(--hax)" />
+      <text x="360" y="52" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="20" letter-spacing="1.5" fill="var(--hax)">RUNDE 1 · TEAMS PER LOS</text>
+      <text x="360" y="76" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="12.5" fill="var(--muted)">4v4 / 3er-Teams · 5-Min-Matches · Schwächste scheiden aus</text>
+      <polygon points="350,100 370,100 360,116" fill="var(--muted)"/>
+      <!-- Stufe 2 -->
+      <rect x="170" y="124" width="380" height="64" rx="12" fill="var(--surface2)" stroke="var(--accent3)"/>
+      <text x="360" y="150" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="20" letter-spacing="1.5" fill="var(--accent3)">RUNDE 2 · 2 vs 2</text>
+      <text x="360" y="172" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="12.5" fill="var(--muted)">Weitergekommene neu verlost · K.o.</text>
+      <polygon points="350,196 370,196 360,212" fill="var(--muted)"/>
+      <!-- Finale -->
+      <rect x="250" y="220" width="220" height="64" rx="12" fill="var(--surface2)" stroke="var(--accent)"/>
+      <text x="360" y="246" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="20" letter-spacing="1.5" fill="var(--accent)">FINALE · 1 vs 1</text>
+      <text x="360" y="268" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="12.5" fill="var(--muted)">die zwei Besten · um Platz 1 &amp; 2</text>
+      <polygon points="350,292 370,292 360,308" fill="var(--accent)"/>
+      <!-- Trophy -->
+      <text x="360" y="344" text-anchor="middle" font-size="30">🏆</text>
+      <text x="360" y="372" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="13" fill="var(--text)">Endplatzierung → Disziplinpunkte 10 · 8 · 6 · …</text>
+    </svg>
+  </div>
+  <div class="note reveal" style="margin-top:1rem;">
+    <strong>Je nach Köpfen:</strong> 4–5 Spieler → direkt 2v2; 6–8 → zwei Teams in Runde 1; 9–12 → drei Teams. Die genaue Aufteilung wird am Abend nach Anwesenheit festgelegt — fair, flott, ohne lange Pausen.
+  </div>
+
+  <!-- 07 Timeline -->
+  <div class="section-label" id="timeline">07 — So läuft ein Abend</div>
+  <div class="panel reveal">
+    <div class="timeline">
+      <div class="tl-line"></div>
+      <div class="tl-item"><div class="tl-time">20:00</div><div class="tl-dot"><span></span></div><div class="tl-card"><b>Begrüßung &amp; Auslosung</b><small>Teams für Haxball &amp; Fall Guys werden gelost</small></div></div>
+      <div class="tl-item"><div class="tl-time">20:05</div><div class="tl-dot"><span></span></div><div class="tl-card"><span class="tl-dur">~25 Min</span><b>🌍 GeoGuessr</b><small>Challenge-Link, No Move</small></div></div>
+      <div class="tl-item"><div class="tl-time">20:30</div><div class="tl-dot"><span></span></div><div class="tl-card"><span class="tl-dur">~35 Min</span><b>⚽ Haxball</b><small>Teams → 2v2 → 1v1-Finale</small></div></div>
+      <div class="tl-item"><div class="tl-time">21:05</div><div class="tl-dot"><span></span></div><div class="tl-card"><span class="tl-dur">~25 Min</span><b>♟️ Chess.com Blitz</b><small>Arena 3+2</small></div></div>
+      <div class="tl-item"><div class="tl-time">21:30</div><div class="tl-dot"><span></span></div><div class="tl-card"><span class="tl-dur">~25 Min</span><b>⚔️ Brawlhalla</b><small>FFA, Stock-Modus</small></div></div>
+      <div class="tl-item"><div class="tl-time">21:55</div><div class="tl-dot"><span></span></div><div class="tl-card"><span class="tl-dur">~30 Min</span><b>🫘 Fall Guys</b><small>2 Squad-Sessions</small></div></div>
+      <div class="tl-item fin"><div class="tl-time">22:25</div><div class="tl-dot"><span></span></div><div class="tl-card"><b>🏆 Siegerehrung &amp; Saisonpunkte</b><small>Abendwertung → Tabelle aktualisiert</small></div></div>
+    </div>
+    <p style="color:var(--muted); font-size:0.78rem; font-family:'DM Mono',monospace; margin-top:1rem; text-align:center; letter-spacing:0.05em;">Richtwerte · ein Abend dauert ca. 2,5 Stunden</p>
+  </div>
+
+  <!-- 08 Preis -->
+  <div class="section-label">08 — Der Saisonpreis</div>
+  <div class="preis-card reveal">
     <span class="crown">👑</span>
     <h3>Saisonsieger</h3>
     <p>Wer am Ende der Saison die meisten Saisonpunkte gesammelt hat, gewinnt den Freitags Bash Titel — und steht für immer in der Hall of Fame.</p>
@@ -811,7 +568,49 @@
     <p style="margin-top:1.25rem; font-size:0.8rem; font-family:'DM Mono',monospace; color:var(--muted); letter-spacing:0.05em;">Preisgeld aus freiwilligem Einwurf (5 € pro Spieler) · Details folgen</p>
   </div>
 
+  <!-- 09 Kleingedrucktes -->
+  <div class="section-label" id="kleingedrucktes">09 — § Das Kleingedruckte</div>
+  <p class="lead">Für die Juristen unter uns 🤓 — damit am Spielabend nicht diskutiert, sondern gespielt wird. Im Zweifel gilt, was hier steht.</p>
+  <div class="fineprint reveal">
+    <div class="clause"><span class="para">§ 1</span><span><b>Veto-Anmeldung.</b> Der Veto wird <b>vor dem Start</b> der jeweiligen Disziplin laut in der Gruppe angesagt — niemals erst, wenn das eigene Ergebnis schon feststeht. Genau einer pro Spieler und Abend, nicht übertragbar, nicht aufschiebbar; ungenutzt verfällt er. Das Veto-Ersatzspiel selbst kann nicht vetot werden.</span></div>
+    <div class="clause"><span class="para">§ 2</span><span><b>Veto auf ein Teamspiel.</b> Wer Fall Guys vetot, fehlt seinem Squad — das Team spielt dann unterzählig. Bewusste Konsequenz, kein Beschwerdegrund.</span></div>
+    <div class="clause"><span class="para">§ 3</span><span><b>Gleichstand in einer Disziplin.</b> Punktgleiche teilen sich den besseren Platz; der folgende Platz entfällt entsprechend (zwei 1. Plätze → kein 2., weiter mit Platz 3). Bei Fall Guys erhalten gleichplatzierte Teams jeweils den höheren Wert.</span></div>
+    <div class="clause"><span class="para">§ 4</span><span><b>Gleichstand am Abend.</b> Es entscheidet zuerst die Anzahl der <b>Disziplin-Siege</b> (1. Plätze), danach ein <b>1v1-Stechen in Haxball</b>.</span></div>
+    <div class="clause"><span class="para">§ 5</span><span><b>Gleichstand um den Titel.</b> Am Saisonende entscheidet zuerst die Anzahl der <b>Abendsiege</b>, dann der direkte Vergleich am letzten gemeinsamen Abend, zuletzt ein großes 1v1-Finale.</span></div>
+    <div class="clause"><span class="para">§ 6</span><span><b>Wer trägt die Krone.</b> „Tabellenführer" ist, wer nach dem letzten abgeschlossenen Abend die meisten Saisonpunkte hat (Streicher eingerechnet). Führen mehrere gleichauf, tragen alle die ×0,8-Bürde. An Abend 1 trägt sie der Veranstalter.</span></div>
+    <div class="clause"><span class="para">§ 7</span><span><b>Streicher.</b> Greift erst ab dem 2. gewerteten Abend — bei nur einem Abend gäbe es nichts zu streichen. Gestrichen wird immer das schlechteste Abendergebnis, auch eine 0 wegen Abwesenheit.</span></div>
+    <div class="clause"><span class="para">§ 8</span><span><b>Was gespielt wird.</b> An jedem Abend werden grundsätzlich <b>alle fünf Disziplinen</b> gespielt. Einzige Ausnahme ist ein Veto: wer eines setzt, spielt statt der gewählten Disziplin sein Ersatz-Minispiel. Fällt eine Disziplin nur aus technischen Gründen für alle aus, greift § 10.</span></div>
+    <div class="clause"><span class="para">§ 9</span><span><b>Zu spät oder früher weg.</b> Wer eine Disziplin verpasst, bekommt dort 0 Punkte. Bereits erspielte Punkte bleiben erhalten, wenn jemand früher gehen muss.</span></div>
+    <div class="clause"><span class="para">§ 10</span><span><b>Technik &amp; höhere Gewalt.</b> Eigenverschuldete Ausfälle (Internet, Absturz) zählen wie erspielt. Fällt eine Disziplin für alle aus (Server down o. Ä.), wird sie wiederholt oder gestrichen — die Mehrheit entscheidet.</span></div>
+    <div class="clause"><span class="para">§ 11</span><span><b>Fairplay.</b> Keine fremde Hilfe. GeoGuessr „No Move" heißt kein Bewegen und keine zweite Karte; Chess ohne Engine. Verstoß = 0 Punkte in der Disziplin, im Wiederholungsfall der ganze Abend.</span></div>
+    <div class="clause"><span class="para">§ 12</span><span><b>Rundung.</b> Der Krone-Faktor ×0,8 wird kaufmännisch gerundet (14,4 → 14; 14,5 → 15).</span></div>
+    <div class="clause"><span class="para">§ 13</span><span><b>Regeländerungen.</b> Gelten ab dem nächsten Abend — nie rückwirkend auf bereits abgeschlossene Abende.</span></div>
+    <div class="clause"><span class="para">§ 14</span><span><b>Letzte Instanz: der Würfel.</b> Bei Streit entscheidet zuerst die einfache Mehrheit der Anwesenden. Bei Patt fällt die Entscheidung — wie es sich für eine Nerd-Runde gehört — per <b>W20</b>: jede Streitpartei würfelt, die höchste Augenzahl gewinnt (Gleichstand → neu würfeln). Der Würfel ist die letzte Instanz, niemand ist Richter in eigener Sache. 🎲</span></div>
+  </div>
+
+  <div class="wip-banner">⚙ VORSCHAU · Spieleranzahl wird noch finalisiert — Haxball-Format folgt</div>
+
 </main>
+
+<script>
+  // Scroll-Fortschrittsbalken
+  const prog = document.getElementById('scrollProg');
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    prog.style.transform = 'scaleX(' + (max > 0 ? h.scrollTop / max : 0) + ')';
+  };
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Scroll-Reveal
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
 
 </body>
 </html>

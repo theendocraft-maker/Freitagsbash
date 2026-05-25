@@ -436,6 +436,15 @@
       </table>
     </div>
 
+    <!-- Live schalten -->
+    <div class="finalize-bar" style="background:linear-gradient(135deg, rgba(255,92,92,0.08), rgba(245,200,66,0.08)); border-color:rgba(255,92,92,0.3); margin-bottom:1.5rem;">
+      <div class="finalize-info">
+        <strong>Live-Modus</strong><br>
+        Live schalten = Vetos werden gesperrt und alle sehen die Wertung live auf der Hauptseite.
+      </div>
+      <button class="btn-primary" id="liveToggleBtn">▶ Abend live schalten</button>
+    </div>
+
     <!-- Finalize -->
     <div class="finalize-bar">
       <div class="finalize-info">
@@ -465,21 +474,14 @@
   // ===== Disziplin-Definitionen =====
   const DISCIPLINES = [
     { kind: 'geoguessr', name: 'GeoGuessr',              icon: '🌍', type: 'solo' },
-    { kind: 'haxball',   name: 'Haxball',                icon: '⚽', type: 'team' },
+    { kind: 'haxball',   name: 'Haxball',                icon: '⚽', type: 'solo' },  // K.o.-Trichter → Einzel-Endplatzierung
     { kind: 'chess',     name: 'Chess.com Blitz',        icon: '♟️', type: 'solo' },
     { kind: 'brawlhalla', name: 'Brawlhalla',            icon: '⚔️', type: 'solo' },
-    { kind: 'fallguys',  name: 'Fall Guys',              icon: '🫘', type: 'fallguys' }
+    { kind: 'fallguys',  name: 'Fall Guys',              icon: '🫘', type: 'team' }   // Squads per Los → Teamwertung
   ];
 
   const SOLO_POINTS     = [10, 8, 6, 4, 3, 2, 1]; // Platz 1..7+, 7+ alle 1
-  const HAXBALL_POINTS  = [9, 6, 3, 1, 1];        // Teamrang 1..N, alles ab 4 nur noch 1
-  const FALLGUYS_TIERS  = [
-    { tier: 1, label: '🏆 Show',    points: 10 },
-    { tier: 2, label: 'Finale',     points: 7 },
-    { tier: 3, label: 'Halbfinale', points: 5 },
-    { tier: 4, label: 'R2–3',       points: 3 },
-    { tier: 5, label: 'R1',         points: 1 }
-  ];
+  const TEAM_POINTS     = [8, 4, 2, 1];           // Team-Platz 1..N (Fall Guys), ab 4. Team nur noch 1
   const SEASON_PTS_BY_RANK = [25, 18, 15, 12, 10, 8, 6, 4]; // Platz 1..8+
 
   // ===== State =====
@@ -488,6 +490,7 @@
   let currentEvent = null;           // aktuell geöffneter Abend
   let currentDisciplines = [];       // 5 Disziplinen des aktuellen Abends
   let currentResults = {};           // { disciplineId: { playerId: resultRow } }
+  let currentVetoes = {};            // { playerId: discipline_kind } für den aktuellen Abend
   let currentParticipantIds = new Set();
 
   // ===== Helpers =====
@@ -507,17 +510,22 @@
     if (!rank || rank < 1) return 0;
     return SOLO_POINTS[Math.min(rank, SOLO_POINTS.length) - 1];
   }
-  function haxballPoints(teamRank) {
+  function teamPoints(teamRank) {
     if (!teamRank || teamRank < 1) return 0;
-    return HAXBALL_POINTS[Math.min(teamRank, HAXBALL_POINTS.length) - 1];
-  }
-  function fallguysPoints(tier) {
-    const t = FALLGUYS_TIERS.find(x => x.tier === tier);
-    return t ? t.points : 0;
+    return TEAM_POINTS[Math.min(teamRank, TEAM_POINTS.length) - 1];
   }
   function seasonPointsByRank(rank) {
     if (!rank || rank < 1) return 0;
     return SEASON_PTS_BY_RANK[Math.min(rank, SEASON_PTS_BY_RANK.length) - 1];
+  }
+  // Tiebreaker: Anzahl Disziplin-Siege (1. Platz bzw. Sieger-Team) am aktuellen Abend
+  function disciplineWins(playerId) {
+    let w = 0;
+    currentDisciplines.forEach(d => {
+      const r = currentResults[d.id]?.[playerId];
+      if (r && parseInt(r.placement) === 1) w++;
+    });
+    return w;
   }
 
   // ===== Login =====
@@ -640,6 +648,11 @@
       currentParticipantIds = new Set(players.map(p => p.id));
     }
 
+    // Vetos laden (von Spielern auf der Hauptseite gesetzt)
+    const { data: vData } = await sb.from('vetoes').select('*').eq('event_id', id);
+    currentVetoes = {};
+    (vData || []).forEach(v => currentVetoes[v.player_id] = v.discipline_kind);
+
     $('eventListView').style.display = 'none';
     $('eventDetailView').style.display = 'block';
     renderDetail();
@@ -660,6 +673,12 @@
     const stPill = $('detailStatus');
     stPill.className = 'status-pill ' + currentEvent.status;
     stPill.textContent = currentEvent.status === 'finalized' ? '✓ Abgeschlossen' : currentEvent.status === 'live' ? 'Läuft' : 'Entwurf';
+
+    const liveBtn = $('liveToggleBtn');
+    if (liveBtn) {
+      liveBtn.textContent = currentEvent.status === 'live' ? '⏸ Live beenden (zurück zu Entwurf)' : '▶ Abend live schalten';
+      liveBtn.disabled = currentEvent.status === 'finalized';
+    }
 
     $('setupDate').value = currentEvent.event_date;
     const hostSel = $('setupHost');
@@ -736,7 +755,6 @@
     if (participants.length === 0) return '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
     if (def.type === 'solo')     return renderSoloBody(d, participants);
     if (def.type === 'team')     return renderTeamBody(d, participants);
-    if (def.type === 'fallguys') return renderFallguysBody(d, participants);
     return '';
   }
 
@@ -748,7 +766,7 @@
       const pts = soloPoints(r?.placement);
       return `
         <div class="result-row">
-          <div class="result-name">${p.name}</div>
+          <div class="result-name">${p.name}${currentVetoes[p.id] === d.kind ? ' <span style="color:var(--accent);font-size:0.7rem;font-weight:700">🃏 Veto → Ersatzspiel</span>' : ''}</div>
           <input type="number" min="1" class="result-input" value="${placement}" placeholder="—"
                  onchange="setSoloPlacement('${d.id}','${p.id}',this.value)">
           <div class="result-points">${pts ? '+' + pts : '—'}</div>
@@ -762,18 +780,18 @@
       </div>`;
   }
 
-  // --- Haxball: Team + Teamrang ---
+  // --- Fall Guys: Squads + Team-Platz ---
   function renderTeamBody(d, participants) {
-    // Step 1: Teams zuweisen (1/2/3)
+    // Step 1: Squads zuweisen (1/2/3)
     const teamRows = participants.map(p => {
       const r = currentResults[d.id]?.[p.id];
       const team = r?.team || 0;
       return `
         <div class="result-row" style="grid-template-columns:1fr auto">
-          <div class="result-name">${p.name}</div>
+          <div class="result-name">${p.name}${currentVetoes[p.id] === d.kind ? ' <span style="color:var(--accent);font-size:0.7rem;font-weight:700">🃏 Veto → Ersatzspiel</span>' : ''}</div>
           <div class="team-buttons">
             ${[1,2,3].map(t => `
-              <button class="team-btn ${team === t ? 'selected-t'+t : ''}" onclick="setHaxballTeam('${d.id}','${p.id}',${t})">${t}</button>
+              <button class="team-btn ${team === t ? 'selected-t'+t : ''}" onclick="setTeam('${d.id}','${p.id}',${t})">${t}</button>
             `).join('')}
           </div>
         </div>`;
@@ -792,14 +810,14 @@
             const members = participants.filter(p => currentResults[d.id]?.[p.id]?.team === t);
             // Rang ist auf den Result-Rows der Teammitglieder gespeichert (placement)
             const placement = members[0] ? (currentResults[d.id][members[0].id]?.placement || '') : '';
-            const pts = haxballPoints(parseInt(placement));
+            const pts = teamPoints(parseInt(placement));
             return `
               <div class="team-rank-row">
                 <span class="team-badge t${t}">Team ${t}</span>
                 <span class="team-members">${members.map(m => m.name).join(', ') || '(leer)'}</span>
                 <input type="number" min="1" max="${teamsInUse.length}" class="team-rank-input"
                        value="${placement}" placeholder="—"
-                       onchange="setHaxballTeamRank('${d.id}',${t},this.value)">
+                       onchange="setTeamRank('${d.id}',${t},this.value)">
                 <span class="result-points">${pts ? '+' + pts : '—'}</span>
               </div>`;
           }).join('')}
@@ -812,31 +830,6 @@
         <div class="haxball-step-title" style="border-top:none;padding-top:0">Teams zuweisen</div>
         ${teamRows}
         ${teamRankBlock}
-      </div>`;
-  }
-
-  // --- Fall Guys: Tier pro Spieler ---
-  function renderFallguysBody(d, participants) {
-    const rows = participants.map(p => {
-      const r = currentResults[d.id]?.[p.id];
-      const tier = r?.fallguys_tier || 0;
-      const pts = fallguysPoints(tier);
-      return `
-        <div class="result-row" style="grid-template-columns:1fr auto auto">
-          <div class="result-name">${p.name}</div>
-          <div class="tier-buttons">
-            ${FALLGUYS_TIERS.map(t => `
-              <button class="tier-btn ${tier === t.tier ? 'selected' : ''}"
-                      onclick="setFallguysTier('${d.id}','${p.id}',${t.tier})">${t.label}</button>
-            `).join('')}
-          </div>
-          <div class="result-points">${pts ? '+' + pts : '—'}</div>
-        </div>`;
-    }).join('');
-    return `
-      <div style="padding-top:1rem">
-        <p class="section-desc">Beste Platzierung aus zwei Sessions pro Spieler.</p>
-        ${rows}
       </div>`;
   }
 
@@ -870,8 +863,7 @@
     const disc = currentDisciplines.find(d => d.id === disciplineId);
     const def = DISCIPLINES.find(x => x.kind === disc.kind) || { type: 'solo' };
     if (def.type === 'solo')     return soloPoints(rowData.placement);
-    if (def.type === 'team')     return haxballPoints(rowData.placement);
-    if (def.type === 'fallguys') return fallguysPoints(rowData.fallguys_tier);
+    if (def.type === 'team')     return teamPoints(rowData.placement);
     return 0;
   }
 
@@ -882,7 +874,7 @@
     renderOverview();
   };
 
-  window.setHaxballTeam = async function(discId, playerId, team) {
+  window.setTeam = async function(discId, playerId, team) {
     const cur = currentResults[discId][playerId];
     const newTeam = cur?.team === team ? null : team;
     // Wenn Team geändert wird, placement (= Teamrang) zurücksetzen
@@ -891,21 +883,13 @@
     renderOverview();
   };
 
-  window.setHaxballTeamRank = async function(discId, team, value) {
+  window.setTeamRank = async function(discId, team, value) {
     const rank = parseInt(value) || null;
     const participants = players.filter(p => currentParticipantIds.has(p.id));
     const teamMembers = participants.filter(p => currentResults[discId]?.[p.id]?.team === team);
     for (const m of teamMembers) {
       await upsertResult(discId, m.id, { placement: rank, team });
     }
-    renderDisciplineBodyFor(discId);
-    renderOverview();
-  };
-
-  window.setFallguysTier = async function(discId, playerId, tier) {
-    const cur = currentResults[discId][playerId];
-    const newTier = cur?.fallguys_tier === tier ? null : tier;
-    await upsertResult(discId, playerId, { fallguys_tier: newTier });
     renderDisciplineBodyFor(discId);
     renderOverview();
   };
@@ -928,17 +912,16 @@
         const r = currentResults[d.id]?.[p.id];
         if (r && r.points) pts += parseFloat(r.points);
       });
-      return { player: p, eveningPoints: pts };
+      return { player: p, eveningPoints: pts, wins: disciplineWins(p.id) };
     });
 
     // Sortieren, Rang vergeben
-    totals.sort((a,b) => b.eveningPoints - a.eveningPoints);
-    let rank = 0, lastPts = -1, sameRankCount = 0;
+    totals.sort((a,b) => (b.eveningPoints - a.eveningPoints) || (b.wins - a.wins));
+    let rank = 0, lastPts = -1, lastWins = -1;
     totals.forEach((t, i) => {
-      if (t.eveningPoints !== lastPts) { rank = i + 1; sameRankCount = 1; }
-      else { sameRankCount++; }
+      if (t.eveningPoints !== lastPts || t.wins !== lastWins) { rank = i + 1; }
       t.rank = rank;
-      lastPts = t.eveningPoints;
+      lastPts = t.eveningPoints; lastWins = t.wins;
     });
 
     // Krone-Faktor: Veranstalter an Abend 1, sonst Leader
@@ -985,6 +968,20 @@
     return null;
   }
 
+  // ===== Live schalten =====
+  $('liveToggleBtn').addEventListener('click', async () => {
+    if (!currentEvent) return;
+    if (currentEvent.status === 'finalized') { toast('Abend ist bereits abgeschlossen', 'error'); return; }
+    const goLive = currentEvent.status !== 'live';
+    if (goLive && !confirm(`„${currentEvent.name}" live schalten? Vetos werden gesperrt und die Wertung erscheint öffentlich auf der Hauptseite.`)) return;
+    const newStatus = goLive ? 'live' : 'draft';
+    const { error } = await sb.from('events').update({ status: newStatus }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Status-Update fehlgeschlagen', 'error'); return; }
+    currentEvent.status = newStatus;
+    toast(goLive ? '🔴 Abend ist live' : 'Zurück auf Entwurf', 'ok');
+    renderDetail();
+  });
+
   // ===== Finalize =====
   $('finalizeBtn').addEventListener('click', async () => {
     if (currentEvent.status === 'finalized') {
@@ -1002,16 +999,16 @@
         const r = currentResults[d.id]?.[p.id];
         if (r && r.points) pts += parseFloat(r.points);
       });
-      return { player: p, eveningPoints: pts };
+      return { player: p, eveningPoints: pts, wins: disciplineWins(p.id) };
     });
 
-    // Sortieren, Rang vergeben (Gleichstand → gleicher Rang)
-    totals.sort((a,b) => b.eveningPoints - a.eveningPoints);
-    let rank = 0, lastPts = -1;
+    // Sortieren, Rang vergeben (Gleichstand → Tiebreaker: mehr Disziplin-Siege; danach gleicher Rang)
+    totals.sort((a,b) => (b.eveningPoints - a.eveningPoints) || (b.wins - a.wins));
+    let rank = 0, lastPts = -1, lastWins = -1;
     totals.forEach((t, i) => {
-      if (t.eveningPoints !== lastPts) { rank = i + 1; }
+      if (t.eveningPoints !== lastPts || t.wins !== lastWins) { rank = i + 1; }
       t.rank = rank;
-      lastPts = t.eveningPoints;
+      lastPts = t.eveningPoints; lastWins = t.wins;
     });
 
     // Leader/Host bestimmen
