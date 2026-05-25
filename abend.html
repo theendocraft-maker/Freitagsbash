@@ -3,94 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Freitags Bash · Spielabend</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Freitags Bash · Veto &amp; Live</title>
+<link rel="stylesheet" href="styles.css">
 <script>document.documentElement.classList.add('js');</script>
 <style>
-  :root { --bg:#08080d; --surface:#111118; --surface2:#1a1a24; --border:#ffffff12; --accent:#f5c842; --accent2:#ff5c5c; --accent3:#5cefff; --text:#f2f2f7; --muted:#8a8a9e; --shadow:0 10px 40px -18px rgba(0,0,0,0.8); --wrap:960px; color-scheme:dark; }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html { scroll-behavior:smooth; }
-  body { background:var(--bg); color:var(--text); font-family:'DM Sans',system-ui,sans-serif; min-height:100vh; overflow-x:hidden; }
-  body::before { content:''; position:fixed; inset:0; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; opacity:0.4; }
-  .scroll-prog { position:fixed; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transform:scaleX(0); transform-origin:left; z-index:1000; }
-
-  header { border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(8,8,13,0.8); z-index:50; backdrop-filter:blur(14px); }
-  .nav-inner { max-width:var(--wrap); margin:0 auto; padding:1rem 1.5rem; display:flex; align-items:center; justify-content:space-between; }
-  .logo { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:0.15em; color:var(--accent); line-height:1; text-decoration:none; }
-  .logo span { color:var(--text); opacity:0.45; font-size:0.7rem; letter-spacing:0.25em; display:block; font-family:'DM Mono',monospace; margin-top:2px; }
-  .nav-links { display:flex; align-items:center; gap:1.4rem; }
-  .nav-links a { color:var(--muted); text-decoration:none; font-size:0.85rem; letter-spacing:0.04em; transition:color 0.2s; font-weight:500; }
-  .nav-links a:hover, .nav-links a.active { color:var(--text); }
-  .nav-cta { background:var(--accent); color:#08080d !important; padding:0.5rem 1.1rem; border-radius:999px; font-weight:700 !important; }
-  .nav-cta:hover { box-shadow:0 6px 20px -6px var(--accent); }
-  @media (max-width:600px){ .nav-links{gap:1rem;} .nav-links a.hide-sm{display:none;} }
-
-  .btn { display:inline-flex; align-items:center; gap:0.5rem; text-decoration:none; font-weight:700; font-size:0.92rem; padding:0.75rem 1.5rem; border-radius:999px; transition:transform 0.15s, box-shadow 0.2s; cursor:pointer; border:1px solid transparent; font-family:'DM Sans',sans-serif; }
-  .btn-primary { background:var(--accent); color:#08080d; box-shadow:0 8px 26px -10px var(--accent); }
-  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 12px 32px -8px var(--accent); }
-  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
-
-  main { max-width:var(--wrap); margin:0 auto; padding:0 1.5rem 4rem; }
-  .sec { padding-top:3.5rem; }
-  .sec:first-child { padding-top:2.5rem; }
-  .sec-head { margin-bottom:1.5rem; }
-  .sec-head .eyebrow { font-family:'DM Mono',monospace; font-size:0.68rem; letter-spacing:0.28em; color:var(--accent); text-transform:uppercase; margin-bottom:0.6rem; display:inline-flex; align-items:center; gap:0.5rem; }
-  .sec-head h2 { font-family:'Bebas Neue',sans-serif; font-size:clamp(2rem,5vw,2.8rem); letter-spacing:0.03em; line-height:1; }
-  .sec-head h2 span { color:var(--accent); }
-  .sec-head p { color:var(--muted); font-size:0.98rem; margin-top:0.5rem; max-width:560px; }
-  .sec-head p a { color:var(--accent); text-decoration:none; }
-
-  .live-badge { display:inline-flex; align-items:center; gap:0.5rem; background:rgba(255,92,92,0.12); border:1px solid rgba(255,92,92,0.3); color:var(--accent2); font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.18em; text-transform:uppercase; padding:0.3rem 0.7rem; border-radius:999px; }
-  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--accent2); animation:pulse 1.2s ease-in-out infinite; }
-
-  .leaderboard { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); }
-  .lb-header { display:grid; grid-template-columns:48px 1fr 80px 80px; padding:0.85rem 1.5rem; font-family:'DM Mono',monospace; font-size:0.68rem; font-weight:500; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:1px solid var(--border); }
-  .lb-row { display:grid; grid-template-columns:48px 1fr 80px 80px; padding:0.9rem 1.5rem; border-bottom:1px solid var(--border); align-items:center; transition:background 0.15s; }
-  .lb-row:last-child { border-bottom:none; }
-  .lb-row:hover { background:var(--surface2); }
-  .lb-rank { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:0.04em; color:var(--muted); }
-  .lb-rank.gold{color:#f5c842;} .lb-rank.silver{color:#c0c0c0;} .lb-rank.bronze{color:#cd7f32;}
-  .lb-player { display:flex; align-items:center; gap:0.75rem; }
-  .lb-avatar { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:700; color:#08080d; flex-shrink:0; }
-  .lb-name { font-weight:600; font-size:0.9rem; }
-  .lb-pts { font-family:'DM Mono',monospace; font-weight:500; color:var(--accent); font-size:1rem; text-align:right; }
-  .lb-w { color:var(--muted); font-size:0.82rem; text-align:right; font-family:'DM Mono',monospace; }
-  .lb-empty { padding:3rem; text-align:center; color:var(--muted); font-size:0.88rem; line-height:1.6; }
-  .lb-veto { font-size:0.62rem; color:var(--accent); margin-left:0.4rem; }
-
-  label { font-family:'DM Mono',monospace; font-size:0.68rem; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
-  select { background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:0.75rem 1rem; border-radius:8px; font-size:0.92rem; font-family:'DM Sans',inherit; outline:none; width:100%; cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8a9e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 1rem center; transition:border-color 0.2s, box-shadow 0.2s; }
-  select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(245,200,66,0.1); }
-  select option { background:var(--surface2); }
-
-  .veto-wrap { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:2rem; box-shadow:var(--shadow); position:relative; overflow:hidden; }
-  .veto-wrap::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
-  .veto-row { display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end; }
-  .veto-field { flex:1; min-width:170px; display:flex; flex-direction:column; gap:0.4rem; }
-  .veto-list { margin-top:1.5rem; display:flex; flex-direction:column; gap:0.5rem; }
-  .veto-item { display:flex; align-items:center; gap:0.6rem; font-size:0.85rem; color:var(--muted); padding:0.55rem 0.85rem; background:var(--surface2); border:1px solid var(--border); border-radius:8px; }
-  .veto-locked { color:var(--muted); font-size:0.9rem; padding:1.5rem; text-align:center; line-height:1.6; }
-
-  footer { border-top:1px solid var(--border); margin-top:3.5rem; }
-  .footer-inner { max-width:var(--wrap); margin:0 auto; padding:2.5rem 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
-  .footer-inner nav { display:flex; gap:1.4rem; flex-wrap:wrap; }
-  .footer-inner a { color:var(--muted); text-decoration:none; font-size:0.85rem; } .footer-inner a:hover { color:var(--accent); }
-  .footer-inner small { color:var(--muted); font-family:'DM Mono',monospace; font-size:0.72rem; letter-spacing:0.05em; }
-  .footer-inner .logo { font-size:1.5rem; }
-
-  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-  .js .reveal { opacity:0; transform:translateY(22px); transition:opacity 0.6s ease, transform 0.6s cubic-bezier(.2,.8,.2,1); }
-  .js .reveal.in { opacity:1; transform:none; }
-  @media (prefers-reduced-motion:reduce){ .js .reveal{opacity:1;transform:none;transition:none;} .live-dot{animation:none;} html{scroll-behavior:auto;} }
+  /* Page-local */
+  .veto-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    position: relative; overflow: hidden;
+  }
+  .veto-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--primary);
+  }
+  .veto-row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+  .veto-field { flex: 1 1 180px; min-width: 0; }
+  .veto-list { margin-top: 1.5rem; display: grid; gap: 0.5rem; }
+  .veto-item {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.7rem 1rem;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem; color: var(--text-soft);
+  }
+  .veto-item .joker {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 5px;
+    background: var(--primary-soft);
+    border: 1px solid var(--primary-line);
+    color: var(--primary);
+    font-family: var(--font-display); font-weight: 900;
+    font-size: 0.75rem; line-height: 1;
+  }
+  .veto-item b { color: var(--text); }
+  .veto-item .arrow { color: var(--muted); font-family: var(--font-mono); }
+  .veto-locked {
+    padding: 2.5rem; text-align: center;
+    color: var(--muted); font-size: 0.95rem; line-height: 1.6;
+  }
+  .veto-locked .lock-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+  }
 </style>
 </head>
 <body>
 
 <div class="scroll-prog" id="scrollProg"></div>
 
-<header>
+<header class="site-header">
   <div class="nav-inner">
-    <a href="index.html" class="logo">Freitags Bash<span>SAISON 1 · 2026</span></a>
+    <a href="index.html" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">Freitags Bash<small>Saison 1 · 2026</small></span>
+    </a>
     <div class="nav-links">
       <a href="index.html" class="hide-sm">Start</a>
       <a href="abend.html" class="active">Veto</a>
@@ -100,11 +77,11 @@
   </div>
 </header>
 
-<main>
+<main class="wrap">
   <section class="sec">
     <div class="sec-head reveal">
-      <div class="eyebrow">Der Spielabend</div>
-      <h2>Der <span>Abend</span></h2>
+      <div class="eyebrow"><span class="num">→</span> Der Spielabend</div>
+      <h2>Der <span class="accent">Abend.</span></h2>
       <p>Setz vor dem Start dein Veto — am Spielabend läuft hier die Live-Wertung in Echtzeit. <a href="regeln.html">Regeln →</a></p>
     </div>
   </section>
@@ -112,12 +89,16 @@
   <!-- LIVE -->
   <section class="sec" id="live" style="display:none">
     <div class="sec-head">
-      <div class="eyebrow"><span class="live-badge"><span class="live-dot"></span> Live</span></div>
-      <h2>Aktuelle <span>Wertung</span></h2>
+      <span class="live-badge"><span class="dot"></span> Live</span>
+      <h2>Aktuelle <span class="alert">Wertung</span></h2>
       <p id="liveSub">—</p>
     </div>
     <div class="leaderboard">
-      <div class="lb-header"><div>#</div><div>Spieler</div><div style="text-align:right">Punkte</div><div style="text-align:right">🥇</div></div>
+      <div class="lb-header">
+        <div>#</div><div>Spieler</div>
+        <div style="text-align:right">Punkte</div>
+        <div style="text-align:right">Siege</div>
+      </div>
       <div id="liveBody"></div>
     </div>
   </section>
@@ -125,33 +106,45 @@
   <!-- VETO -->
   <section class="sec" id="veto">
     <div class="sec-head reveal">
-      <div class="eyebrow">🃏 Joker</div>
-      <h2>Dein <span>Veto</span></h2>
+      <div class="eyebrow"><span class="num">🃏</span> Joker</div>
+      <h2>Dein <span class="accent">Veto.</span></h2>
       <p>Einmal pro Abend darfst du eine Disziplin vetoen — du spielst sie dann nicht, sondern ein Überraschungs-Minispiel. Wähle vor Abendstart.</p>
     </div>
-    <div class="veto-wrap reveal">
+    <div class="veto-card reveal">
       <div id="vetoOpen">
         <div class="veto-row">
-          <div class="veto-field"><label for="vetoPlayer">Dein Name</label><select id="vetoPlayer"></select></div>
-          <div class="veto-field"><label for="vetoDisc">Disziplin vetoen</label><select id="vetoDisc"></select></div>
+          <div class="veto-field">
+            <label for="vetoPlayer">Dein Name</label>
+            <select id="vetoPlayer"></select>
+          </div>
+          <div class="veto-field">
+            <label for="vetoDisc">Disziplin vetoen</label>
+            <select id="vetoDisc"></select>
+          </div>
           <button class="btn btn-primary" id="vetoSaveBtn">Veto speichern</button>
         </div>
         <div class="veto-list" id="vetoList"></div>
       </div>
-      <div id="vetoClosed" class="veto-locked" style="display:none"></div>
+      <div id="vetoClosed" class="veto-locked" style="display:none">
+        <div class="lock-icon">🔒</div>
+        <div id="vetoClosedText"></div>
+      </div>
     </div>
   </section>
 </main>
 
-<footer>
+<footer class="site-footer">
   <div class="footer-inner">
-    <a href="index.html" class="logo">Freitags Bash<span>SAISON 1 · 2026</span></a>
+    <a href="index.html" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">Freitags Bash<small>Saison 1 · 2026</small></span>
+    </a>
     <nav>
       <a href="index.html">Start</a>
       <a href="regeln.html">Regeln</a>
       <a href="anmelden.html">Anmelden</a>
     </nav>
-    <small>Saison 1 · Start 29. Mai 2026</small>
+    <small>Saison 1 · Start 29.05.2026</small>
   </div>
 </footer>
 
@@ -161,19 +154,24 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const COLORS = [['#f5c842','#ff5c5c'],['#5cefff','#f5c842'],['#ff5c5c','#5cefff'],['#f5c842','#5cefff'],['#ff5c5c','#f5c842'],['#5cefff','#ff5c5c'],['#f5c842','#e0a91f'],['#5cefff','#3bb8c9']];
+  const COLORS = [
+    ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
+    ['#ffd34a','#ff7a4a'], ['#6cf2a0','#d4ff3a'], ['#ff7ce0','#7df0ff'],
+    ['#d4ff3a','#6cf2a0'], ['#7df0ff','#d4ff3a']
+  ];
   const grad = i => { const c=COLORS[i%COLORS.length]; return `linear-gradient(135deg,${c[0]},${c[1]})`; };
   const ini = s => s.slice(0,2).toUpperCase();
+  const pad2 = n => String(n).padStart(2,'0');
 
   const VDISCS = [
-    { kind:'geoguessr', name:'GeoGuessr', icon:'🌍' },
-    { kind:'haxball', name:'Haxball', icon:'⚽' },
-    { kind:'chess', name:'Chess.com Blitz', icon:'♟️' },
-    { kind:'brawlhalla', name:'Brawlhalla', icon:'⚔️' },
-    { kind:'fallguys', name:'Fall Guys', icon:'🫘' }
+    { kind:'geoguessr', name:'GeoGuessr',       icon:'GEO' },
+    { kind:'haxball',   name:'Haxball',         icon:'HAX' },
+    { kind:'chess',     name:'Chess.com Blitz', icon:'CHE' },
+    { kind:'brawlhalla',name:'Brawlhalla',      icon:'BRA' },
+    { kind:'fallguys',  name:'Fall Guys',       icon:'FAL' }
   ];
   const discName = k => (VDISCS.find(d => d.kind === k) || {}).name || k;
-  const discIcon = k => (VDISCS.find(d => d.kind === k) || {}).icon || '🎮';
+  const discIcon = k => (VDISCS.find(d => d.kind === k) || {}).icon || '—';
 
   let evPlayers = [], liveEvent = null, upcomingEvent = null, evVetoes = [];
 
@@ -215,23 +213,26 @@
     const dWith = new Set(results.map(r => r.discipline_id));
     document.getElementById('liveSub').textContent = `${liveEvent.name} · ${dWith.size}/${dList.length || 5} Disziplinen gewertet`;
     const body = document.getElementById('liveBody');
-    if (rows.length === 0) { body.innerHTML = '<div class="lb-empty">Noch keine Ergebnisse — gleich geht’s los. 🎮</div>'; return; }
-    const ranks = ['gold','silver','bronze'], icons = ['👑','🥈','🥉'];
+    if (rows.length === 0) { body.innerHTML = '<div class="lb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>'; return; }
+    const ranks = ['gold','silver','bronze'];
     let rank = 0, lp = -1, lw = -1;
     rows.forEach((r,i) => { if (r.pts !== lp || r.wins !== lw) rank = i+1; r.rank = rank; lp = r.pts; lw = r.wins; });
     body.innerHTML = rows.map((r,i) => {
-      const av = r.player.avatar_url ? `background-image:url(${r.player.avatar_url});background-size:cover;background-position:center;` : `background:${grad(i)}`;
+      const av = r.player.avatar_url ? `background-image:url(${r.player.avatar_url});` : `background:${grad(i)}`;
       const vetoTag = r.veto ? `<span class="lb-veto">🃏 ${discIcon(r.veto)}</span>` : '';
-      return `<div class="lb-row"><div class="lb-rank ${ranks[r.rank-1]||''}">${icons[r.rank-1]||r.rank}</div><div class="lb-player"><div class="lb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div><div><div class="lb-name">${r.player.name}${vetoTag}</div></div></div><div class="lb-pts">${r.pts}</div><div class="lb-w">${r.wins ? ('×'+r.wins) : '—'}</div></div>`;
+      return `<div class="lb-row"><div class="lb-rank ${ranks[r.rank-1]||''} tnum">${pad2(r.rank)}</div><div class="lb-player"><div class="lb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div><div><div class="lb-name">${r.player.name}${vetoTag}</div></div></div><div class="lb-pts">${r.pts}</div><div class="lb-w">${r.wins ? ('×'+r.wins) : '—'}</div></div>`;
     }).join('');
   }
 
   async function renderVeto() {
     const open = document.getElementById('vetoOpen');
     const closed = document.getElementById('vetoClosed');
+    const closedText = document.getElementById('vetoClosedText');
     if (!upcomingEvent) {
       open.style.display = 'none'; closed.style.display = 'block';
-      closed.innerHTML = liveEvent ? 'Der Abend läuft bereits — Vetos sind jetzt gesperrt. 🔒' : 'Aktuell ist kein Abend für Vetos offen. Sobald der nächste Abend angelegt ist, kannst du hier wählen.';
+      closedText.textContent = liveEvent
+        ? 'Der Abend läuft bereits — Vetos sind jetzt gesperrt.'
+        : 'Aktuell ist kein Abend für Vetos offen. Sobald der nächste Abend angelegt ist, kannst du hier wählen.';
       return;
     }
     open.style.display = 'block'; closed.style.display = 'none';
@@ -242,13 +243,18 @@
     psel.innerHTML = '<option value="">— wähle deinen Namen —</option>' + evPlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     if (cur) psel.value = cur;
     const dsel = document.getElementById('vetoDisc');
-    if (dsel.options.length === 0) { dsel.innerHTML = '<option value="">— kein Veto —</option>' + VDISCS.map(d => `<option value="${d.kind}">${d.icon} ${d.name}</option>`).join(''); }
+    if (dsel.options.length === 0) {
+      dsel.innerHTML = '<option value="">— kein Veto —</option>' + VDISCS.map(d => `<option value="${d.kind}">${d.name}</option>`).join('');
+    }
     const selV = evVetoes.find(v => v.player_id === psel.value);
     dsel.value = selV ? selV.discipline_kind : '';
     const list = document.getElementById('vetoList');
     list.innerHTML = evVetoes.length === 0
-      ? '<div class="veto-item" style="opacity:0.7">Noch keine Vetos gesetzt für „' + upcomingEvent.name + '".</div>'
-      : evVetoes.map(v => { const pl = evPlayers.find(p => p.id === v.player_id); return `<div class="veto-item">🃏 <b style="color:var(--text)">${pl ? pl.name : '?'}</b> &rarr; ${discIcon(v.discipline_kind)} ${discName(v.discipline_kind)}</div>`; }).join('');
+      ? '<div class="veto-item" style="opacity:0.7"><span class="joker">J</span> Noch keine Vetos gesetzt für „' + upcomingEvent.name + '".</div>'
+      : evVetoes.map(v => {
+          const pl = evPlayers.find(p => p.id === v.player_id);
+          return `<div class="veto-item"><span class="joker">J</span><b>${pl ? pl.name : '?'}</b><span class="arrow">→</span> ${discName(v.discipline_kind)}</div>`;
+        }).join('');
   }
 
   document.getElementById('vetoPlayer').addEventListener('change', e => {
