@@ -353,6 +353,7 @@
     border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; font-family: var(--font-mono); font-size: 0.85rem;
   }
   .join-field-input:focus { outline: none; border-color: var(--cool); }
+  .dur-hint { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.9rem; }
 
   .mode-block {
     border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -958,16 +959,23 @@
       </div>`;
   }
 
+  const DURATION_HINT = {
+    haxball:'~40–45 min (inkl. Trichter)', geoguessr:'~15 min (5 Runden)',
+    brawlhalla:'~25 min (2–3 FFA-Runden)', chess:'~20–25 min (feste Arena-Dauer)',
+    fallguys:'~30–35 min (2–3 Modi)'
+  };
   function renderDisciplineBody(d, def) {
     const join = joinLinkFieldHtml(d);
+    const dur = DURATION_HINT[d.kind] ? `<div class="dur-hint">⏱ Empfohlene Dauer: ${DURATION_HINT[d.kind]}</div>` : '';
+    const head = join + dur;
     const participants = players.filter(p => currentParticipantIds.has(p.id));
-    if (participants.length === 0) return join + '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
-    if (d.kind === 'haxball')    return join + renderHaxballBody(d, participants);
-    if (d.kind === 'fallguys')   return join + renderFallguysBody(d, participants);
-    if (d.kind === 'brawlhalla') return join + renderBrawlhallaBody(d, participants);
-    if (def.type === 'solo')     return join + renderSoloBody(d, participants);
-    if (def.type === 'team')     return join + renderTeamBody(d, participants);
-    return join;
+    if (participants.length === 0) return head + '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
+    if (d.kind === 'haxball')    return head + renderHaxballBody(d, participants);
+    if (d.kind === 'fallguys')   return head + renderFallguysBody(d, participants);
+    if (d.kind === 'brawlhalla') return head + renderBrawlhallaBody(d, participants);
+    if (def.type === 'solo')     return head + renderSoloBody(d, participants);
+    if (def.type === 'team')     return head + renderTeamBody(d, participants);
+    return head;
   }
 
   // Eingabefeld für den Join-Link/Code (wird live auf abend.html groß angezeigt)
@@ -1061,7 +1069,13 @@
     const br = d.bracket || {};
     const gpp = br.gpp || 1;
     const games = br.games || {};
-    const gppSel = `<div class="draw-control"><span class="draw-label">Spiele je Paarung:</span>${[1,2,3].map(n => `<button class="phase-btn ${gpp===n?'active':''}" onclick="setHaxGpp('${d.id}',${n})">${n}</button>`).join('')}</div>`;
+    const PHASE_REC = {
+      'Teams': '1 Spiel pro Paarung · jedes Spiel: erster mit 3 Toren oder 3-Min-Cap',
+      '2v2': 'Best of 3 → „Spiele je Paarung" = 3',
+      '1v1-Finale': 'Best of 3 (oder Best of 5 fürs Drama)'
+    };
+    const recHtml = `<p class="section-desc">💡 Empfohlen (${d.phase || 'Teams'}): ${PHASE_REC[d.phase || 'Teams']}</p>`;
+    const gppSel = `<div class="draw-control"><span class="draw-label">Spiele je Paarung:</span>${[1,2,3,5].map(n => `<button class="phase-btn ${gpp===n?'active':''}" onclick="setHaxGpp('${d.id}',${n})">${n}</button>`).join('')}</div>`;
     const pairs = [];
     for (let i = 0; i < teams.length; i++) for (let j = i+1; j < teams.length; j++) {
       const a = teams[i], b = teams[j], key = `${a}-${b}`;
@@ -1083,8 +1097,8 @@
     const winVals = standing.map(t => wins[t]);
     const allPlayed = Object.values(games).reduce((a,arr) => a + arr.filter(Boolean).length, 0) >= teams.length * (teams.length - 1) / 2 * gpp;
     const hasTie = allPlayed && new Set(winVals).size < winVals.length && winVals.some(v => v > 0);
-    const tieHint = hasTie ? `<div class="fg-suggest" style="background:var(--alert-soft);border-color:var(--alert-line)"><div class="fg-suggest-head" style="color:var(--alert)">⚠ Gleichstand</div><div class="fg-suggest-body">Punktgleiche Teams: erst zählt das <b>direkte Duell</b>. Bei einem Dreier-Zyklus (jeder gleich viele Siege) gibt's ein <b>Sudden-Death-Stechen</b> zwischen den betroffenen Teams — erhöhe „Spiele je Paarung" für eine Extrarunde oder spielt ein Entscheidungsspiel. Die finale Reihenfolge trägst du unten als Endplatzierung ein.</div></div>` : '';
-    return `<div class="haxball-step-title">Partien · Jeder gegen jeden</div>${gppSel}${pairs.join('')}${winsTable}${tieHint}`;
+    const tieHint = hasTie ? `<div class="fg-suggest" style="background:var(--alert-soft);border-color:var(--alert-line)"><div class="fg-suggest-head" style="color:var(--alert)">⚠ Gleichstand — Sudden Death</div><div class="fg-suggest-body">Erst zählt das <b>direkte Duell</b>. Bleibt's gleich (Dreier-Zyklus): <b>Golden Goal</b> — die punktgleichen Teams spielen je ein Spiel, <b>das erste Tor gewinnt</b>. Bei 3 Teams jeder gegen jeden im Golden Goal, wer die meisten holt steht oben. Immer noch gleich → <b>W20-Wurf</b> (höchste Augenzahl, wie im Kleingedruckten). Erhöhe für das Stechen „Spiele je Paarung" oder spielt es separat; die finale Reihenfolge trägst du unten als Endplatzierung ein.</div></div>` : '';
+    return `<div class="haxball-step-title">Partien · Jeder gegen jeden</div>${recHtml}${gppSel}${pairs.join('')}${winsTable}${tieHint}`;
   }
   window.setHaxGpp = async function(discId, n) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
