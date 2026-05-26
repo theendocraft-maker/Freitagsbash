@@ -268,14 +268,14 @@
   }
   .nd-rules {
     font-size: 0.92rem; line-height: 1.5; color: var(--muted);
-    padding: 0.7rem 0.9rem; margin-top: 0.4rem;
+    padding: 0.7rem 0.9rem; margin-top: 0.8rem;
     background: var(--bg-2); border-radius: var(--radius-sm);
-    border-left: 3px solid var(--alert-line);
+    border-left: 3px solid var(--border-strong);
   }
-  .nd-block { margin-top: 1.1rem; }
+  .nd-block { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
   .nd-label {
     font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.55rem;
   }
   .nd-phases { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
   .nd-phase {
@@ -308,7 +308,7 @@
   }
   .br-stage.done { opacity: 0.85; }
   .br-stage.now { opacity: 1; border-color: var(--alert-line); background: var(--alert-soft); }
-  .br-stage-label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  .br-stage-label { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.55rem; }
   .br-stage.now .br-stage-label { color: var(--alert); }
   .br-teams { display: flex; flex-direction: column; gap: 0.4rem; }
   .br-note { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
@@ -356,7 +356,7 @@
     background: var(--cool-soft); border: 1px solid var(--cool);
     border-radius: var(--radius-sm);
   }
-  .jn-label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cool); margin-bottom: 0.6rem; }
+  .jn-label { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cool); margin-bottom: 0.6rem; }
   .jn-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
   .jn-open {
     background: var(--cool); color: var(--bg); text-decoration: none;
