@@ -314,6 +314,8 @@
   .br-matches { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
   .br-match { display: flex; align-items: center; justify-content: center; gap: 0.7rem; padding: 0.35rem 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text); }
   .br-match b { color: var(--primary); font-family: var(--font-display); font-size: 1.05rem; min-width: 44px; text-align: center; }
+  .br-match .bm-t { display: flex; flex-direction: column; align-items: center; }
+  .br-match .bm-t small { color: var(--muted); font-size: 0.68rem; margin-top: 2px; }
   .br-wins { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; justify-content: center; }
   .br-win { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.25rem 0.6rem; }
   .br-win b { color: var(--text); }
@@ -716,6 +718,12 @@
         <button id="demoStep3">Nach 3 Spielen</button>
         <button id="demoStep4">Nach 4 Spielen</button>
       </div>
+      <div class="demo-controls" style="margin-top:0.4rem">
+        <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);align-self:center">Haxball-Phase:</span>
+        <button id="demoHaxTeams">Teams</button>
+        <button id="demoHax2v2">2v2</button>
+        <button id="demoHaxFinale">1v1-Finale</button>
+      </div>
     </div>
 
     <div class="pause-banner" id="livePause" style="display:none;">
@@ -750,11 +758,6 @@
       <div class="lh-next" id="liveNext">—</div>
 
       <div class="disc-strip" id="liveDiscStrip"></div>
-
-      <div class="tiebreak-line" id="liveTiebreak" style="display:none;">
-        <span class="tb-ico">⚔</span>
-        <span>Bei Gleichstand nach Spiel 5 entscheidet: <b id="liveTiebreakGame">—</b></span>
-      </div>
     </div>
 
     <div class="now-detail" id="liveNowDetail"></div>
@@ -870,6 +873,12 @@
   const params = new URLSearchParams(location.search);
   const isDemo = params.get('demo') === '1';
   let demoStep = parseInt(params.get('step')) || 3; // default: 3 disciplines done
+  let demoHaxPhase = params.get('hax') || 'Teams';
+  const HAX_PHASE_DATA = {
+    'Teams':      { gpp:1, teams:{ 1:['p1','p3'], 2:['p2','p5'], 3:['p4','p6'] }, games:{ '1-2':[1], '1-3':[3], '2-3':[2] } },
+    '2v2':        { gpp:1, teams:{ 1:['p1','p3'], 2:['p2','p5'] },                games:{ '1-2':[1] } },
+    '1v1-Finale': { gpp:1, teams:{ 1:['p1'], 2:['p2'] },                          games:{ '1-2':[1] } }
+  };
 
   function demoData(step) {
     const players = [
@@ -888,12 +897,13 @@
       brawlhalla: '482913',
       fallguys:   'DEMO-7788'
     };
+    const hp = HAX_PHASE_DATA[demoHaxPhase] || HAX_PHASE_DATA['Teams'];
     const disciplines = VDISCS.map((d,i) => ({
       id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1,
-      phase: d.kind === 'haxball' ? '2v2' : null,
+      phase: d.kind === 'haxball' ? demoHaxPhase : null,
       join_link: DEMO_JOIN[d.kind] || null,
       teams_drawn_at: d.kind === 'haxball' ? new Date().toISOString() : null,
-      bracket: d.kind === 'haxball' ? { gpp:1, games:{ '1-2':[1], '1-3':[3], '2-3':[2] } } : null
+      bracket: d.kind === 'haxball' ? { gpp: hp.gpp, games: hp.games } : null
     }));
     const placements = [
       // Nach Haxball (Spiel 1)
@@ -925,7 +935,7 @@
     // Solange Haxball läuft (noch keine Platzierungen), zeigen wir die Teams
     const haxDisc = disciplines.find(d => d.kind === 'haxball');
     if (!results.some(r => r.discipline_id === haxDisc.id)) {
-      const haxTeams = { 1:['p1','p3'], 2:['p2','p5'], 3:['p4','p6'] };
+      const haxTeams = hp.teams;
       Object.entries(haxTeams).forEach(([tn, pids]) => pids.forEach(pid => {
         results.push({ id:`r-hax-team-${pid}`, discipline_id:haxDisc.id, player_id:pid, placement:null, points:null, team:Number(tn) });
       }));
@@ -1053,16 +1063,6 @@
 
     document.getElementById('liveDoneCount').textContent = doneCount;
     document.getElementById('liveTotalCount').textContent = totalCount;
-
-    // Stech-Spiel bei Gleichstand (pro Abend im Admin festgelegt)
-    const tbEl = document.getElementById('liveTiebreak');
-    if (liveEvent.tiebreaker) {
-      const tbName = discName(liveEvent.tiebreaker) + (liveEvent.tiebreaker === 'haxball' ? ' 1v1' : '');
-      document.getElementById('liveTiebreakGame').textContent = tbName;
-      tbEl.style.display = 'flex';
-    } else {
-      tbEl.style.display = 'none';
-    }
 
     // Progress ring
     const pct = (doneCount / totalCount) * 100;
@@ -1342,10 +1342,11 @@
         let matchesHtml = '';
         if (teamNums.length >= 2 && Object.keys(games).length) {
           const mrows = [];
+          const memOf = t => (teams['Team ' + t] || []).map(nameOf).join(' & ');
           for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
             const a=teamNums[i], b=teamNums[j], arr = games[`${a}-${b}`] || [];
             const wa = arr.filter(x=>x===a).length, wb = arr.filter(x=>x===b).length;
-            mrows.push(`<div class="br-match"><span>Team ${a}</span><b>${wa}:${wb}</b><span>Team ${b}</span></div>`);
+            mrows.push(`<div class="br-match"><span class="bm-t">Team ${a}<small>${memOf(a)}</small></span><b>${wa}:${wb}</b><span class="bm-t">Team ${b}<small>${memOf(b)}</small></span></div>`);
           }
           const wins = {}; teamNums.forEach(t => wins[t]=0);
           Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w]=(wins[w]||0)+1; }));
@@ -1534,6 +1535,12 @@
         // DON'T reset demoFirstRender so we get flashes / deltas on subsequent steps
         refreshEvents();
       });
+    });
+    // Haxball-Phasen durchklicken (springt automatisch auf „Vor dem Start", wo Haxball läuft)
+    const haxBtns = { demoHaxTeams:'Teams', demoHax2v2:'2v2', demoHaxFinale:'1v1-Finale' };
+    Object.entries(haxBtns).forEach(([id, phase]) => {
+      const b = document.getElementById(id);
+      if (b) b.addEventListener('click', () => { demoHaxPhase = phase; demoStep = 0; refreshEvents(); });
     });
   }
 

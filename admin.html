@@ -384,8 +384,10 @@
   .fg-suggest-body { font-size: 0.85rem; line-height: 1.45; color: var(--text); }
 
   .match-row { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; background: var(--bg); }
-  .match-head { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text); margin-bottom: 0.5rem; }
+  .match-head { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.8rem; }
   .match-head b { color: var(--primary); font-size: 0.95rem; }
+  .match-head .mt { display: flex; flex-direction: column; align-items: center; }
+  .match-head .mt small { color: var(--muted); font-size: 0.68rem; margin-top: 2px; }
   .match-game { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem; }
   .mg-label { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); min-width: 52px; }
   .mg-btn { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
@@ -1069,13 +1071,17 @@
           <button class="mg-btn ${w===a?'win':''}" onclick="setMatchWinner('${d.id}','${key}',${g},${a})">Team ${a}</button>
           <button class="mg-btn ${w===b?'win':''}" onclick="setMatchWinner('${d.id}','${key}',${g},${b})">Team ${b}</button></div>`;
       }
-      pairs.push(`<div class="match-row"><div class="match-head">Team ${a} <b>${wa}:${wb}</b> Team ${b}</div>${gameBtns}</div>`);
+      pairs.push(`<div class="match-row"><div class="match-head"><span class="mt">Team ${a}<small>${haxTeamMembers(d, playing, a)}</small></span><b>${wa}:${wb}</b><span class="mt">Team ${b}<small>${haxTeamMembers(d, playing, b)}</small></span></div>${gameBtns}</div>`);
     }
     const wins = {}; teams.forEach(t => wins[t] = 0);
     Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w] = (wins[w]||0) + 1; }));
     const standing = teams.slice().sort((a,b) => wins[b] - wins[a]);
     const winsTable = `<div class="haxball-step-title">Siege je Team (Schwächstes scheidet aus)</div>${standing.map(t => `<div class="team-rank-row"><span class="team-badge t${(((t-1)%3)+1)}">Team ${t}</span><span class="team-members">${haxTeamMembers(d, playing, t)}</span><span class="result-points">${wins[t]} ${wins[t]===1?'Sieg':'Siege'}</span></div>`).join('')}`;
-    return `<div class="haxball-step-title">Partien · Jeder gegen jeden</div>${gppSel}${pairs.join('')}${winsTable}`;
+    const winVals = standing.map(t => wins[t]);
+    const allPlayed = Object.values(games).reduce((a,arr) => a + arr.filter(Boolean).length, 0) >= teams.length * (teams.length - 1) / 2 * gpp;
+    const hasTie = allPlayed && new Set(winVals).size < winVals.length && winVals.some(v => v > 0);
+    const tieHint = hasTie ? `<div class="fg-suggest" style="background:var(--alert-soft);border-color:var(--alert-line)"><div class="fg-suggest-head" style="color:var(--alert)">⚠ Gleichstand</div><div class="fg-suggest-body">Punktgleiche Teams: erst zählt das <b>direkte Duell</b>. Bei einem Dreier-Zyklus (jeder gleich viele Siege) gibt's ein <b>Sudden-Death-Stechen</b> zwischen den betroffenen Teams — erhöhe „Spiele je Paarung" für eine Extrarunde oder spielt ein Entscheidungsspiel. Die finale Reihenfolge trägst du unten als Endplatzierung ein.</div></div>` : '';
+    return `<div class="haxball-step-title">Partien · Jeder gegen jeden</div>${gppSel}${pairs.join('')}${winsTable}${tieHint}`;
   }
   window.setHaxGpp = async function(discId, n) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
