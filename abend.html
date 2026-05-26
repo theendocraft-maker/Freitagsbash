@@ -200,24 +200,31 @@
     flex: 1; min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .disc-pill .mark {
-    font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;
-    color: var(--muted);
-    width: 14px; text-align: center;
-    flex-shrink: 0;
+  .disc-pill .dp-no {
+    font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
+    color: var(--muted); background: var(--surface-2);
+    border-radius: 4px; padding: 2px 5px; flex-shrink: 0;
+  }
+  .disc-pill .dp-status {
+    font-family: var(--font-mono); font-size: 0.56rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); flex-shrink: 0; margin-left: auto;
   }
   .disc-pill.done { border-color: var(--primary-line); background: var(--primary-soft); }
   .disc-pill.done .glyph { background: var(--primary); color: var(--bg); }
   .disc-pill.done .nm { color: var(--text); }
-  .disc-pill.done .mark { color: var(--primary); }
+  .disc-pill.done .dp-no { color: var(--primary); }
+  .disc-pill.done .dp-status { color: var(--primary); }
   .disc-pill.now { border-color: var(--alert-line); background: var(--alert-soft); }
   .disc-pill.now .glyph { background: var(--alert); color: white; }
   .disc-pill.now .nm { color: var(--text); }
-  .disc-pill.now .mark { color: var(--alert); }
+  .disc-pill.now .dp-status { color: var(--alert); animation: dppulse 1.4s ease-in-out infinite; }
+  .disc-pill.next { opacity: 0.5; border-style: dashed; }
+  @keyframes dppulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
   @media (max-width: 720px) {
     .disc-pill { padding: 0.45rem 0.45rem; flex-direction: column; gap: 0.25rem; text-align: center; }
     .disc-pill .nm { font-size: 0.58rem; }
-    .disc-pill .mark { width: auto; }
+    .disc-pill .dp-status { margin-left: 0; }
   }
   .pause-banner {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
@@ -314,11 +321,17 @@
   .br-note { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
   .br-sep { display: flex; align-items: center; color: var(--muted); font-size: 1.1rem; }
   .br-history { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
-  .br-hist { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.7rem; padding: 0.3rem 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); }
+  .br-hist { display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 0.7rem; padding: 0.35rem 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .br-hist:last-child { border-bottom: none; }
   .br-hist b { color: var(--text); font-family: var(--font-display); font-size: 1rem; min-width: 40px; text-align: center; }
   .br-hist .bh-t { color: var(--muted); }
   .br-hist .bh-t:first-child { text-align: right; }
   .br-hist .bh-t.w { color: var(--primary); }
+  .br-hist.next { opacity: 0.55; }
+  .br-hist.next b { color: var(--muted); font-family: var(--font-mono); font-size: 0.85rem; }
+  .br-hist.live b { color: var(--alert); }
+  .bh-tag { font-family: var(--font-mono); font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .bh-tag.live { color: var(--alert); }
   .nd-gpts { display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-gpt { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem 0.6rem; background: var(--bg-2); border-radius: var(--radius-sm); }
   .nd-gpt-pos { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); width: 24px; }
@@ -900,9 +913,9 @@
   let demoStep = parseInt(params.get('step')) || 3; // default: 3 disciplines done
   let demoHaxPhase = params.get('hax') || 'Teams';
   const HAX_PHASE_DATA = {
-    'Teams':      { gpp:1, teams:{ 1:['p1','p3'], 2:['p2','p5'], 3:['p4','p6'] }, games:{ '1-2':[1], '1-3':[3], '2-3':[2] } },
-    '2v2':        { gpp:1, teams:{ 1:['p1','p3'], 2:['p2','p5'] },                games:{ '1-2':[1] } },
-    '1v1-Finale': { gpp:1, teams:{ 1:['p1'], 2:['p2'] },                          games:{ '1-2':[1] } }
+    'Teams':      { gpp:1, teams:{ 1:['p1','p3'], 2:['p2','p5'], 3:['p4','p6'] }, games:{ '1-2':[1] } },         // 1-2 fertig, Rest kommt
+    '2v2':        { gpp:3, teams:{ 1:['p1','p3'], 2:['p2','p5'] },                games:{ '1-2':[1,2] } },        // läuft (Best of 3, 1:1)
+    '1v1-Finale': { gpp:1, teams:{ 1:['p1'], 2:['p2'] },                          games:{ '1-2':[1] } }           // fertig
   };
 
   function demoData(step) {
@@ -1108,12 +1121,12 @@
 
     // Discipline strip
     const strip = document.getElementById('liveDiscStrip');
-    strip.innerHTML = orderedDiscs.map(d => {
+    strip.innerHTML = orderedDiscs.map((d,i) => {
       const done = discDone[d.id];
       const isCurrent = currentDisc && d.id === currentDisc.id;
-      const cls = done ? 'done' : (isCurrent ? 'now' : '');
-      const mark = done ? '✓' : (isCurrent ? '●' : '–');
-      return `<div class="disc-pill ${cls}"><span class="glyph">${discShort(d.kind)}</span><span class="nm">${d.name}</span><span class="mark">${mark}</span></div>`;
+      const cls = done ? 'done' : (isCurrent ? 'now' : 'next');
+      const status = done ? '✓ fertig' : (isCurrent ? '● läuft' : 'kommt');
+      return `<div class="disc-pill ${cls}"><span class="dp-no">${i+1}</span><span class="glyph">${discShort(d.kind)}</span><span class="nm">${d.name}</span><span class="dp-status">${status}</span></div>`;
     }).join('');
 
     // === "Wie im Fernsehen" — Regeln / Phase / Teams der aktuellen Disziplin ===
@@ -1381,25 +1394,27 @@
           `<div class="br-stage ${sc(idx)}"><div class="br-stage-label">${idx === phs.length-1 ? '🏆 ' : ''}${ph}</div>${stageInner(idx)}</div>`
         ).join('<div class="br-sep">›</div>');
 
-        // Kleine Match-Historie aus disciplines.bracket
-        let historyHtml = '';
-        const hrows = [];
-        for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
-          const a=teamNums[i], b=teamNums[j], arr = (games[`${a}-${b}`] || []).filter(Boolean);
-          if (!arr.length) continue;
-          const wa = arr.filter(x=>x===a).length, wb = arr.filter(x=>x===b).length;
-          const win = wa === wb ? '' : (wa > wb ? 'a' : 'b');
-          hrows.push(`<div class="br-hist"><span class="bh-t ${win==='a'?'w':''}">${memOf(a)||('Team '+a)}</span><b>${wa}:${wb}</b><span class="bh-t ${win==='b'?'w':''}">${memOf(b)||('Team '+b)}</span></div>`);
-        }
-        if (hrows.length) historyHtml = `<div class="br-history"><div class="br-stage-label">Match-Historie</div>${hrows.join('')}</div>`;
-
+        // Spielplan: alle Paarungen mit Status (gespielt / läuft / kommt)
         const gpp = br.gpp || 1;
         const bo = gpp === 1 ? '1 Spiel je Paarung' : 'Best of ' + gpp;
+        let scheduleHtml = '';
+        const srows = [];
+        for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
+          const a=teamNums[i], b=teamNums[j], played = (games[`${a}-${b}`] || []).filter(Boolean);
+          const wa = played.filter(x=>x===a).length, wb = played.filter(x=>x===b).length;
+          const full = played.length >= gpp;
+          const state = full ? 'done' : (played.length > 0 ? 'live' : 'next');
+          const center = (played.length > 0) ? `${wa}:${wb}` : 'vs';
+          const tag = full ? '' : (played.length > 0 ? '<span class="bh-tag live">läuft</span>' : '<span class="bh-tag">kommt</span>');
+          srows.push(`<div class="br-hist ${state}"><span class="bh-t ${full&&wa>wb?'w':''}">${memOf(a)||('Team '+a)}</span><b>${center}</b><span class="bh-t ${full&&wb>wa?'w':''}">${memOf(b)||('Team '+b)}</span>${tag}</div>`);
+        }
+        if (srows.length) scheduleHtml = `<div class="br-history"><div class="br-stage-label">Partien · wer gegen wen</div>${srows.join('')}</div>`;
+
         teamsHtml = `
           <div class="nd-block">
             <div class="nd-label">Turnierbaum · ${bo}${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
             <div class="bracket">${stages}</div>
-            ${historyHtml}
+            ${scheduleHtml}
           </div>`;
       } else {
         teamsHtml = `
