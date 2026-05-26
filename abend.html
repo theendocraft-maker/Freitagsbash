@@ -417,6 +417,10 @@
   .rr-mv.down { color: var(--alert); }
   .rr-mv.same { color: var(--muted); }
   .rr-total { font-family: var(--font-display); font-size: 1.25rem; color: var(--text); min-width: 32px; text-align: right; }
+  .rr-pts { font-family: var(--font-display); font-size: 1.3rem; color: var(--primary); min-width: 44px; text-align: right; }
+  .rr-foot { margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); text-align: center; }
+  .rr-foot b { color: var(--text); }
+  .rr-row .rr-rank { font-size: 1rem; }
 
   @media (max-width: 720px) {
     .now-detail { padding: 1.1rem 1.1rem; }
@@ -1230,44 +1234,51 @@
     demoFirstRender = false;
 
     // Ranking-Reveal-Animation, wenn gerade ein Spiel fertig eingetragen wurde
-    if (newlyDoneDisc && rows.length) showRankingReveal(rows, newlyDoneDisc);
+    if (newlyDoneDisc) showGameEndscore(newlyDoneDisc, results, rows);
   }
 
-  // Zwischenstand-Reveal: zeigt nach jedem fertigen Spiel das aktuelle Ranking animiert
+  // Game-Endscore: zeigt nach jedem fertigen Spiel den Endstand DIESES Spiels (Mario-Kart-Style)
   let lastDoneIds = null;
-  function showRankingReveal(rows, disc) {
+  function showGameEndscore(disc, results, overall) {
     const box = document.getElementById('rankingReveal');
-    if (!box) return;
-    const title = disc ? `Zwischenstand nach ${discName(disc.kind)}` : 'Zwischenstand';
+    if (!box || !disc) return;
+    const grows = (results || []).filter(r => r.discipline_id === disc.id && (r.placement || (parseFloat(r.points)||0) > 0))
+      .map(r => ({ pid: r.player_id, pl: parseInt(r.placement) || 99, pts: parseFloat(r.points) || 0 }))
+      .sort((a,b) => (a.pl - b.pl) || (b.pts - a.pts));
+    if (!grows.length) return;
+    const pOf  = pid => evPlayers.find(p => p.id === pid) || { name: '—' };
+    const pIdx = pid => Math.max(0, evPlayers.findIndex(p => p.id === pid));
+    const medal = pl => pl === 1 ? '🥇' : pl === 2 ? '🥈' : pl === 3 ? '🥉' : pad2(pl);
     box.innerHTML = `
-      <div class="rr-title"><span class="rr-ico">📊</span> ${title}</div>
+      <div class="rr-title"><span class="rr-ico">🏁</span> Endstand · ${discName(disc.kind)}</div>
       <div class="rr-rows">
-        ${rows.map((r,i) => {
-          const av = r.player.avatar_url ? `background-image:url(${r.player.avatar_url});` : `background:${grad(i)}`;
-          let mv = '<span class="rr-mv same">–</span>';
-          if (r.delta.kind === 'up')   mv = `<span class="rr-mv up">▲${r.delta.value}</span>`;
-          if (r.delta.kind === 'down') mv = `<span class="rr-mv down">▼${r.delta.value}</span>`;
-          const tier = r.rank <= 3 ? ` tier-${r.rank}` : '';
-          return `<div class="rr-row${tier}" style="opacity:0;transform:translateX(-14px)">
-            <span class="rr-rank">${pad2(r.rank)}</span>
-            <span class="rr-av" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</span>
-            <span class="rr-name">${r.player.name}</span>
-            ${mv}
-            <span class="rr-total">${r.total}</span>
+        ${grows.map((r,i) => {
+          const p = pOf(r.pid);
+          const av = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${grad(pIdx(r.pid))}`;
+          const tier = r.pl <= 3 ? ` tier-${r.pl}` : '';
+          return `<div class="rr-row${tier}" data-pos="${i}" style="opacity:0;transform:translateX(-14px)">
+            <span class="rr-rank">${medal(r.pl)}</span>
+            <span class="rr-av" style="${av}">${p.avatar_url ? '' : ini(p.name)}</span>
+            <span class="rr-name">${p.name}</span>
+            <span class="rr-pts">+${r.pts}</span>
           </div>`;
         }).join('')}
-      </div>`;
+      </div>
+      ${overall && overall[0] ? `<div class="rr-foot">Gesamt-Führung: <b>${overall[0].player.name}</b> · ${overall[0].total} Pkt</div>` : ''}`;
     box.style.display = 'block';
-    const rrRows = box.querySelectorAll('.rr-row');
-    rrRows.forEach((el, i) => {
+    const rrRows = [...box.querySelectorAll('.rr-row')];
+    // Reveal von hinten nach vorne (Sieger zuletzt) — Mario-Kart-Spannung
+    rrRows.forEach(el => {
+      const pos = parseInt(el.dataset.pos);
+      const delay = (rrRows.length - 1 - pos) * 220;
       setTimeout(() => {
         el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
         el.style.opacity = '1';
         el.style.transform = 'none';
-      }, i * 180);
+      }, delay);
     });
-    clearTimeout(showRankingReveal._t);
-    showRankingReveal._t = setTimeout(() => { box.style.display = 'none'; }, rrRows.length * 180 + 5500);
+    clearTimeout(showGameEndscore._t);
+    showGameEndscore._t = setTimeout(() => { box.style.display = 'none'; }, rrRows.length * 220 + 6000);
   }
 
   // "Wie im Fernsehen": zeigt für die aktuelle Disziplin Regeln/Modus,
