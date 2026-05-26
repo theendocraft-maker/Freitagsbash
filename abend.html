@@ -747,14 +747,17 @@
       if (parseInt(r.placement) === 1) byPid[r.player_id].wins++;
     });
 
-    // Which disciplines are "done"
+    // Fortschritt: bevorzugt expliziter Status (offen → läuft → fertig) aus dem Admin,
+    // sonst aus den Ergebnissen abgeleitet.
+    const useStatus = orderedDiscs.some(d => d.status === 'live' || d.status === 'done');
     const discDone = {};
     orderedDiscs.forEach(d => {
-      discDone[d.id] = results.some(r => r.discipline_id === d.id && r.points);
+      discDone[d.id] = useStatus ? (d.status === 'done') : results.some(r => r.discipline_id === d.id && r.points);
     });
     const doneCount = Object.values(discDone).filter(Boolean).length;
     const totalCount = orderedDiscs.length || 5;
-    const currentDisc = orderedDiscs.find(d => !discDone[d.id]) || null;
+    const liveDisc = useStatus ? orderedDiscs.find(d => d.status === 'live') : null;
+    const currentDisc = liveDisc || orderedDiscs.find(d => !discDone[d.id]) || null;
     const currentIdx = currentDisc ? orderedDiscs.findIndex(d => d.id === currentDisc.id) : -1;
     const nextDisc = currentIdx >= 0 && currentIdx + 1 < orderedDiscs.length ? orderedDiscs[currentIdx + 1] : null;
     const lastDoneId = [...orderedDiscs].reverse().find(d => discDone[d.id])?.id;
@@ -979,6 +982,7 @@
   if (!isDemo) {
     sb.channel('abend-live')
       .on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => refreshEvents())
+      .on('postgres_changes', { event:'*', schema:'public', table:'disciplines' }, () => refreshEvents())
       .on('postgres_changes', { event:'*', schema:'public', table:'results' }, () => refreshEvents())
       .on('postgres_changes', { event:'*', schema:'public', table:'event_participation' }, () => refreshEvents())
       .on('postgres_changes', { event:'*', schema:'public', table:'vetoes' }, () => refreshEvents())

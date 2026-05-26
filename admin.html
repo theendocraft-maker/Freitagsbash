@@ -828,7 +828,7 @@
               <span class="discipline-title">${d.name}</span>
             </div>
             <div style="display:flex;align-items:center;gap:0.7rem">
-              <span class="status-pill ${d.status === 'done' ? 'finalized' : 'draft'}">${d.status === 'done' ? '✓' : '—'}</span>
+              <span class="status-pill ${d.status === 'done' ? 'finalized' : (d.status === 'live' ? 'live' : 'draft')}" onclick="event.stopPropagation(); cycleDiscStatus('${d.id}')" style="cursor:pointer" title="Klicken: offen → läuft → fertig">${d.status === 'done' ? '✓ fertig' : (d.status === 'live' ? 'läuft' : 'offen')}</span>
               <span class="chevron">▼</span>
             </div>
           </div>
@@ -964,6 +964,24 @@
     if (!card || !body) return;
     card.classList.toggle('open');
     body.classList.toggle('collapsed');
+  };
+
+  // Status pro Disziplin durchschalten: offen → läuft → fertig (steuert den Live-Ablauf auf der Abend-Seite)
+  window.cycleDiscStatus = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const next = { draft: 'live', live: 'done', done: 'draft' };
+    const cur = (d.status === 'live' || d.status === 'done') ? d.status : 'draft';
+    const ns = next[cur];
+    const { error } = await sb.from('disciplines').update({ status: ns }).eq('id', discId);
+    if (error) { console.error(error); toast('Status-Update fehlgeschlagen', 'error'); return; }
+    d.status = ns;
+    const card = document.querySelector(`.discipline-card[data-disc="${discId}"]`);
+    const pill = card && card.querySelector('.status-pill');
+    if (pill) {
+      pill.className = 'status-pill ' + (ns === 'done' ? 'finalized' : ns === 'live' ? 'live' : 'draft');
+      pill.textContent = ns === 'done' ? '✓ fertig' : ns === 'live' ? 'läuft' : 'offen';
+    }
+    toast(ns === 'live' ? '● läuft jetzt' : ns === 'done' ? '✓ als fertig markiert' : 'wieder offen', 'ok');
   };
 
   // ===== Result-Updates =====
