@@ -358,7 +358,10 @@
     border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 0.9rem 1rem; margin-bottom: 0.9rem; background: var(--bg);
   }
-  .mode-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.7rem; }
+  .mode-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
+  .mode-name-input { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 0.35rem 0.6rem; font-family: var(--font-mono); font-size: 0.78rem; }
+  .mode-name-input:focus { outline: none; border-color: var(--cool); }
+  .mode-head .mode-del { margin-left: auto; }
   .mode-title {
     font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700;
     letter-spacing: 0.08em; text-transform: uppercase; color: var(--cool);
@@ -1250,9 +1253,13 @@
   function renderModeBlock(d, m, idx, playing, term) {
     const n = m.n;
     const lbl = term || 'Modus';
+    const nameInput = (lbl === 'Modus')
+      ? `<input class="mode-name-input" value="${(m.label || '').replace(/"/g,'&quot;')}" placeholder="Name (z.B. Volleyfall, Hex-a-gone)" onchange="setModeLabel('${d.id}',${n},this.value)">`
+      : '';
     const head = `
       <div class="mode-head">
         <span class="mode-title">${lbl} ${idx + 1}${term ? '' : ' · ' + (m.type === 'solo' ? 'Solo' : 'Team')}</span>
+        ${nameInput}
         <button class="mode-del" onclick="removeMode('${d.id}',${n})" title="Modus löschen">×</button>
       </div>`;
     let body = '';
@@ -1310,6 +1317,14 @@
     const body = rows.map(r => `<tr><td style="text-align:left">${r.p.name}</td>${r.perMode.map(pt => `<td>${pt||'–'}</td>`).join('')}<td><b>${r.total}</b></td><td>${r.rank}</td></tr>`).join('');
     return `<div class="haxball-step-title">Gesamtwertung (fließt in den Abend)</div><table class="fg-standings"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
   }
+
+  window.setModeLabel = async function(discId, n, value) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).map(m => m.n === n ? Object.assign({}, m, { label: value.trim() || null }) : m);
+    await sb.from('disciplines').update({ modes }).eq('id', discId);
+    d.modes = modes;
+    renderDisciplineBodyFor(discId);
+  };
 
   window.addMode = async function(discId, type) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;

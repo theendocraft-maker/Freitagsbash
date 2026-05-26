@@ -311,14 +311,12 @@
   .br-teams { display: flex; flex-direction: column; gap: 0.4rem; }
   .br-note { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
   .br-sep { display: flex; align-items: center; color: var(--muted); font-size: 1.1rem; }
-  .br-matches { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
-  .br-match { display: flex; align-items: center; justify-content: center; gap: 0.7rem; padding: 0.35rem 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text); }
-  .br-match b { color: var(--primary); font-family: var(--font-display); font-size: 1.05rem; min-width: 44px; text-align: center; }
-  .br-match .bm-t { display: flex; flex-direction: column; align-items: center; }
-  .br-match .bm-t small { color: var(--muted); font-size: 0.68rem; margin-top: 2px; }
-  .br-wins { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; justify-content: center; }
-  .br-win { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.25rem 0.6rem; }
-  .br-win b { color: var(--text); }
+  .br-history { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+  .br-hist { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.7rem; padding: 0.3rem 0; font-family: var(--font-mono); font-size: 0.82rem; color: var(--muted); }
+  .br-hist b { color: var(--text); font-family: var(--font-display); font-size: 1rem; min-width: 40px; text-align: center; }
+  .br-hist .bh-t { color: var(--muted); }
+  .br-hist .bh-t:first-child { text-align: right; }
+  .br-hist .bh-t.w { color: var(--primary); }
   .nd-gpts { display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-gpt { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem 0.6rem; background: var(--bg-2); border-radius: var(--radius-sm); }
   .nd-gpt-pos { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); width: 24px; }
@@ -328,6 +326,10 @@
   .nd-modetbl th { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; padding: 0.4rem 0.35rem; border-bottom: 1px solid var(--border); }
   .nd-modetbl td { text-align: center; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; color: var(--text); }
   .nd-modetbl td b { color: var(--primary); }
+  .nd-modi { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .nd-mode-chip { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem; }
+  .nd-mode-chip.now { border-color: var(--alert-line); background: var(--alert-soft); color: var(--text); font-weight: 600; }
+  .nd-mode-chip.done { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); }
   .nd-join { margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.1rem; }
   .join-toggle {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
@@ -942,7 +944,7 @@
     }
     // Fall Guys Demo: ein Team-Modus mit ausgelosten Teams (für die Live-Team-Anzeige)
     const fgDisc = disciplines.find(d => d.kind === 'fallguys');
-    fgDisc.modes = [{ n:1, type:'team' }, { n:2, type:'solo' }];
+    fgDisc.modes = [{ n:1, type:'team', label:'Volleyfall' }, { n:2, type:'solo', label:'Hex-a-gone' }];
     fgDisc.teams_drawn_at = new Date().toISOString();
     const fgTeams = { 1:['p1','p3'], 2:['p2','p5'], 3:['p6'] };
     Object.entries(fgTeams).forEach(([t, pids]) => pids.forEach(pid => {
@@ -1331,40 +1333,40 @@
           <div class="nd-team-players">${teams[tk].map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}</div>
         </div>`).join('');
       if (kind === 'haxball') {
-        // Turnierbaum (Trichter): Teams → 2v2 → 1v1-Finale, aktive Phase hervorgehoben
+        // Turnierbaum (Trichter): Teilnehmer stehen im aktiven Stage-Block und rücken pro Phase weiter
         const phs = discPhases('haxball') || ['Teams','2v2','1v1-Finale'];
         const ai = Math.max(0, phs.indexOf(currentDisc.phase || phs[0]));
         const sc = idx => idx < ai ? 'done' : (idx === ai ? 'now' : '');
-        // Partien (Jeder gegen jeden) aus disciplines.bracket
+        const stageInner = idx => {
+          if (idx === ai) return `<div class="nd-teams br-teams">${teamBoxes}</div>`;
+          if (idx < ai)   return `<div class="br-note">✓ durch</div>`;
+          return `<div class="br-note">kommt noch</div>`;
+        };
+        const stages = phs.map((ph, idx) =>
+          `<div class="br-stage ${sc(idx)}"><div class="br-stage-label">${idx === phs.length-1 ? '🏆 ' : ''}${ph}</div>${stageInner(idx)}</div>`
+        ).join('<div class="br-sep">›</div>');
+
+        // Kleine Match-Historie aus disciplines.bracket
         const br = currentDisc.bracket || {};
         const games = br.games || {};
         const teamNums = teamKeys.map(k => parseInt(String(k).replace(/\D/g,''))).filter(n => !isNaN(n)).sort((a,b)=>a-b);
-        let matchesHtml = '';
-        if (teamNums.length >= 2 && Object.keys(games).length) {
-          const mrows = [];
-          const memOf = t => (teams['Team ' + t] || []).map(nameOf).join(' & ');
-          for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
-            const a=teamNums[i], b=teamNums[j], arr = games[`${a}-${b}`] || [];
-            const wa = arr.filter(x=>x===a).length, wb = arr.filter(x=>x===b).length;
-            mrows.push(`<div class="br-match"><span class="bm-t">Team ${a}<small>${memOf(a)}</small></span><b>${wa}:${wb}</b><span class="bm-t">Team ${b}<small>${memOf(b)}</small></span></div>`);
-          }
-          const wins = {}; teamNums.forEach(t => wins[t]=0);
-          Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w]=(wins[w]||0)+1; }));
-          const standing = teamNums.slice().sort((x,y)=>wins[y]-wins[x]);
-          matchesHtml = `<div class="br-matches"><div class="br-stage-label">Partien · jeder gegen jeden</div>${mrows.join('')}
-            <div class="br-wins">${standing.map(t=>`<span class="br-win"><b>Team ${t}</b> ${wins[t]}</span>`).join('')}</div></div>`;
+        const memOf = t => (teams['Team ' + t] || []).map(nameOf).join(' & ');
+        let historyHtml = '';
+        const hrows = [];
+        for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
+          const a=teamNums[i], b=teamNums[j], arr = (games[`${a}-${b}`] || []).filter(Boolean);
+          if (!arr.length) continue;
+          const wa = arr.filter(x=>x===a).length, wb = arr.filter(x=>x===b).length;
+          const win = wa === wb ? '' : (wa > wb ? 'a' : 'b');
+          hrows.push(`<div class="br-hist"><span class="bh-t ${win==='a'?'w':''}">${memOf(a)||('Team '+a)}</span><b>${wa}:${wb}</b><span class="bh-t ${win==='b'?'w':''}">${memOf(b)||('Team '+b)}</span></div>`);
         }
+        if (hrows.length) historyHtml = `<div class="br-history"><div class="br-stage-label">Match-Historie</div>${hrows.join('')}</div>`;
+
         teamsHtml = `
           <div class="nd-block">
             <div class="nd-label">Turnierbaum${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
-            <div class="bracket">
-              <div class="br-stage ${sc(0)}"><div class="br-stage-label">${phs[0]}</div><div class="nd-teams br-teams">${teamBoxes}</div></div>
-              <div class="br-sep">›</div>
-              <div class="br-stage ${sc(1)}"><div class="br-stage-label">${phs[1]}</div><div class="br-note">Die Besten ziehen weiter</div></div>
-              <div class="br-sep">›</div>
-              <div class="br-stage ${sc(2)}"><div class="br-stage-label">🏆 ${phs[2]}</div><div class="br-note">Einer gewinnt</div></div>
-            </div>
-            ${matchesHtml}
+            <div class="bracket">${stages}</div>
+            ${historyHtml}
           </div>`;
       } else {
         teamsHtml = `
@@ -1394,11 +1396,23 @@
         </div>`;
     }
 
-    // --- Stand nach Runde/Modus (Brawlhalla-Runden, Fall-Guys-Modi) ---
-    let modeTblHtml = '';
+    // --- Modi/Runden des Abends + Stand nach Runde/Modus (Brawlhalla, Fall Guys) ---
+    let modeTblHtml = '', modesListHtml = '';
     const mdefs = Array.isArray(currentDisc.modes) ? currentDisc.modes : [];
     if (mdefs.length) {
       const px = (kind === 'brawlhalla') ? 'R' : 'M';
+      const term = (kind === 'brawlhalla') ? 'Runde' : 'Modus';
+      const lblOf = (m, i) => m.label || (term + ' ' + (i+1));
+      // „Welche Modi/Runden heute gespielt werden" — mit Aktiv-/Erledigt-Status
+      let activeShown = false;
+      modesListHtml = `<div class="nd-block"><div class="nd-label">${kind === 'brawlhalla' ? 'Runden heute' : 'Modi heute'}</div><div class="nd-modi">${mdefs.map((m,i) => {
+        const done = myRows.some(r => r.modes && r.modes[m.n] && (r.modes[m.n].placement || r.modes[m.n].team));
+        let cls = '';
+        if (done) cls = 'done'; else if (!activeShown) { cls = 'now'; activeShown = true; }
+        const badge = (kind === 'brawlhalla') ? '' : ` · ${m.type === 'team' ? 'Team' : 'Solo'}`;
+        return `<span class="nd-mode-chip ${cls}">${lblOf(m,i)}${badge}${done ? ' ✓' : ''}</span>`;
+      }).join('')}</div></div>`;
+
       const SP = [10,8,6,4,3,2,1], sp = r => (r && r >= 1) ? SP[Math.min(r, SP.length)-1] : 0;
       const TP = [10,8,6,4], tp = r => (r && r >= 1) ? TP[Math.min(r, TP.length)-1] : 0;
       const rws = myRows.filter(r => r.modes).map(r => {
@@ -1407,9 +1421,9 @@
       }).filter(r => r.tot > 0);
       if (rws.length) {
         rws.sort((a,b) => b.tot - a.tot);
-        const head = `<th style="text-align:left">Spieler</th>${mdefs.map((m,i) => `<th>${px}${i+1}</th>`).join('')}<th>Σ</th>`;
+        const head = `<th style="text-align:left">Spieler</th>${mdefs.map((m,i) => `<th title="${lblOf(m,i)}">${px}${i+1}</th>`).join('')}<th>Σ</th>`;
         const body = rws.map(r => `<tr><td style="text-align:left">${nameOf(r.pid)}</td>${r.per.map(p => `<td>${p||'–'}</td>`).join('')}<td><b>${r.tot}</b></td></tr>`).join('');
-        modeTblHtml = `<div class="nd-block"><div class="nd-label">Stand nach ${kind === 'brawlhalla' ? 'Runde' : 'Modus'}</div><table class="nd-modetbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+        modeTblHtml = `<div class="nd-block"><div class="nd-label">Stand nach ${term}</div><table class="nd-modetbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       }
     }
 
@@ -1429,7 +1443,7 @@
         </div>`;
     }
 
-    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + (mdefs.length ? modeTblHtml : gamePtsHtml) + joinHtml;
+    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + (mdefs.length ? (modesListHtml + modeTblHtml) : gamePtsHtml) + joinHtml;
     box.style.display = 'block';
 
     // Team-Reveal-Animation nach frischer Auslosung (einmalig pro Auslosung)
