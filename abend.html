@@ -295,7 +295,9 @@
     font-family: var(--font-display); font-weight: 900;
     font-size: 0.85rem; letter-spacing: 0.05em; color: var(--bg);
     padding: 0.4rem 0.7rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
   }
+  .nt-score { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700; background: rgba(10,10,15,0.35); color: var(--bg); border-radius: 999px; padding: 0.1rem 0.45rem; }
   .nd-team-players { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-tp { font-size: 0.88rem; color: var(--text); }
   .bracket { display: flex; align-items: stretch; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem; }
@@ -1337,8 +1339,20 @@
         const phs = discPhases('haxball') || ['Teams','2v2','1v1-Finale'];
         const ai = Math.max(0, phs.indexOf(currentDisc.phase || phs[0]));
         const sc = idx => idx < ai ? 'done' : (idx === ai ? 'now' : '');
+        const br = currentDisc.bracket || {};
+        const games = br.games || {};
+        const teamNums = teamKeys.map(k => parseInt(String(k).replace(/\D/g,''))).filter(n => !isNaN(n)).sort((a,b)=>a-b);
+        const memOf = t => (teams['Team ' + t] || []).map(nameOf).join(' & ');
+        // Aktueller Punktestand je Team (Siege aus den Partien)
+        const winsByTeam = {};
+        Object.values(games).forEach(arr => arr.forEach(w => { if (w) winsByTeam[w] = (winsByTeam[w] || 0) + 1; }));
+        const haxTeamBoxes = teamKeys.map((tk,ti) => {
+          const tn = parseInt(String(tk).replace(/\D/g,''));
+          const w = winsByTeam[tn] || 0;
+          return `<div class="nd-team"><div class="nd-team-name" style="background:${grad(ti)}">${tk}<span class="nt-score">${w} S</span></div><div class="nd-team-players">${(teams[tk]||[]).map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}</div></div>`;
+        }).join('');
         const stageInner = idx => {
-          if (idx === ai) return `<div class="nd-teams br-teams">${teamBoxes}</div>`;
+          if (idx === ai) return `<div class="nd-teams br-teams">${haxTeamBoxes}</div>`;
           if (idx < ai)   return `<div class="br-note">✓ durch</div>`;
           return `<div class="br-note">kommt noch</div>`;
         };
@@ -1347,10 +1361,6 @@
         ).join('<div class="br-sep">›</div>');
 
         // Kleine Match-Historie aus disciplines.bracket
-        const br = currentDisc.bracket || {};
-        const games = br.games || {};
-        const teamNums = teamKeys.map(k => parseInt(String(k).replace(/\D/g,''))).filter(n => !isNaN(n)).sort((a,b)=>a-b);
-        const memOf = t => (teams['Team ' + t] || []).map(nameOf).join(' & ');
         let historyHtml = '';
         const hrows = [];
         for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
