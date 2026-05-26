@@ -858,7 +858,7 @@
         'Warte in der Lobby, bis der Host die Runde startet.'
       ] }
   ];
-  const PLAY_ORDER = ['haxball','geoguessr','chess','brawlhalla','fallguys'];
+  const PLAY_ORDER = ['haxball','geoguessr','brawlhalla','chess','fallguys'];
   const discName  = k => (VDISCS.find(d => d.kind === k) || {}).name  || k;
   const discShort = k => (VDISCS.find(d => d.kind === k) || {}).short || '—';
   const discMode  = k => (VDISCS.find(d => d.kind === k) || {}).mode  || '';
@@ -896,20 +896,20 @@
       bracket: d.kind === 'haxball' ? { gpp:1, games:{ '1-2':[1], '1-3':[3], '2-3':[2] } } : null
     }));
     const placements = [
-      // After GeoGuessr
-      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 } },
-      // After Haxball
-      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
-        haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 } },
-      // After Chess
-      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
-        haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
-        chess:     { p1:2, p2:4, p3:1, p4:3, p5:6, p6:5 } },
-      // After Brawlhalla
-      { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
-        haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
-        chess:     { p1:2, p2:4, p3:1, p4:3, p5:6, p6:5 },
+      // Nach Haxball (Spiel 1)
+      { haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 } },
+      // Nach GeoGuessr (Spiel 2)
+      { haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
+        geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 } },
+      // Nach Brawlhalla (Spiel 3)
+      { haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
+        geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
         brawlhalla:{ p1:4, p2:3, p3:5, p4:1, p5:2, p6:6 } },
+      // Nach Chess (Spiel 4)
+      { haxball:   { p1:3, p2:1, p3:2, p4:5, p5:4, p6:6 },
+        geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 },
+        brawlhalla:{ p1:4, p2:3, p3:5, p4:1, p5:2, p6:6 },
+        chess:     { p1:2, p2:4, p3:1, p4:3, p5:6, p6:5 } },
     ];
     const placementSet = step === 0 ? {} : placements[Math.min(step, placements.length) - 1];
 
