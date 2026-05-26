@@ -219,6 +219,18 @@
     .disc-pill .nm { font-size: 0.58rem; }
     .disc-pill .mark { width: auto; }
   }
+  .tiebreak-line {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 0.6rem;
+    margin-top: 1rem; padding: 0.7rem 1rem;
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-left: 3px solid var(--cool);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+  .tiebreak-line b { color: var(--cool); font-family: var(--font-display); font-size: 0.98rem; letter-spacing: 0.05em; }
+  .tiebreak-line .tb-ico { font-size: 1rem; }
 
   /* ============================
      NOW-DETAIL — "wie im Fernsehen"
@@ -279,6 +291,24 @@
   }
   .nd-team-players { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-tp { font-size: 0.88rem; color: var(--text); }
+  .nd-join { margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.1rem; }
+  .join-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem; cursor: pointer;
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.7rem 0.9rem;
+    font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.03em;
+    color: var(--text); transition: border-color 0.2s, background 0.2s;
+  }
+  .join-toggle:hover { border-color: var(--cool); background: var(--cool-soft); }
+  .join-chevron { color: var(--cool); font-size: 0.7rem; }
+  .join-steps { margin-top: 0.6rem; }
+  .join-steps ol {
+    margin: 0; padding-left: 1.3rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .join-steps li { font-size: 0.9rem; line-height: 1.45; color: var(--muted); }
+  .join-steps li::marker { color: var(--cool); font-family: var(--font-mono); font-weight: 700; }
   @media (max-width: 720px) {
     .now-detail { padding: 1.1rem 1.1rem; }
     .nd-title { font-size: 1.25rem; }
@@ -624,6 +654,11 @@
       <div class="lh-next" id="liveNext">—</div>
 
       <div class="disc-strip" id="liveDiscStrip"></div>
+
+      <div class="tiebreak-line" id="liveTiebreak" style="display:none;">
+        <span class="tb-ico">⚔</span>
+        <span>Bei Gleichstand nach Spiel 5 entscheidet: <b id="liveTiebreakGame">—</b></span>
+      </div>
     </div>
 
     <div class="now-detail" id="liveNowDetail"></div>
@@ -694,17 +729,43 @@
   const pad2 = n => String(n).padStart(2,'0');
 
   const VDISCS = [
-    { kind:'geoguessr', name:'GeoGuessr',   short:'GEO', mode:'Einzeln · No Move', rules:'Gleicher Challenge-Link für alle, 5 Runden, kein Bewegen. Höchste Punktzahl gewinnt.' },
-    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter', rules:'Teams per Los → die Besten ins 2v2 → 1v1-Finale. Endplatzierung zählt.', phases:['Teams','2v2','1v1-Finale'] },
-    { kind:'chess',     name:'Chess Blitz', short:'CHE', mode:'Arena 3+2', rules:'Chess.com-Arena (3 Min +2 Sek), alle per Link. Endstand der Arena = Ranking.' },
-    { kind:'brawlhalla',name:'Brawlhalla',  short:'BRA', mode:'Free For All', rules:'Alle in einem FFA-Match (Stock), 2–3 Runden. Platzierung wird gemittelt.' },
-    { kind:'fallguys',  name:'Fall Guys',   short:'FAL', mode:'Team · Squads', rules:'Squads per Los, 3 Runden. Das beste Team-Ergebnis zählt.' }
+    { kind:'geoguessr', name:'GeoGuessr',   short:'GEO', mode:'Einzeln · No Move', rules:'Gleicher Challenge-Link für alle, 5 Runden, kein Bewegen. Höchste Punktzahl gewinnt.',
+      join:[
+        'Öffne den Challenge-Link, den der Host teilt — gleiche Karte & Runden für alle.',
+        'Melde dich an oder erstelle einen kostenlosen GeoGuessr-Account.',
+        'Spiel die 5 Runden — dein Ergebnis landet automatisch im Challenge-Ranking.'
+      ] },
+    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter', rules:'Teams per Los → die Besten ins 2v2 → 1v1-Finale. Endplatzierung zählt.', phases:['Teams','2v2','1v1-Finale'],
+      join:[
+        'Geh auf haxball.com und öffne den Raum-Link vom Host (im Spiel: Menü → Raum-URL kopieren).',
+        'Gib einen Nickname ein — nur normale Tastatur-Zeichen, keine Emojis.',
+        'Klick auf Join — kein Account nötig.'
+      ] },
+    { kind:'chess',     name:'Chess Blitz', short:'CHE', mode:'Arena 3+2', rules:'Chess.com-Arena (3 Min +2 Sek), alle per Link. Endstand der Arena = Ranking.',
+      join:[
+        'Öffne den Arena-Link (chess.com), den der Host teilt.',
+        'Logg dich mit deinem kostenlosen chess.com-Account ein.',
+        'Klick „Join“ — die Arena (3+2 Blitz) paart dich automatisch, bis die Zeit abläuft.'
+      ] },
+    { kind:'brawlhalla',name:'Brawlhalla',  short:'BRA', mode:'Free For All', rules:'Alle in einem FFA-Match (Stock), 2–3 Runden. Platzierung wird gemittelt.',
+      join:[
+        'Hauptmenü → „Online“ → „Custom Online“.',
+        'Wähle „Join Room“ und gib die 6-stellige Raum-Nummer vom Host ein (steht oben in seiner Lobby).',
+        'Crossplay ist an — PC, PlayStation & Xbox spielen zusammen.'
+      ] },
+    { kind:'fallguys',  name:'Fall Guys',   short:'FAL', mode:'Team · Squads', rules:'Squads per Los, 3 Runden. Das beste Team-Ergebnis zählt.',
+      join:[
+        'Hauptmenü → Show-Auswahl → „Custom Shows“.',
+        'Wähle „Join“ und gib den Lobby-Code vom Host ein.',
+        'Warte in der Lobby, bis der Host die Runde startet.'
+      ] }
   ];
   const discName  = k => (VDISCS.find(d => d.kind === k) || {}).name  || k;
   const discShort = k => (VDISCS.find(d => d.kind === k) || {}).short || '—';
   const discMode  = k => (VDISCS.find(d => d.kind === k) || {}).mode  || '';
   const discRules = k => (VDISCS.find(d => d.kind === k) || {}).rules || '';
   const discPhases= k => (VDISCS.find(d => d.kind === k) || {}).phases || null;
+  const discJoin  = k => (VDISCS.find(d => d.kind === k) || {}).join   || null;
 
   // ===== DEMO MODE =====
   const params = new URLSearchParams(location.search);
@@ -720,7 +781,7 @@
       { id:'p5', name:'Pixie',     cry:'Glück gehört dazu' },
       { id:'p6', name:'Tank',      cry:'Slow and steady' },
     ];
-    const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live' };
+    const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live', tiebreaker:'haxball' };
     const disciplines = VDISCS.map((d,i) => ({ id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1, phase: d.kind === 'haxball' ? '2v2' : null }));
     const placements = [
       // After GeoGuessr
@@ -855,6 +916,16 @@
 
     document.getElementById('liveDoneCount').textContent = doneCount;
     document.getElementById('liveTotalCount').textContent = totalCount;
+
+    // Stech-Spiel bei Gleichstand (pro Abend im Admin festgelegt)
+    const tbEl = document.getElementById('liveTiebreak');
+    if (liveEvent.tiebreaker) {
+      const tbName = discName(liveEvent.tiebreaker) + (liveEvent.tiebreaker === 'haxball' ? ' 1v1' : '');
+      document.getElementById('liveTiebreakGame').textContent = tbName;
+      tbEl.style.display = 'flex';
+    } else {
+      tbEl.style.display = 'none';
+    }
 
     // Progress ring
     const pct = (doneCount / totalCount) * 100;
@@ -1046,9 +1117,37 @@
         </div>`;
     }
 
-    box.innerHTML = head + rulesHtml + phaseHtml + teamsHtml;
+    // --- Ausklappbare Join-Anleitung ---
+    let joinHtml = '';
+    const steps = discJoin(kind);
+    if (steps && steps.length) {
+      joinHtml = `
+        <div class="nd-join">
+          <button class="join-toggle" onclick="toggleJoinGuide()" aria-expanded="${joinGuideOpen}">
+            <span>🎮 So joinst du ${discName(kind)}</span>
+            <span class="join-chevron">${joinGuideOpen ? '▲' : '▼'}</span>
+          </button>
+          <div class="join-steps" style="${joinGuideOpen ? '' : 'display:none'}">
+            <ol>${steps.map(s => `<li>${s}</li>`).join('')}</ol>
+          </div>
+        </div>`;
+    }
+
+    box.innerHTML = head + rulesHtml + phaseHtml + teamsHtml + joinHtml;
     box.style.display = 'block';
   }
+
+  // Join-Anleitung auf-/zuklappen — Status bleibt über Live-Updates erhalten
+  let joinGuideOpen = false;
+  window.toggleJoinGuide = function() {
+    joinGuideOpen = !joinGuideOpen;
+    const steps = document.querySelector('#liveNowDetail .join-steps');
+    const chev  = document.querySelector('#liveNowDetail .join-chevron');
+    const btn   = document.querySelector('#liveNowDetail .join-toggle');
+    if (steps) steps.style.display = joinGuideOpen ? '' : 'none';
+    if (chev)  chev.textContent = joinGuideOpen ? '▲' : '▼';
+    if (btn)   btn.setAttribute('aria-expanded', joinGuideOpen);
+  };
 
   async function renderVeto() {
     const open = document.getElementById('vetoOpen');

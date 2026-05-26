@@ -504,6 +504,10 @@
           <label>Veranstalter (für Abend 1: Krone)</label>
           <select id="setupHost"></select>
         </div>
+        <div class="form-group">
+          <label>Stech-Spiel bei Gleichstand (nach Spiel 5)</label>
+          <select id="setupTiebreak"></select>
+        </div>
       </div>
       <div class="form-group" style="margin-top:0.5rem">
         <label>Teilnehmer</label>
@@ -786,6 +790,11 @@
     hostSel.innerHTML = '<option value="">— niemand —</option>' +
       players.map(p => `<option value="${p.id}" ${currentEvent.host_player_id === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
 
+    // Stech-Spiel (Tiebreaker) — eines der 5 Spiele dieses Abends
+    const tbSel = $('setupTiebreak');
+    tbSel.innerHTML = '<option value="">— noch nicht festgelegt —</option>' +
+      DISCIPLINES.map(d => `<option value="${d.kind}" ${currentEvent.tiebreaker === d.kind ? 'selected' : ''}>${d.icon} ${d.name}${d.kind === 'haxball' ? ' (1v1)' : ''}</option>`).join('');
+
     // Teilnehmer-Toggles
     const pg = $('participantsGrid');
     pg.innerHTML = players.map(p => {
@@ -814,6 +823,13 @@
     await sb.from('events').update({ host_player_id: v }).eq('id', currentEvent.id);
     currentEvent.host_player_id = v;
     renderOverview();
+  });
+  $('setupTiebreak').addEventListener('change', async () => {
+    const v = $('setupTiebreak').value || null;
+    const { error } = await sb.from('events').update({ tiebreaker: v }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Stech-Spiel-Update fehlgeschlagen', 'error'); return; }
+    currentEvent.tiebreaker = v;
+    toast(v ? 'Stech-Spiel gespeichert' : 'Stech-Spiel zurückgesetzt', 'ok');
   });
 
   // ===== Teilnehmer toggeln =====
