@@ -46,3 +46,13 @@ alter table disciplines add column if not exists phase text;
 -- Speichert den discipline_kind des Stech-Spiels (z.B. 'haxball'),
 -- wird im Admin pro Abend festgelegt und auf abend.html live angezeigt.
 alter table events add column if not exists tiebreaker text;
+
+-- ============================================================
+-- 4) JOIN-LINK + TEAM-AUSLOSUNG (Live-Features auf abend.html)
+-- ============================================================
+-- join_link: echter Raum-Link bzw. Code pro Spiel (Admin trägt ihn ein),
+--            wird auf der Spielabend-Seite groß angezeigt.
+-- teams_drawn_at: Zeitstempel der letzten Team-Auslosung — triggert
+--            die einmalige Reveal-Animation auf der Live-Seite.
+alter table disciplines add column if not exists join_link text;
+alter table disciplines add column if not exists teams_drawn_at timestamptz;

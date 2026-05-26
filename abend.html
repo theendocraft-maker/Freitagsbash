@@ -309,9 +309,65 @@
   }
   .join-steps li { font-size: 0.9rem; line-height: 1.45; color: var(--muted); }
   .join-steps li::marker { color: var(--cool); font-family: var(--font-mono); font-weight: 700; }
+
+  .join-now {
+    margin-top: 0.9rem; padding: 1rem 1.1rem;
+    background: var(--cool-soft); border: 1px solid var(--cool);
+    border-radius: var(--radius-sm);
+  }
+  .jn-label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cool); margin-bottom: 0.6rem; }
+  .jn-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .jn-open {
+    background: var(--cool); color: var(--bg); text-decoration: none;
+    font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.04em;
+    padding: 0.6rem 1.2rem; border-radius: var(--radius-sm); font-weight: 700;
+  }
+  .jn-copy {
+    background: transparent; border: 1px solid var(--border-strong); color: var(--text);
+    font-family: var(--font-mono); font-size: 0.78rem; padding: 0.55rem 0.9rem;
+    border-radius: var(--radius-sm); cursor: pointer;
+  }
+  .jn-copy:hover { border-color: var(--cool); color: var(--cool); }
+  .jn-url { margin-top: 0.6rem; font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); word-break: break-all; }
+  .jn-code {
+    font-family: var(--font-display); font-size: 2.4rem; letter-spacing: 0.12em;
+    color: var(--text); margin: 0.2rem 0 0.7rem; line-height: 1;
+  }
+
+  .ranking-reveal {
+    background: var(--surface); border: 1px solid var(--cool);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow);
+    padding: 1.3rem 1.4rem; margin-bottom: 1.25rem;
+  }
+  .rr-title {
+    font-family: var(--font-display); font-weight: 900; font-size: 1.3rem;
+    letter-spacing: 0.03em; text-transform: uppercase; color: var(--cool);
+    margin-bottom: 0.9rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .rr-rows { display: flex; flex-direction: column; gap: 0.4rem; }
+  .rr-row {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.5rem 0.6rem; border-radius: var(--radius-sm); background: var(--bg-2);
+  }
+  .rr-row.tier-1 { background: var(--primary-soft); }
+  .rr-rank { font-family: var(--font-mono); font-weight: 700; color: var(--muted); width: 26px; }
+  .rr-av {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.7rem; color: var(--bg);
+  }
+  .rr-name { flex: 1; font-size: 0.95rem; color: var(--text); }
+  .rr-mv { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; }
+  .rr-mv.up { color: var(--primary); }
+  .rr-mv.down { color: var(--alert); }
+  .rr-mv.same { color: var(--muted); }
+  .rr-total { font-family: var(--font-display); font-size: 1.25rem; color: var(--text); min-width: 32px; text-align: right; }
+
   @media (max-width: 720px) {
     .now-detail { padding: 1.1rem 1.1rem; }
     .nd-title { font-size: 1.25rem; }
+    .jn-code { font-size: 1.9rem; }
   }
 
   /* ============================
@@ -663,6 +719,8 @@
 
     <div class="now-detail" id="liveNowDetail"></div>
 
+    <div class="ranking-reveal" id="rankingReveal" style="display:none;"></div>
+
     <div class="scoreboard">
       <div id="liveBody"></div>
     </div>
@@ -782,7 +840,19 @@
       { id:'p6', name:'Tank',      cry:'Slow and steady' },
     ];
     const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live', tiebreaker:'haxball' };
-    const disciplines = VDISCS.map((d,i) => ({ id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1, phase: d.kind === 'haxball' ? '2v2' : null }));
+    const DEMO_JOIN = {
+      geoguessr:  'https://www.geoguessr.com/challenge/DEMO123',
+      haxball:    'https://www.haxball.com/play?c=DEMO-ROOM',
+      chess:      'https://www.chess.com/tournament/live/arena/demo',
+      brawlhalla: '482913',
+      fallguys:   'DEMO-7788'
+    };
+    const disciplines = VDISCS.map((d,i) => ({
+      id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1,
+      phase: d.kind === 'haxball' ? '2v2' : null,
+      join_link: DEMO_JOIN[d.kind] || null,
+      teams_drawn_at: d.kind === 'haxball' ? new Date().toISOString() : null
+    }));
     const placements = [
       // After GeoGuessr
       { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 } },
@@ -898,6 +968,15 @@
     const currentIdx = currentDisc ? orderedDiscs.findIndex(d => d.id === currentDisc.id) : -1;
     const nextDisc = currentIdx >= 0 && currentIdx + 1 < orderedDiscs.length ? orderedDiscs[currentIdx + 1] : null;
     const lastDoneId = [...orderedDiscs].reverse().find(d => discDone[d.id])?.id;
+
+    // Neu fertig gewordene Disziplin erkennen (für die Ranking-Reveal-Animation)
+    const doneIdsNow = orderedDiscs.filter(d => discDone[d.id]).map(d => d.id);
+    let newlyDoneDisc = null;
+    if (lastDoneIds !== null && !demoFirstRender) {
+      const fresh = doneIdsNow.find(id => !lastDoneIds.includes(id));
+      if (fresh) newlyDoneDisc = orderedDiscs.find(d => d.id === fresh) || null;
+    }
+    lastDoneIds = doneIdsNow;
 
     // === Hero header ===
     document.getElementById('liveEventName').textContent = liveEvent.name;
@@ -1053,6 +1132,46 @@
     rows.forEach(r => { newSnapshot[r.player.id] = { rank: r.rank, total: r.total }; });
     lastSnapshot = newSnapshot;
     demoFirstRender = false;
+
+    // Ranking-Reveal-Animation, wenn gerade ein Spiel fertig eingetragen wurde
+    if (newlyDoneDisc && rows.length) showRankingReveal(rows, newlyDoneDisc);
+  }
+
+  // Zwischenstand-Reveal: zeigt nach jedem fertigen Spiel das aktuelle Ranking animiert
+  let lastDoneIds = null;
+  function showRankingReveal(rows, disc) {
+    const box = document.getElementById('rankingReveal');
+    if (!box) return;
+    const title = disc ? `Zwischenstand nach ${discName(disc.kind)}` : 'Zwischenstand';
+    box.innerHTML = `
+      <div class="rr-title"><span class="rr-ico">📊</span> ${title}</div>
+      <div class="rr-rows">
+        ${rows.map((r,i) => {
+          const av = r.player.avatar_url ? `background-image:url(${r.player.avatar_url});` : `background:${grad(i)}`;
+          let mv = '<span class="rr-mv same">–</span>';
+          if (r.delta.kind === 'up')   mv = `<span class="rr-mv up">▲${r.delta.value}</span>`;
+          if (r.delta.kind === 'down') mv = `<span class="rr-mv down">▼${r.delta.value}</span>`;
+          const tier = r.rank <= 3 ? ` tier-${r.rank}` : '';
+          return `<div class="rr-row${tier}" style="opacity:0;transform:translateX(-14px)">
+            <span class="rr-rank">${pad2(r.rank)}</span>
+            <span class="rr-av" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</span>
+            <span class="rr-name">${r.player.name}</span>
+            ${mv}
+            <span class="rr-total">${r.total}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    box.style.display = 'block';
+    const rrRows = box.querySelectorAll('.rr-row');
+    rrRows.forEach((el, i) => {
+      setTimeout(() => {
+        el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        el.style.opacity = '1';
+        el.style.transform = 'none';
+      }, i * 180);
+    });
+    clearTimeout(showRankingReveal._t);
+    showRankingReveal._t = setTimeout(() => { box.style.display = 'none'; }, rrRows.length * 180 + 5500);
   }
 
   // "Wie im Fernsehen": zeigt für die aktuelle Disziplin Regeln/Modus,
@@ -1077,6 +1196,32 @@
       </div>`;
     const rulesHtml = rules ? `<div class="nd-rules">${rules}</div>` : '';
 
+    // --- Großer Join-Link / Code (damit niemand suchen muss) ---
+    let joinLinkHtml = '';
+    const jl = (currentDisc.join_link || '').trim();
+    if (jl) {
+      const isUrl = /^https?:\/\//i.test(jl);
+      const safe = jl.replace(/'/g, "\\'");
+      if (isUrl) {
+        joinLinkHtml = `
+          <div class="join-now">
+            <div class="jn-label">🔗 Jetzt beitreten</div>
+            <div class="jn-row">
+              <a class="jn-open" href="${jl}" target="_blank" rel="noopener">Spiel öffnen →</a>
+              <button class="jn-copy" onclick="copyJoin('${safe}')">Link kopieren</button>
+            </div>
+            <div class="jn-url">${jl}</div>
+          </div>`;
+      } else {
+        joinLinkHtml = `
+          <div class="join-now">
+            <div class="jn-label">🔗 Code zum Beitreten</div>
+            <div class="jn-code">${jl}</div>
+            <button class="jn-copy" onclick="copyJoin('${safe}')">Code kopieren</button>
+          </div>`;
+      }
+    }
+
     // --- Phasen-Fortschritt (nur Disziplinen mit phases, z.B. Haxball) ---
     let phaseHtml = '';
     const phases = discPhases(kind);
@@ -1097,20 +1242,23 @@
 
     // --- Aktuelle Teams (aus results.team der aktuellen Disziplin) ---
     let teamsHtml = '';
+    const drawnAt = currentDisc.teams_drawn_at || null;
+    const animateTeams = !!drawnAt && teamsRevealed[currentDisc.id] !== drawnAt && !demoFirstRender;
     const myResults = (results || []).filter(r => r.discipline_id === currentDisc.id && r.team != null && r.team !== '');
     if (myResults.length) {
       const teams = {};
       myResults.forEach(r => { (teams[r.team] = teams[r.team] || []).push(r.player_id); });
       const teamKeys = Object.keys(teams).sort((a,b) => String(a).localeCompare(String(b), 'de', { numeric:true }));
+      const hideStyle = animateTeams ? ' style="opacity:0;transform:translateY(8px) scale(0.85)"' : '';
       teamsHtml = `
         <div class="nd-block">
-          <div class="nd-label">Teams</div>
+          <div class="nd-label">Teams${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
           <div class="nd-teams">
             ${teamKeys.map((tk,ti) => `
               <div class="nd-team">
                 <div class="nd-team-name" style="background:${grad(ti)}">${tk}</div>
                 <div class="nd-team-players">
-                  ${teams[tk].map(pid => `<span class="nd-tp">${nameOf(pid)}</span>`).join('')}
+                  ${teams[tk].map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}
                 </div>
               </div>`).join('')}
           </div>
@@ -1133,9 +1281,29 @@
         </div>`;
     }
 
-    box.innerHTML = head + rulesHtml + phaseHtml + teamsHtml + joinHtml;
+    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + joinHtml;
     box.style.display = 'block';
+
+    // Team-Reveal-Animation nach frischer Auslosung (einmalig pro Auslosung)
+    if (animateTeams) {
+      teamsRevealed[currentDisc.id] = drawnAt;
+      box.querySelectorAll('.nd-tp').forEach((el, i) => {
+        setTimeout(() => {
+          el.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+        }, i * 220);
+      });
+    }
   }
+
+  // Join-Link/Code kopieren (kurzes visuelles Feedback am Button)
+  const teamsRevealed = {};
+  window.copyJoin = function(txt) {
+    try { navigator.clipboard.writeText(txt); } catch (e) {}
+    const b = (typeof event !== 'undefined') ? event.target : null;
+    if (b) { const o = b.textContent; b.textContent = 'Kopiert ✓'; setTimeout(() => { b.textContent = o; }, 1500); }
+  };
 
   // Join-Anleitung auf-/zuklappen — Status bleibt über Live-Updates erhalten
   let joinGuideOpen = false;

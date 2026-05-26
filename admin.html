@@ -336,6 +336,24 @@
   .phase-btn:hover { border-color: var(--border-strong); color: var(--text); }
   .phase-btn.active { background: var(--alert-soft); border-color: var(--alert-line); color: var(--alert); font-weight: 700; }
 
+  .draw-control { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .draw-label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; color: var(--muted); }
+  .draw-btn {
+    background: var(--primary-soft); border: 1px solid var(--primary-line); color: var(--primary);
+    padding: 0.4rem 0.8rem; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; letter-spacing: 0.03em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .draw-btn:hover { background: var(--primary); color: var(--bg); }
+
+  .join-field { margin-bottom: 1rem; }
+  .join-field-label { display: block; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.4rem; }
+  .join-field-input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border-strong); color: var(--text);
+    border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; font-family: var(--font-mono); font-size: 0.85rem;
+  }
+  .join-field-input:focus { outline: none; border-color: var(--cool); }
+
   .haxball-step { margin-top: 0.5rem; }
   .haxball-step-title {
     font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600;
@@ -890,13 +908,35 @@
   }
 
   function renderDisciplineBody(d, def) {
+    const join = joinLinkFieldHtml(d);
     const participants = players.filter(p => currentParticipantIds.has(p.id));
-    if (participants.length === 0) return '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
-    if (d.kind === 'haxball')    return renderHaxballBody(d, participants);
-    if (def.type === 'solo')     return renderSoloBody(d, participants);
-    if (def.type === 'team')     return renderTeamBody(d, participants);
-    return '';
+    if (participants.length === 0) return join + '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
+    if (d.kind === 'haxball')    return join + renderHaxballBody(d, participants);
+    if (def.type === 'solo')     return join + renderSoloBody(d, participants);
+    if (def.type === 'team')     return join + renderTeamBody(d, participants);
+    return join;
   }
+
+  // Eingabefeld für den Join-Link/Code (wird live auf abend.html groß angezeigt)
+  function joinLinkFieldHtml(d) {
+    const v = (d.join_link || '').replace(/"/g, '&quot;');
+    return `
+      <div class="join-field">
+        <label class="join-field-label">🔗 Join-Link / Code — wird live groß angezeigt</label>
+        <input type="text" class="join-field-input" value="${v}"
+               placeholder="z.B. https://haxball.com/play?c=… oder Raum-Code 123456"
+               onchange="setJoinLink('${d.id}', this.value)">
+      </div>`;
+  }
+
+  window.setJoinLink = async function(discId, value) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const v = value.trim() || null;
+    const { error } = await sb.from('disciplines').update({ join_link: v }).eq('id', discId);
+    if (error) { console.error(error); toast('Link-Update fehlgeschlagen', 'error'); return; }
+    d.join_link = v;
+    toast(v ? 'Join-Link gespeichert' : 'Join-Link entfernt', 'ok');
+  };
 
   // --- Haxball: Phasen-Steuerung + Teams (Anzeige) + Endplatzierung (Klick-Reihenfolge) ---
   function renderHaxballBody(d, participants) {
@@ -942,7 +982,8 @@
       <div style="padding-top:1rem">
         ${phaseStrip}
         <div class="haxball-step-title">Teams (nur Anzeige · per Los)</div>
-        <p class="section-desc">Ordne die Spieler den Teams zu — wird auf der Live-Seite angezeigt, zählt aber nicht für die Punkte.</p>
+        <p class="section-desc">Lose die Teams aus (Reveal-Animation läuft live bei den Spielern) oder ordne sie manuell zu. Zählt nicht für die Punkte.</p>
+        ${drawControlHtml(d.id, 'haxball')}
         ${teamRows}
         <div class="haxball-step-title">Endplatzierung (zählt für die Wertung)</div>
         <p class="section-desc">Tippe die Spieler in <b>Zielreihenfolge</b> an — 1. Klick = Platz 1.${ranked.length ? ` · <a onclick="resetSolo('${d.id}')" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : ''}</p>
@@ -993,8 +1034,8 @@
         <div class="result-row" style="grid-template-columns:1fr auto">
           <div class="result-name">${p.name}</div>
           <div class="team-buttons">
-            ${[1,2,3].map(t => `
-              <button class="team-btn ${team === t ? 'selected-t'+t : ''}" onclick="setTeam('${d.id}','${p.id}',${t})">${t}</button>
+            ${[1,2,3,4].map(t => `
+              <button class="team-btn ${team === t ? 'selected-t'+(((t-1)%3)+1) : ''}" onclick="setTeam('${d.id}','${p.id}',${t})">${t}</button>
             `).join('')}
           </div>
         </div>`;
@@ -1003,7 +1044,7 @@
     const vetoHtml = '';
 
     // Step 2: Team-Reihenfolge (zeige nur Teams mit Mitgliedern)
-    const teamsInUse = [1,2,3].filter(t =>
+    const teamsInUse = [1,2,3,4].filter(t =>
       playing.some(p => currentResults[d.id]?.[p.id]?.team === t)
     );
     let teamRankBlock = '';
@@ -1031,8 +1072,9 @@
 
     return `
       <div style="padding-top:1rem">
-        <p class="section-desc">Schritt 1: Jeden Spieler einem Team zuordnen. Schritt 2: Team-Reihenfolge eintragen.</p>
+        <p class="section-desc">Schritt 1: Squads auslosen (Reveal-Animation läuft live bei den Spielern) oder manuell zuordnen. Schritt 2: Team-Reihenfolge eintragen.</p>
         <div class="haxball-step-title" style="border-top:none;padding-top:0">Teams zuweisen</div>
+        ${drawControlHtml(d.id, 'fallguys')}
         ${teamRows}
         ${teamRankBlock}
         ${vetoHtml}
@@ -1229,6 +1271,40 @@
     d.phase = newPhase;
     renderDisciplineBodyFor(discId);
     toast(newPhase ? 'Phase: ' + newPhase : 'Phase zurückgesetzt', 'ok');
+  };
+
+  // Auslos-Steuerung (Buttons) für Team-Disziplinen
+  function drawControlHtml(discId, mode) {
+    return `
+      <div class="draw-control">
+        <span class="draw-label">🎲 Auslosen:</span>
+        <button class="draw-btn" onclick="drawTeams('${discId}',2,'${mode}')">2 Teams</button>
+        <button class="draw-btn" onclick="drawTeams('${discId}',3,'${mode}')">3 Teams</button>
+        <button class="draw-btn" onclick="drawTeams('${discId}',4,'${mode}')">4 Teams</button>
+      </div>`;
+  }
+
+  // Teams zufällig auslosen → speichert results.team + setzt teams_drawn_at (triggert Live-Reveal)
+  window.drawTeams = async function(discId, n, mode) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    if (playing.length < n) { toast(`Zu wenige Spieler für ${n} Teams`, 'error'); return; }
+    if (!confirm(`${playing.length} Spieler in ${n} Teams auslosen? Eine bestehende Aufteilung wird überschrieben.`)) return;
+    // Fisher-Yates
+    const arr = playing.slice();
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    for (let i = 0; i < arr.length; i++) {
+      const team = (i % n) + 1;
+      if (mode === 'fallguys') await upsertResult(discId, arr[i].id, { team, placement: null });
+      else await upsertResult(discId, arr[i].id, { team });
+    }
+    const ts = new Date().toISOString();
+    const { error } = await sb.from('disciplines').update({ teams_drawn_at: ts }).eq('id', discId);
+    if (error) console.error(error);
+    d.teams_drawn_at = ts;
+    renderDisciplineBodyFor(discId);
+    renderOverview();
+    toast(`In ${n} Teams ausgelost — Reveal läuft live`, 'ok');
   };
 
   // Haxball-Team setzen — NUR Anzeige, lässt placement (= Wertung) unberührt
