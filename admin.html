@@ -610,6 +610,7 @@
   function disciplineWins(playerId) {
     let w = 0;
     currentDisciplines.forEach(d => {
+      if (currentVetoes[playerId] === d.kind) return; // vetote Disziplin zählt nicht als Sieg
       const r = currentResults[d.id]?.[playerId];
       if (r && parseInt(r.placement) === 1) w++;
     });
@@ -835,7 +836,29 @@
             ${renderDisciplineBody(d, def)}
           </div>
         </div>`;
-    }).join('');
+    }).join('') + renderSubCard();
+  }
+
+  // Eigene Karte fürs Veto-Ersatzspiel (alle Veto-Spieler gesammelt)
+  function renderSubCard() {
+    const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
+    if (vp.length === 0) return '';
+    return `
+      <div class="discipline-card" data-disc="veto" style="border-color:var(--alert-line)">
+        <div class="discipline-head" onclick="toggleDiscipline('veto')">
+          <div class="discipline-head-left">
+            <span class="discipline-icon">🃏</span>
+            <span class="discipline-title">Veto-Ersatzspiel</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.7rem">
+            <span class="status-pill draft">${vp.length} Spieler</span>
+            <span class="chevron">▼</span>
+          </div>
+        </div>
+        <div class="discipline-body collapsed" id="dbody-veto">
+          ${renderSubBody()}
+        </div>
+      </div>`;
   }
 
   function renderDisciplineBody(d, def) {
@@ -864,15 +887,7 @@
       ? `<div class="rank-pool-title">Noch offen — anklicken = nächster Platz</div><div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankSolo('${d.id}','${p.id}')">${p.name}</button>`).join('')}</div>`
       : '<div class="rank-done">✓ Alle platziert.</div>';
 
-    const vetoHtml = vetoed.length ? `
-      <div class="veto-sub">
-        <div class="veto-sub-title">🃏 Veto-Ersatzspiel — Punkte (0–10)</div>
-        ${vetoed.map(p => {
-          const r = currentResults[d.id]?.[p.id];
-          const vp = (r && r.placement == null && r.points != null) ? r.points : '';
-          return `<div class="result-row" style="grid-template-columns:1fr auto auto"><div class="result-name">${p.name}</div><input type="number" min="0" max="10" class="result-input" value="${vp}" placeholder="—" onchange="setVetoPoints('${d.id}','${p.id}',this.value)"><div class="result-points">${vp !== '' ? '+' + vp : '—'}</div></div>`;
-        }).join('')}
-      </div>` : '';
+    const vetoHtml = '';
 
     return `
       <div style="padding-top:1rem">
@@ -903,15 +918,7 @@
         </div>`;
     }).join('');
 
-    const vetoHtml = vetoed.length ? `
-      <div class="veto-sub">
-        <div class="veto-sub-title">🃏 Veto-Ersatzspiel — Punkte (0–10)</div>
-        ${vetoed.map(p => {
-          const r = currentResults[d.id]?.[p.id];
-          const vp = (r && r.placement == null && r.team == null && r.points != null) ? r.points : '';
-          return `<div class="result-row" style="grid-template-columns:1fr auto auto"><div class="result-name">${p.name}</div><input type="number" min="0" max="10" class="result-input" value="${vp}" placeholder="—" onchange="setVetoPoints('${d.id}','${p.id}',this.value)"><div class="result-points">${vp !== '' ? '+' + vp : '—'}</div></div>`;
-        }).join('')}
-      </div>` : '';
+    const vetoHtml = '';
 
     // Step 2: Team-Reihenfolge (zeige nur Teams mit Mitgliedern)
     const teamsInUse = [1,2,3].filter(t =>
@@ -1043,6 +1050,73 @@
       const { data, error } = await sb.from('results').insert(row).select().single();
       if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
       currentResults[discId][playerId] = data;
+    }
+  }
+
+  // ===== Veto-Ersatzspiel =====
+  function discLabel(k) { const x = DISCIPLINES.find(d => d.kind === k); return x ? x.name : k; }
+  function vetoDiscIdFor(playerId) {
+    const kind = currentVetoes[playerId];
+    if (!kind) return null;
+    const d = currentDisciplines.find(x => x.kind === kind);
+    return d ? d.id : null;
+  }
+
+  function renderSubBody() {
+    const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
+    if (vp.length === 0) return '<p class="section-desc" style="padding-top:1rem">Keine Vetos gesetzt.</p>';
+    const subRank = p => { const did = vetoDiscIdFor(p.id); return did ? (currentResults[did]?.[p.id]?.placement || null) : null; };
+    const ranked = vp.filter(p => subRank(p)).sort((a,b) => subRank(a) - subRank(b));
+    const unranked = vp.filter(p => !subRank(p));
+
+    const rankedHtml = ranked.length ? ranked.map(p => {
+      const pl = subRank(p); const pts = soloPoints(pl);
+      return `<div class="rank-row"><span class="rank-pos">${pl}.</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:0.72rem">(statt ${discLabel(currentVetoes[p.id])})</span></span><span class="rank-pts">+${pts}</span><button class="rank-x" onclick="unrankSub('${p.id}')" title="Entfernen">×</button></div>`;
+    }).join('') : '<div class="rank-empty">Noch keine Platzierung — tippe die Veto-Spieler in Zielreihenfolge an.</div>';
+
+    const poolHtml = unranked.length
+      ? `<div class="rank-pool-title">Noch offen — anklicken = nächster Platz</div><div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankSub('${p.id}')">${p.name}</button>`).join('')}</div>`
+      : '<div class="rank-done">✓ Alle platziert.</div>';
+
+    return `
+      <div style="padding-top:1rem">
+        <p class="section-desc">Eigenes Spiel für alle, die ein Veto gesetzt haben. Tippe sie in <b>Zielreihenfolge</b> an — die Punkte (10·8·6·…) zählen für ihre vetote Disziplin.${ranked.length ? ` · <a onclick="resetSub()" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : ''}</p>
+        <div class="rank-list">${rankedHtml}</div>
+        ${poolHtml}
+      </div>`;
+  }
+
+  function renderSubBodyFor() { const body = $('dbody-veto'); if (body) body.innerHTML = renderSubBody(); }
+
+  window.rankSub = async function(playerId) {
+    const did = vetoDiscIdFor(playerId); if (!did) return;
+    const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
+    const maxR = Math.max(0, ...vp.map(p => { const d2 = vetoDiscIdFor(p.id); return d2 ? (currentResults[d2]?.[p.id]?.placement || 0) : 0; }));
+    const rank = maxR + 1;
+    await upsertResultDirect(did, playerId, { placement: rank, team: null, points: soloPoints(rank) });
+    renderSubBodyFor(); renderOverview();
+  };
+
+  window.unrankSub = async function(playerId) {
+    const did = vetoDiscIdFor(playerId); if (!did) return;
+    await upsertResultDirect(did, playerId, { placement: null, team: null, points: 0 });
+    await resequenceSub();
+    renderSubBodyFor(); renderOverview();
+  };
+
+  window.resetSub = async function() {
+    const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
+    for (const p of vp) { const did = vetoDiscIdFor(p.id); if (did && currentResults[did]?.[p.id]?.placement) await upsertResultDirect(did, p.id, { placement: null, team: null, points: 0 }); }
+    renderSubBodyFor(); renderOverview();
+  };
+
+  async function resequenceSub() {
+    const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
+    const ranked = vp.filter(p => { const d = vetoDiscIdFor(p.id); return d && currentResults[d]?.[p.id]?.placement; })
+      .sort((a,b) => { const da = vetoDiscIdFor(a.id), db = vetoDiscIdFor(b.id); return currentResults[da][a.id].placement - currentResults[db][b.id].placement; });
+    for (let i = 0; i < ranked.length; i++) {
+      const did = vetoDiscIdFor(ranked[i].id); const want = i + 1;
+      if (currentResults[did][ranked[i].id].placement !== want) await upsertResultDirect(did, ranked[i].id, { placement: want, team: null, points: soloPoints(want) });
     }
   }
 
