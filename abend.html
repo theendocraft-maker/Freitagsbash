@@ -259,7 +259,16 @@
     margin-bottom: 1.25rem;
   }
   .nd-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.5rem; }
-  .nd-logo { height: 46px; width: auto; max-width: 170px; object-fit: contain; border-radius: 8px; flex-shrink: 0; background: var(--bg-2); padding: 4px 8px; }
+  .nd-logo { height: 54px; width: auto; max-width: 200px; object-fit: contain; border-radius: 8px; flex-shrink: 0; background: var(--bg-2); padding: 5px 9px; }
+  .intro { text-align: center; }
+  .intro-slide { display: flex; flex-direction: column; align-items: center; gap: 0.55rem; padding: 1.1rem 0 1.3rem; }
+  .intro-logo { height: 68px; width: auto; max-width: 240px; object-fit: contain; }
+  .intro-name { font-family: var(--font-display); font-weight: 900; font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); line-height: 1; }
+  .intro-mode { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cool); }
+  .intro-rules { font-size: 0.95rem; line-height: 1.5; color: var(--muted); max-width: 520px; }
+  .intro-dots { display: flex; justify-content: center; gap: 0.4rem; }
+  .intro-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); transition: background 0.25s; }
+  .intro-dot.on { background: var(--primary); }
   .nd-glyph {
     font-family: var(--font-display); font-weight: 900;
     font-size: 1rem; letter-spacing: 0.04em;
@@ -1140,8 +1149,16 @@
       return `<div class="disc-pill ${cls}"><span class="dp-no">${i+1}</span><span class="glyph">${discShort(d.kind)}</span><span class="nm">${d.name}</span><span class="dp-status">${status}</span></div>`;
     }).join('');
 
-    // === "Wie im Fernsehen" — Regeln / Phase / Teams der aktuellen Disziplin ===
-    buildNowDetail(currentDisc, results);
+    // === "Wie im Fernsehen": vor dem Start eine Vorstellungs-Slideshow, sonst die aktuelle Disziplin ===
+    const started = doneCount > 0
+      || orderedDiscs.some(d => d.status === 'live' || d.status === 'done')
+      || (results && results.length > 0);
+    if (!started && currentDisc) {
+      buildIntroSlideshow(orderedDiscs);
+    } else {
+      clearInterval(introTimer); introTimer = null;
+      buildNowDetail(currentDisc, results);
+    }
 
     // === Scoreboard rows ===
     const rows = evPlayers
@@ -1286,6 +1303,32 @@
     });
     clearTimeout(showGameEndscore._t);
     showGameEndscore._t = setTimeout(() => { box.style.display = 'none'; }, rrRows.length * 220 + 6000);
+  }
+
+  // Vorstellungs-Slideshow vor dem Start: alle Disziplinen des Abends mit Logo + Regeln, auto-rotierend
+  let introTimer = null, introIdx = 0;
+  function buildIntroSlideshow(discs) {
+    const box = document.getElementById('liveNowDetail');
+    if (!box) return;
+    const render = () => {
+      const d = discs[introIdx % discs.length];
+      const k = d.kind;
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label">Heute Abend · ${discs.length} Spiele</div>
+          <div class="intro-slide">
+            <img class="intro-logo" src="logos/${k}.svg" alt="${discName(k)}" onerror="this.style.display='none'">
+            <div class="intro-name">${discName(k)}</div>
+            <div class="intro-mode">${discMode(k)}</div>
+            <div class="intro-rules">${discRules(k)}</div>
+          </div>
+          <div class="intro-dots">${discs.map((dd,i) => `<span class="intro-dot ${i === introIdx % discs.length ? 'on' : ''}"></span>`).join('')}</div>
+        </div>`;
+    };
+    render();
+    box.style.display = 'block';
+    clearInterval(introTimer);
+    introTimer = setInterval(() => { introIdx++; render(); }, 4200);
   }
 
   // "Wie im Fernsehen": zeigt für die aktuelle Disziplin Regeln/Modus,
