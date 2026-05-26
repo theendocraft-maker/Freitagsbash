@@ -325,6 +325,17 @@
   .team-btn.selected-t2 { background: var(--cool-soft); border-color: var(--cool); color: var(--cool); }
   .team-btn.selected-t3 { background: var(--alert-soft); border-color: var(--alert); color: var(--alert); }
 
+  .phase-strip { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .phase-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.04em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .phase-btn:hover { border-color: var(--border-strong); color: var(--text); }
+  .phase-btn.active { background: var(--alert-soft); border-color: var(--alert-line); color: var(--alert); font-weight: 700; }
+
   .haxball-step { margin-top: 0.5rem; }
   .haxball-step-title {
     font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600;
@@ -568,6 +579,7 @@
     { kind: 'fallguys',  name: 'Fall Guys',              icon: '🫘', type: 'team' }   // Squads per Los → Teamwertung
   ];
 
+  const HAXBALL_PHASES  = ['Teams', '2v2', '1v1-Finale']; // Trichter-Phasen (für Live-Anzeige)
   const SOLO_POINTS     = [10, 8, 6, 4, 3, 2, 1]; // Platz 1..7+, 7+ alle 1
   const TEAM_POINTS     = [10, 8, 6, 4];          // Team-Platz 1..N (Fall Guys) = wie Einzelplatzierung
   const SEASON_PTS_BY_RANK = [25, 18, 15, 12, 10, 8, 6, 4]; // Platz 1..8+
@@ -864,9 +876,63 @@
   function renderDisciplineBody(d, def) {
     const participants = players.filter(p => currentParticipantIds.has(p.id));
     if (participants.length === 0) return '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
+    if (d.kind === 'haxball')    return renderHaxballBody(d, participants);
     if (def.type === 'solo')     return renderSoloBody(d, participants);
     if (def.type === 'team')     return renderTeamBody(d, participants);
     return '';
+  }
+
+  // --- Haxball: Phasen-Steuerung + Teams (Anzeige) + Endplatzierung (Klick-Reihenfolge) ---
+  function renderHaxballBody(d, participants) {
+    const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
+    const activePhase = d.phase || HAXBALL_PHASES[0];
+
+    // Phasen-Strip (steuert disciplines.phase → Live-Anzeige auf der Abend-Seite)
+    const phaseStrip = `
+      <div class="haxball-step-title" style="border-top:none;padding-top:0">Phase (steuert die Live-Anzeige)</div>
+      <div class="phase-strip">
+        ${HAXBALL_PHASES.map(ph => `
+          <button class="phase-btn ${ph === activePhase ? 'active' : ''}" onclick="setDiscPhase('${d.id}','${ph}')">${ph}</button>
+        `).join('')}
+      </div>`;
+
+    // Team-Zuordnung (nur für die Live-Anzeige, beeinflusst die Wertung NICHT)
+    const teamRows = playing.map(p => {
+      const team = currentResults[d.id]?.[p.id]?.team || 0;
+      return `
+        <div class="result-row" style="grid-template-columns:1fr auto">
+          <div class="result-name">${p.name}</div>
+          <div class="team-buttons">
+            ${[1,2,3,4].map(t => `
+              <button class="team-btn ${team === t ? 'selected-t'+(((t-1)%3)+1) : ''}" onclick="setHaxTeam('${d.id}','${p.id}',${t})">${t}</button>
+            `).join('')}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Endplatzierung per Klick-Reihenfolge (zählt für die Wertung)
+    const plOf = p => currentResults[d.id]?.[p.id]?.placement || null;
+    const ranked = playing.filter(p => plOf(p)).sort((a,b) => plOf(a) - plOf(b));
+    const unranked = playing.filter(p => !plOf(p));
+    const rankedHtml = ranked.length ? ranked.map(p => {
+      const pl = plOf(p); const pts = soloPoints(pl);
+      return `<div class="rank-row"><span class="rank-pos">${pl}.</span><span class="rank-name">${p.name}</span><span class="rank-pts">+${pts}</span><button class="rank-x" onclick="unrankSolo('${d.id}','${p.id}')" title="Entfernen">×</button></div>`;
+    }).join('') : '<div class="rank-empty">Noch keine Endplatzierung — nach dem 1v1-Finale die Spieler in Zielreihenfolge antippen.</div>';
+    const poolHtml = unranked.length
+      ? `<div class="rank-pool-title">Noch offen — anklicken = nächster Platz</div><div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankSolo('${d.id}','${p.id}')">${p.name}</button>`).join('')}</div>`
+      : '<div class="rank-done">✓ Alle platziert.</div>';
+
+    return `
+      <div style="padding-top:1rem">
+        ${phaseStrip}
+        <div class="haxball-step-title">Teams (nur Anzeige · per Los)</div>
+        <p class="section-desc">Ordne die Spieler den Teams zu — wird auf der Live-Seite angezeigt, zählt aber nicht für die Punkte.</p>
+        ${teamRows}
+        <div class="haxball-step-title">Endplatzierung (zählt für die Wertung)</div>
+        <p class="section-desc">Tippe die Spieler in <b>Zielreihenfolge</b> an — 1. Klick = Platz 1.${ranked.length ? ` · <a onclick="resetSolo('${d.id}')" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : ''}</p>
+        <div class="rank-list">${rankedHtml}</div>
+        ${poolHtml}
+      </div>`;
   }
 
   // --- Solo: Klick-Reihenfolge ---
@@ -1137,6 +1203,25 @@
       if (currentResults[did][ranked[i].id].placement !== want) await upsertResultDirect(did, ranked[i].id, { placement: want, team: null, points: soloPoints(want) });
     }
   }
+
+  // Haxball-Phase setzen (steuert die Live-Anzeige auf abend.html)
+  window.setDiscPhase = async function(discId, phase) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const newPhase = d.phase === phase ? null : phase;
+    const { error } = await sb.from('disciplines').update({ phase: newPhase }).eq('id', discId);
+    if (error) { console.error(error); toast('Phase-Update fehlgeschlagen', 'error'); return; }
+    d.phase = newPhase;
+    renderDisciplineBodyFor(discId);
+    toast(newPhase ? 'Phase: ' + newPhase : 'Phase zurückgesetzt', 'ok');
+  };
+
+  // Haxball-Team setzen — NUR Anzeige, lässt placement (= Wertung) unberührt
+  window.setHaxTeam = async function(discId, playerId, team) {
+    const cur = currentResults[discId][playerId];
+    const newTeam = cur?.team === team ? null : team;
+    await upsertResult(discId, playerId, { team: newTeam });
+    renderDisciplineBodyFor(discId);
+  };
 
   window.setTeam = async function(discId, playerId, team) {
     const cur = currentResults[discId][playerId];

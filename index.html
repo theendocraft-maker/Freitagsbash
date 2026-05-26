@@ -68,6 +68,32 @@
   .pc-delete { top: 0.5rem; right: 0.5rem; }
   body.admin-mode .lb-del, body.admin-mode .pc-delete { display: flex; }
   .lb-del:hover, .pc-delete:hover { background: var(--alert); color: white; }
+
+  /* LIVE-Banner */
+  .live-banner {
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    max-width: 960px; margin: 1rem auto 0; padding: 0.7rem 1.1rem;
+    background: var(--alert-soft);
+    border: 1px solid var(--alert-line);
+    border-radius: 999px;
+    text-decoration: none; color: var(--text);
+    font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.04em;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .live-banner:hover { background: var(--alert); color: #fff; }
+  .live-banner:hover .lb-cta, .live-banner:hover .lb-text b { color: #fff; }
+  .live-banner .lb-text b { color: var(--alert); font-family: var(--font-display); font-size: 0.95rem; letter-spacing: 0.08em; }
+  .live-banner .lb-cta { margin-left: auto; color: var(--muted); font-weight: 600; }
+  .lb-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--alert);
+    flex-shrink: 0; box-shadow: 0 0 0 0 var(--alert-line);
+    animation: lbpulse 1.6s infinite;
+  }
+  @keyframes lbpulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,61,110,0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(255,61,110,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,61,110,0); }
+  }
 </style>
 </head>
 <body>
@@ -89,6 +115,13 @@
     </div>
   </div>
 </header>
+
+<!-- LIVE-BANNER (sichtbar nur wenn ein Abend live ist) -->
+<a href="abend.html" class="live-banner" id="liveBanner" style="display:none;">
+  <span class="lb-dot"></span>
+  <span class="lb-text"><b>LIVE</b> — <span id="liveBannerName">Der Abend läuft gerade</span></span>
+  <span class="lb-cta">Zum Live-Abend →</span>
+</a>
 
 <!-- HERO -->
 <section class="hero">
@@ -254,6 +287,23 @@
 
   loadAndRender();
   sb.channel('players-live').on('postgres_changes', { event:'*', schema:'public', table:'players' }, () => loadAndRender()).subscribe();
+
+  // LIVE-Banner: zeigen, sobald ein Abend status='live' hat
+  async function checkLive() {
+    const { data } = await sb.from('events').select('*').eq('status', 'live').limit(1);
+    const ev = (data || [])[0];
+    const banner = document.getElementById('liveBanner');
+    if (ev) {
+      document.getElementById('liveBannerName').textContent = (ev.name || 'Der Abend') + ' läuft gerade';
+      banner.style.display = 'flex';
+      document.body.classList.add('has-live');
+    } else {
+      banner.style.display = 'none';
+      document.body.classList.remove('has-live');
+    }
+  }
+  checkLive();
+  sb.channel('events-live').on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => checkLive()).subscribe();
 
   // Scroll-Fortschritt + Reveal
   const prog = document.getElementById('scrollProg');

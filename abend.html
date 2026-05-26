@@ -221,6 +221,70 @@
   }
 
   /* ============================
+     NOW-DETAIL — "wie im Fernsehen"
+     ============================ */
+  .now-detail {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 1.4rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .nd-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.5rem; }
+  .nd-glyph {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: 1rem; letter-spacing: 0.04em;
+    padding: 0.45rem 0.6rem; border-radius: 8px;
+    background: var(--alert); color: #fff; flex-shrink: 0;
+  }
+  .nd-eyebrow {
+    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .nd-title {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: 1.5rem; letter-spacing: 0.01em; line-height: 1; color: var(--text);
+  }
+  .nd-rules {
+    font-size: 0.92rem; line-height: 1.5; color: var(--muted);
+    padding: 0.7rem 0.9rem; margin-top: 0.4rem;
+    background: var(--bg-2); border-radius: var(--radius-sm);
+    border-left: 3px solid var(--alert-line);
+  }
+  .nd-block { margin-top: 1.1rem; }
+  .nd-label {
+    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem;
+  }
+  .nd-phases { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+  .nd-phase {
+    font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.03em;
+    padding: 0.4rem 0.75rem; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--bg-2); color: var(--muted);
+  }
+  .nd-phase.done { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); }
+  .nd-phase.now  { border-color: var(--alert-line); background: var(--alert-soft); color: var(--text); font-weight: 600; }
+  .nd-phase-sep { color: var(--muted); font-size: 0.9rem; }
+  .nd-teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; }
+  .nd-team {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg-2); overflow: hidden;
+  }
+  .nd-team-name {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: 0.85rem; letter-spacing: 0.05em; color: var(--bg);
+    padding: 0.4rem 0.7rem;
+  }
+  .nd-team-players { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .nd-tp { font-size: 0.88rem; color: var(--text); }
+  @media (max-width: 720px) {
+    .now-detail { padding: 1.1rem 1.1rem; }
+    .nd-title { font-size: 1.25rem; }
+  }
+
+  /* ============================
      SCOREBOARD — broadcast-sized
      ============================ */
   .scoreboard {
@@ -562,6 +626,8 @@
       <div class="disc-strip" id="liveDiscStrip"></div>
     </div>
 
+    <div class="now-detail" id="liveNowDetail"></div>
+
     <div class="scoreboard">
       <div id="liveBody"></div>
     </div>
@@ -628,15 +694,17 @@
   const pad2 = n => String(n).padStart(2,'0');
 
   const VDISCS = [
-    { kind:'geoguessr', name:'GeoGuessr',   short:'GEO', mode:'Einzeln · No Move' },
-    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter' },
-    { kind:'chess',     name:'Chess Blitz', short:'CHE', mode:'Arena 3+2' },
-    { kind:'brawlhalla',name:'Brawlhalla',  short:'BRA', mode:'Free For All' },
-    { kind:'fallguys',  name:'Fall Guys',   short:'FAL', mode:'Team · Squads' }
+    { kind:'geoguessr', name:'GeoGuessr',   short:'GEO', mode:'Einzeln · No Move', rules:'Gleicher Challenge-Link für alle, 5 Runden, kein Bewegen. Höchste Punktzahl gewinnt.' },
+    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter', rules:'Teams per Los → die Besten ins 2v2 → 1v1-Finale. Endplatzierung zählt.', phases:['Teams','2v2','1v1-Finale'] },
+    { kind:'chess',     name:'Chess Blitz', short:'CHE', mode:'Arena 3+2', rules:'Chess.com-Arena (3 Min +2 Sek), alle per Link. Endstand der Arena = Ranking.' },
+    { kind:'brawlhalla',name:'Brawlhalla',  short:'BRA', mode:'Free For All', rules:'Alle in einem FFA-Match (Stock), 2–3 Runden. Platzierung wird gemittelt.' },
+    { kind:'fallguys',  name:'Fall Guys',   short:'FAL', mode:'Team · Squads', rules:'Squads per Los, 3 Runden. Das beste Team-Ergebnis zählt.' }
   ];
   const discName  = k => (VDISCS.find(d => d.kind === k) || {}).name  || k;
   const discShort = k => (VDISCS.find(d => d.kind === k) || {}).short || '—';
   const discMode  = k => (VDISCS.find(d => d.kind === k) || {}).mode  || '';
+  const discRules = k => (VDISCS.find(d => d.kind === k) || {}).rules || '';
+  const discPhases= k => (VDISCS.find(d => d.kind === k) || {}).phases || null;
 
   // ===== DEMO MODE =====
   const params = new URLSearchParams(location.search);
@@ -653,7 +721,7 @@
       { id:'p6', name:'Tank',      cry:'Slow and steady' },
     ];
     const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live' };
-    const disciplines = VDISCS.map((d,i) => ({ id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1 }));
+    const disciplines = VDISCS.map((d,i) => ({ id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1, phase: d.kind === 'haxball' ? '2v2' : null }));
     const placements = [
       // After GeoGuessr
       { geoguessr: { p1:1, p2:2, p3:3, p4:4, p5:5, p6:6 } },
@@ -681,6 +749,14 @@
         results.push({ id:`r-${kind}-${pid}`, discipline_id:disc.id, player_id:pid, placement:place, points:soloPts(place), team:null });
       });
     });
+    // Solange Haxball läuft (noch keine Platzierungen), zeigen wir die Teams
+    const haxDisc = disciplines.find(d => d.kind === 'haxball');
+    if (!results.some(r => r.discipline_id === haxDisc.id)) {
+      const haxTeams = { 'Team Rot': ['p1','p3'], 'Team Blau': ['p2','p5'], 'Team Grün': ['p4','p6'] };
+      Object.entries(haxTeams).forEach(([tn, pids]) => pids.forEach(pid => {
+        results.push({ id:`r-hax-team-${pid}`, discipline_id:haxDisc.id, player_id:pid, placement:null, points:null, team:tn });
+      }));
+    }
     const vetoes = [{ event_id:'e1', player_id:'p4', discipline_kind:'fallguys' }];
     return { players, event, disciplines, results, vetoes };
   }
@@ -807,6 +883,9 @@
       return `<div class="disc-pill ${cls}"><span class="glyph">${discShort(d.kind)}</span><span class="nm">${d.name}</span><span class="mark">${mark}</span></div>`;
     }).join('');
 
+    // === "Wie im Fernsehen" — Regeln / Phase / Teams der aktuellen Disziplin ===
+    buildNowDetail(currentDisc, results);
+
     // === Scoreboard rows ===
     const rows = evPlayers
       .map(p => ({ player: p, ...(byPid[p.id] || { points:{}, placements:{}, total:0, wins:0 }), veto: vetoBy[p.id] }))
@@ -903,6 +982,72 @@
     rows.forEach(r => { newSnapshot[r.player.id] = { rank: r.rank, total: r.total }; });
     lastSnapshot = newSnapshot;
     demoFirstRender = false;
+  }
+
+  // "Wie im Fernsehen": zeigt für die aktuelle Disziplin Regeln/Modus,
+  // den Phasen-Fortschritt (z.B. Haxball Teams → 2v2 → 1v1) und die aktuellen Teams.
+  function buildNowDetail(currentDisc, results) {
+    const box = document.getElementById('liveNowDetail');
+    if (!box) return;
+    if (!currentDisc) { box.style.display = 'none'; box.innerHTML = ''; return; }
+
+    const kind = currentDisc.kind;
+    const nameOf = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
+
+    // --- Regeln / Modus ---
+    const rules = discRules(kind);
+    const head = `
+      <div class="nd-head">
+        <span class="nd-glyph">${discShort(kind)}</span>
+        <div>
+          <div class="nd-eyebrow">Aktuelles Spiel · ${discMode(kind)}</div>
+          <div class="nd-title">${discName(kind)}</div>
+        </div>
+      </div>`;
+    const rulesHtml = rules ? `<div class="nd-rules">${rules}</div>` : '';
+
+    // --- Phasen-Fortschritt (nur Disziplinen mit phases, z.B. Haxball) ---
+    let phaseHtml = '';
+    const phases = discPhases(kind);
+    if (phases && phases.length) {
+      const active = currentDisc.phase || phases[0];
+      const activeIdx = Math.max(0, phases.indexOf(active));
+      phaseHtml = `
+        <div class="nd-block">
+          <div class="nd-label">Phase</div>
+          <div class="nd-phases">
+            ${phases.map((ph,i) => {
+              const st = i < activeIdx ? 'done' : (i === activeIdx ? 'now' : '');
+              return `<span class="nd-phase ${st}">${i < activeIdx ? '✓ ' : (i === activeIdx ? '● ' : '')}${ph}</span>`;
+            }).join('<span class="nd-phase-sep">›</span>')}
+          </div>
+        </div>`;
+    }
+
+    // --- Aktuelle Teams (aus results.team der aktuellen Disziplin) ---
+    let teamsHtml = '';
+    const myResults = (results || []).filter(r => r.discipline_id === currentDisc.id && r.team != null && r.team !== '');
+    if (myResults.length) {
+      const teams = {};
+      myResults.forEach(r => { (teams[r.team] = teams[r.team] || []).push(r.player_id); });
+      const teamKeys = Object.keys(teams).sort((a,b) => String(a).localeCompare(String(b), 'de', { numeric:true }));
+      teamsHtml = `
+        <div class="nd-block">
+          <div class="nd-label">Teams</div>
+          <div class="nd-teams">
+            ${teamKeys.map((tk,ti) => `
+              <div class="nd-team">
+                <div class="nd-team-name" style="background:${grad(ti)}">${tk}</div>
+                <div class="nd-team-players">
+                  ${teams[tk].map(pid => `<span class="nd-tp">${nameOf(pid)}</span>`).join('')}
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    box.innerHTML = head + rulesHtml + phaseHtml + teamsHtml;
+    box.style.display = 'block';
   }
 
   async function renderVeto() {
