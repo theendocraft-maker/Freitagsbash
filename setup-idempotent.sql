@@ -56,3 +56,12 @@ alter table events add column if not exists tiebreaker text;
 --            die einmalige Reveal-Animation auf der Live-Seite.
 alter table disciplines add column if not exists join_link text;
 alter table disciplines add column if not exists teams_drawn_at timestamptz;
+
+-- ============================================================
+-- 5) FALL-GUYS MINI-TURNIER (mehrere Modi pro Abend, je solo/Team)
+-- ============================================================
+-- disciplines.modes: Definition der Modi, z.B. [{"n":1,"type":"solo"},{"n":2,"type":"team"}]
+-- results.modes:     pro Spieler die Ergebnisse je Modus, z.B. {"1":{"placement":2},"2":{"team":1,"placement":1}}
+-- Die Fall-Guys-Gesamtplatzierung (results.placement/points) wird aus der Summe aller Modus-Punkte berechnet.
+alter table disciplines add column if not exists modes jsonb;
+alter table results     add column if not exists modes jsonb;

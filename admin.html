@@ -354,6 +354,29 @@
   }
   .join-field-input:focus { outline: none; border-color: var(--cool); }
 
+  .mode-block {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 0.9rem 1rem; margin-bottom: 0.9rem; background: var(--bg);
+  }
+  .mode-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.7rem; }
+  .mode-title {
+    font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--cool);
+  }
+  .mode-del {
+    width: 24px; height: 24px; border-radius: 50%; line-height: 1;
+    background: var(--alert-soft); color: var(--alert); border: 1px solid var(--alert-line);
+    cursor: pointer; font-size: 0.9rem; padding: 0;
+  }
+  .mode-del:hover { background: var(--alert); color: #fff; }
+  .fg-standings { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+  .fg-standings th {
+    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); text-align: center; padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--border);
+  }
+  .fg-standings td { text-align: center; padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+  .fg-standings td b { color: var(--primary); }
+
   .haxball-step { margin-top: 0.5rem; }
   .haxball-step-title {
     font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600;
@@ -912,6 +935,7 @@
     const participants = players.filter(p => currentParticipantIds.has(p.id));
     if (participants.length === 0) return join + '<p class="section-desc" style="padding-top:1rem">Keine Teilnehmer ausgewählt.</p>';
     if (d.kind === 'haxball')    return join + renderHaxballBody(d, participants);
+    if (d.kind === 'fallguys')   return join + renderFallguysBody(d, participants);
     if (def.type === 'solo')     return join + renderSoloBody(d, participants);
     if (def.type === 'team')     return join + renderTeamBody(d, participants);
     return join;
@@ -1079,6 +1103,213 @@
         ${teamRankBlock}
         ${vetoHtml}
       </div>`;
+  }
+
+  // --- Fall Guys: Mini-Turnier (mehrere Modi, je solo/Team, summiert) ---
+  const fgModeOf = (discId, pid, n) => ((currentResults[discId]?.[pid]?.modes) || {})[n] || {};
+
+  function renderFallguysBody(d, participants) {
+    const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
+    const modes = Array.isArray(d.modes) ? d.modes : [];
+    const addBar = `
+      <div class="draw-control">
+        <span class="draw-label">+ Modus:</span>
+        <button class="draw-btn" onclick="addMode('${d.id}','solo')">+ Solo-Modus</button>
+        <button class="draw-btn" onclick="addMode('${d.id}','team')">+ Team-Modus</button>
+      </div>`;
+    const modesHtml = modes.length
+      ? modes.map((m, idx) => renderModeBlock(d, m, idx, playing)).join('')
+      : '<div class="rank-empty">Noch keine Modi — füge oben 2–3 Modi hinzu (Solo oder Team).</div>';
+    return `
+      <div style="padding-top:1rem">
+        <p class="section-desc">Mini-Turnier: 2–3 Modi, jeder einzeln solo oder Team. Punkte werden über alle Modi summiert → Fall-Guys-Gesamtwertung.</p>
+        ${addBar}
+        ${modesHtml}
+        ${renderFallguysStandings(d, playing)}
+      </div>`;
+  }
+
+  function renderModeBlock(d, m, idx, playing) {
+    const n = m.n;
+    const head = `
+      <div class="mode-head">
+        <span class="mode-title">Modus ${idx + 1} · ${m.type === 'solo' ? 'Solo' : 'Team'}</span>
+        <button class="mode-del" onclick="removeMode('${d.id}',${n})" title="Modus löschen">×</button>
+      </div>`;
+    let body = '';
+    if (m.type === 'solo') {
+      const plOf = p => fgModeOf(d.id, p.id, n).placement || null;
+      const ranked = playing.filter(p => plOf(p)).sort((a,b) => plOf(a) - plOf(b));
+      const unranked = playing.filter(p => !plOf(p));
+      const rankedHtml = ranked.length ? ranked.map(p => {
+        const pl = plOf(p); const pts = soloPoints(pl);
+        return `<div class="rank-row"><span class="rank-pos">${pl}.</span><span class="rank-name">${p.name}</span><span class="rank-pts">+${pts}</span><button class="rank-x" onclick="unrankModeSolo('${d.id}',${n},'${p.id}')">×</button></div>`;
+      }).join('') : '<div class="rank-empty">Tippe die Spieler in Zielreihenfolge an.</div>';
+      const poolHtml = unranked.length
+        ? `<div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankModeSolo('${d.id}',${n},'${p.id}')">${p.name}</button>`).join('')}</div>`
+        : '<div class="rank-done">✓ Alle platziert.</div>';
+      const resetLink = ranked.length ? ` · <a onclick="resetModeSolo('${d.id}',${n})" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : '';
+      body = `<p class="section-desc">1. Klick = Platz 1.${resetLink}</p><div class="rank-list">${rankedHtml}</div>${poolHtml}`;
+    } else {
+      const teamOf = p => fgModeOf(d.id, p.id, n).team || 0;
+      const teamRows = playing.map(p => {
+        const team = teamOf(p);
+        return `<div class="result-row" style="grid-template-columns:1fr auto"><div class="result-name">${p.name}</div><div class="team-buttons">${[1,2,3,4].map(t => `<button class="team-btn ${team===t?'selected-t'+(((t-1)%3)+1):''}" onclick="setModeTeam('${d.id}',${n},'${p.id}',${t})">${t}</button>`).join('')}</div></div>`;
+      }).join('');
+      const teamsInUse = [1,2,3,4].filter(t => playing.some(p => teamOf(p) === t));
+      let rankBlock = '';
+      if (teamsInUse.length >= 2) {
+        rankBlock = `<div class="haxball-step"><div class="haxball-step-title">Team-Reihenfolge (Platz 1 = Sieger)</div>${teamsInUse.map(t => {
+          const members = playing.filter(p => teamOf(p) === t);
+          const rank = members[0] ? (fgModeOf(d.id, members[0].id, n).placement || '') : '';
+          const pts = teamPoints(parseInt(rank));
+          return `<div class="team-rank-row"><span class="team-badge t${(((t-1)%3)+1)}">Team ${t}</span><span class="team-members">${members.map(mm=>mm.name).join(', ')||'(leer)'}</span><input type="number" min="1" max="${teamsInUse.length}" class="team-rank-input" value="${rank}" placeholder="—" onchange="setModeTeamRank('${d.id}',${n},${t},this.value)"><span class="result-points">${pts?'+'+pts:'—'}</span></div>`;
+        }).join('')}</div>`;
+      }
+      const draw = `<div class="draw-control"><span class="draw-label">🎲 Auslosen:</span>${[2,3,4].map(c=>`<button class="draw-btn" onclick="drawModeTeams('${d.id}',${n},${c})">${c} Teams</button>`).join('')}</div>`;
+      body = `${draw}${teamRows}${rankBlock}`;
+    }
+    return `<div class="mode-block">${head}${body}</div>`;
+  }
+
+  function renderFallguysStandings(d, playing) {
+    const modes = Array.isArray(d.modes) ? d.modes : [];
+    if (!modes.length) return '';
+    const rows = playing.map(p => {
+      const perMode = modes.map(m => {
+        const md = fgModeOf(d.id, p.id, m.n);
+        return (m.type === 'solo') ? soloPoints(md.placement) : teamPoints(md.placement);
+      });
+      const total = perMode.reduce((a,b) => a + b, 0);
+      return { p, perMode, total };
+    });
+    rows.sort((a,b) => b.total - a.total);
+    let rank = 0, last = -1;
+    rows.forEach((r,i) => { if (r.total !== last) rank = i + 1; r.rank = r.total > 0 ? rank : '–'; last = r.total; });
+    const head = `<th style="text-align:left">Spieler</th>${modes.map((m,i) => `<th>M${i+1}</th>`).join('')}<th>Σ</th><th>Platz</th>`;
+    const body = rows.map(r => `<tr><td style="text-align:left">${r.p.name}</td>${r.perMode.map(pt => `<td>${pt||'–'}</td>`).join('')}<td><b>${r.total}</b></td><td>${r.rank}</td></tr>`).join('');
+    return `<div class="haxball-step-title">Gesamtwertung (fließt in den Abend)</div><table class="fg-standings"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  }
+
+  window.addMode = async function(discId, type) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).slice();
+    const nextN = modes.reduce((mx,m) => Math.max(mx, m.n), 0) + 1;
+    modes.push({ n: nextN, type });
+    const { error } = await sb.from('disciplines').update({ modes }).eq('id', discId);
+    if (error) { console.error(error); toast('Modus hinzufügen fehlgeschlagen', 'error'); return; }
+    d.modes = modes;
+    renderDisciplineBodyFor(discId);
+    toast(`${type === 'solo' ? 'Solo' : 'Team'}-Modus hinzugefügt`, 'ok');
+  };
+
+  window.removeMode = async function(discId, n) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    if (!confirm('Diesen Modus löschen? Die Ergebnisse dieses Modus gehen verloren.')) return;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).filter(m => m.n !== n);
+    await sb.from('disciplines').update({ modes }).eq('id', discId);
+    d.modes = modes;
+    const playing = players.filter(p => currentParticipantIds.has(p.id));
+    for (const p of playing) {
+      const cur = currentResults[discId]?.[p.id];
+      if (cur && cur.modes && cur.modes[n] != null) {
+        const m2 = Object.assign({}, cur.modes); delete m2[n];
+        await upsertResultDirect(discId, p.id, { modes: m2 });
+      }
+    }
+    await recomputeFallguys(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  async function setModeData(discId, pid, n, data) {
+    const cur = currentResults[discId]?.[pid] || {};
+    const modes = Object.assign({}, cur.modes || {});
+    modes[n] = Object.assign({}, modes[n] || {}, data);
+    await upsertResultDirect(discId, pid, { modes });
+  }
+
+  window.rankModeSolo = async function(discId, n, pid) {
+    const d = currentDisciplines.find(x => x.id === discId);
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const maxPl = Math.max(0, ...playing.map(p => fgModeOf(discId, p.id, n).placement || 0));
+    await setModeData(discId, pid, n, { placement: maxPl + 1 });
+    await recomputeFallguys(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.unrankModeSolo = async function(discId, n, pid) {
+    await setModeData(discId, pid, n, { placement: null });
+    await resequenceModeSolo(discId, n);
+    await recomputeFallguys(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.resetModeSolo = async function(discId, n) {
+    const d = currentDisciplines.find(x => x.id === discId);
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    for (const p of playing) { if (fgModeOf(discId, p.id, n).placement) await setModeData(discId, p.id, n, { placement: null }); }
+    await recomputeFallguys(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  async function resequenceModeSolo(discId, n) {
+    const d = currentDisciplines.find(x => x.id === discId);
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const ranked = playing.filter(p => fgModeOf(discId, p.id, n).placement)
+      .sort((a,b) => fgModeOf(discId, a.id, n).placement - fgModeOf(discId, b.id, n).placement);
+    for (let i = 0; i < ranked.length; i++) {
+      if (fgModeOf(discId, ranked[i].id, n).placement !== i + 1) await setModeData(discId, ranked[i].id, n, { placement: i + 1 });
+    }
+  }
+
+  window.setModeTeam = async function(discId, n, pid, team) {
+    const cur = fgModeOf(discId, pid, n);
+    const newTeam = cur.team === team ? null : team;
+    await setModeData(discId, pid, n, { team: newTeam, placement: null });
+    await recomputeFallguys(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.setModeTeamRank = async function(discId, n, team, value) {
+    const d = currentDisciplines.find(x => x.id === discId);
+    const rank = parseInt(value) || null;
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const members = playing.filter(p => fgModeOf(discId, p.id, n).team === team);
+    for (const m of members) await setModeData(discId, m.id, n, { placement: rank, team });
+    await recomputeFallguys(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.drawModeTeams = async function(discId, n, count) {
+    const d = currentDisciplines.find(x => x.id === discId);
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    if (playing.length < count) { toast(`Zu wenige Spieler für ${count} Teams`, 'error'); return; }
+    const arr = playing.slice();
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    for (let i = 0; i < arr.length; i++) await setModeData(discId, arr[i].id, n, { team: (i % count) + 1, placement: null });
+    const ts = new Date().toISOString();
+    await sb.from('disciplines').update({ teams_drawn_at: ts }).eq('id', discId);
+    d.teams_drawn_at = ts;
+    await recomputeFallguys(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+    toast(`Modus in ${count} Teams ausgelost`, 'ok');
+  };
+
+  async function recomputeFallguys(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const modes = Array.isArray(d.modes) ? d.modes : [];
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const totals = playing.map(p => {
+      let pts = 0;
+      modes.forEach(m => { const md = fgModeOf(discId, p.id, m.n); pts += (m.type === 'solo') ? soloPoints(md.placement) : teamPoints(md.placement); });
+      return { p, pts };
+    });
+    totals.sort((a,b) => b.pts - a.pts);
+    let rank = 0, last = -1;
+    for (let i = 0; i < totals.length; i++) { if (totals[i].pts !== last) rank = i + 1; totals[i].rank = rank; last = totals[i].pts; }
+    for (const t of totals) {
+      await upsertResultDirect(discId, t.p.id, { placement: t.pts > 0 ? t.rank : null, points: t.pts > 0 ? soloPoints(t.rank) : 0 });
+    }
   }
 
   // ===== Discipline expand/collapse =====
