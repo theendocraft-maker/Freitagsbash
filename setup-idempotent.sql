@@ -65,3 +65,16 @@ alter table disciplines add column if not exists teams_drawn_at timestamptz;
 -- Die Fall-Guys-Gesamtplatzierung (results.placement/points) wird aus der Summe aller Modus-Punkte berechnet.
 alter table disciplines add column if not exists modes jsonb;
 alter table results     add column if not exists modes jsonb;
+
+-- ============================================================
+-- 6) HAXBALL-PARTIEN (Round-Robin / Turnierbaum)
+-- ============================================================
+-- disciplines.bracket: { "gpp": <Spiele je Paarung>, "games": { "1-2":[Sieger-Team je Spiel], ... } }
+-- Rein informativ/Anzeige — die gewertete Endplatzierung wird weiterhin per Klick-Reihenfolge erfasst.
+alter table disciplines add column if not exists bracket jsonb;
+
+-- ============================================================
+-- 7) LIVE-PAUSE (Admin schaltet eine Pause, Banner auf der Spielabend-Seite)
+-- ============================================================
+-- events.pause_msg: null = keine Pause; Text = Pausen-Banner (z.B. "weiter um 21:10").
+alter table events add column if not exists pause_msg text;

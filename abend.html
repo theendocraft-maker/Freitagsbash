@@ -219,6 +219,13 @@
     .disc-pill .nm { font-size: 0.58rem; }
     .disc-pill .mark { width: auto; }
   }
+  .pause-banner {
+    display: flex; align-items: center; justify-content: center; gap: 0.7rem;
+    background: var(--cool-soft); border: 1px solid var(--cool);
+    border-radius: var(--radius-lg); padding: 1.1rem 1.4rem; margin-bottom: 1.25rem;
+    font-family: var(--font-display); font-size: 1.6rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cool);
+  }
+  .pause-banner .pause-ico { font-size: 1.5rem; }
   .tiebreak-line {
     position: relative; z-index: 1;
     display: flex; align-items: center; gap: 0.6rem;
@@ -304,11 +311,21 @@
   .br-teams { display: flex; flex-direction: column; gap: 0.4rem; }
   .br-note { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
   .br-sep { display: flex; align-items: center; color: var(--muted); font-size: 1.1rem; }
+  .br-matches { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+  .br-match { display: flex; align-items: center; justify-content: center; gap: 0.7rem; padding: 0.35rem 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text); }
+  .br-match b { color: var(--primary); font-family: var(--font-display); font-size: 1.05rem; min-width: 44px; text-align: center; }
+  .br-wins { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; justify-content: center; }
+  .br-win { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.25rem 0.6rem; }
+  .br-win b { color: var(--text); }
   .nd-gpts { display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-gpt { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem 0.6rem; background: var(--bg-2); border-radius: var(--radius-sm); }
   .nd-gpt-pos { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); width: 24px; }
   .nd-gpt-name { flex: 1; font-size: 0.92rem; color: var(--text); }
   .nd-gpt-val { font-family: var(--font-display); font-size: 1.2rem; color: var(--primary); min-width: 28px; text-align: right; }
+  .nd-modetbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .nd-modetbl th { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; padding: 0.4rem 0.35rem; border-bottom: 1px solid var(--border); }
+  .nd-modetbl td { text-align: center; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; color: var(--text); }
+  .nd-modetbl td b { color: var(--primary); }
   .nd-join { margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.1rem; }
   .join-toggle {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
@@ -701,6 +718,11 @@
       </div>
     </div>
 
+    <div class="pause-banner" id="livePause" style="display:none;">
+      <span class="pause-ico">☕</span>
+      <span class="pause-txt">Kurze Pause</span>
+    </div>
+
     <div class="live-hero">
       <div class="lh-top">
         <span class="live-badge-big"><span class="dot"></span> Live</span>
@@ -817,7 +839,7 @@
         'Gib einen Nickname ein — nur normale Tastatur-Zeichen, keine Emojis.',
         'Klick auf Join — kein Account nötig.'
       ] },
-    { kind:'chess',     name:'Chess Blitz', short:'CHE', mode:'Arena 3+2', rules:'Chess.com-Arena (3 Min +2 Sek), alle per Link. Endstand der Arena = Ranking.',
+    { kind:'chess',     name:'Chess Blitz', short:'CHE', mode:'Private Arena 3+2', rules:'Private Chess.com-Arena (3+2) — nur eure Crew, keine Fremden. Automatisch gepaart, Endstand der Arena = Ranking.',
       join:[
         'Öffne den Arena-Link (chess.com), den der Host teilt.',
         'Logg dich mit deinem kostenlosen chess.com-Account ein.',
@@ -836,6 +858,7 @@
         'Warte in der Lobby, bis der Host die Runde startet.'
       ] }
   ];
+  const PLAY_ORDER = ['haxball','geoguessr','chess','brawlhalla','fallguys'];
   const discName  = k => (VDISCS.find(d => d.kind === k) || {}).name  || k;
   const discShort = k => (VDISCS.find(d => d.kind === k) || {}).short || '—';
   const discMode  = k => (VDISCS.find(d => d.kind === k) || {}).mode  || '';
@@ -869,7 +892,8 @@
       id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1,
       phase: d.kind === 'haxball' ? '2v2' : null,
       join_link: DEMO_JOIN[d.kind] || null,
-      teams_drawn_at: d.kind === 'haxball' ? new Date().toISOString() : null
+      teams_drawn_at: d.kind === 'haxball' ? new Date().toISOString() : null,
+      bracket: d.kind === 'haxball' ? { gpp:1, games:{ '1-2':[1], '1-3':[3], '2-3':[2] } } : null
     }));
     const placements = [
       // After GeoGuessr
@@ -901,9 +925,9 @@
     // Solange Haxball läuft (noch keine Platzierungen), zeigen wir die Teams
     const haxDisc = disciplines.find(d => d.kind === 'haxball');
     if (!results.some(r => r.discipline_id === haxDisc.id)) {
-      const haxTeams = { 'Team Rot': ['p1','p3'], 'Team Blau': ['p2','p5'], 'Team Grün': ['p4','p6'] };
+      const haxTeams = { 1:['p1','p3'], 2:['p2','p5'], 3:['p4','p6'] };
       Object.entries(haxTeams).forEach(([tn, pids]) => pids.forEach(pid => {
-        results.push({ id:`r-hax-team-${pid}`, discipline_id:haxDisc.id, player_id:pid, placement:null, points:null, team:tn });
+        results.push({ id:`r-hax-team-${pid}`, discipline_id:haxDisc.id, player_id:pid, placement:null, points:null, team:Number(tn) });
       }));
     }
     // Fall Guys Demo: ein Team-Modus mit ausgelosten Teams (für die Live-Team-Anzeige)
@@ -961,10 +985,11 @@
   async function renderLiveFromData(dList, results, vetoes) {
     document.getElementById('live').style.display = 'block';
 
-    // Sort disciplines by canonical VDISCS order
-    const orderedDiscs = VDISCS.map(vd => {
-      const found = dList.find(d => d.kind === vd.kind);
-      return found || { id: `missing-${vd.kind}`, kind: vd.kind, name: vd.name };
+    // Spiel-Reihenfolge des Abends: Haxball als niederschwelliger Start, Fall Guys als Finale
+    const orderedDiscs = PLAY_ORDER.map(kind => {
+      const vd = VDISCS.find(v => v.kind === kind) || { kind, name: kind };
+      const found = dList.find(d => d.kind === kind);
+      return found || { id: `missing-${kind}`, kind, name: vd.name };
     });
 
     const vetoBy = {}; vetoes.forEach(v => vetoBy[v.player_id] = v.discipline_kind);
@@ -1003,6 +1028,13 @@
       if (fresh) newlyDoneDisc = orderedDiscs.find(d => d.id === fresh) || null;
     }
     lastDoneIds = doneIdsNow;
+
+    // Pause-Banner (Admin-gesteuert)
+    const pauseEl = document.getElementById('livePause');
+    if (pauseEl) {
+      if (liveEvent.pause_msg) { pauseEl.querySelector('.pause-txt').textContent = liveEvent.pause_msg; pauseEl.style.display = 'flex'; }
+      else { pauseEl.style.display = 'none'; }
+    }
 
     // === Hero header ===
     document.getElementById('liveEventName').textContent = liveEvent.name;
@@ -1288,7 +1320,7 @@
         myRows.forEach(r => { const md = r.modes && r.modes[targetN]; if (md && md.team) { const k = 'Team ' + md.team; (teams[k] = teams[k] || []).push(r.player_id); } });
       }
     } else {
-      myRows.forEach(r => { if (r.team != null && r.team !== '') { (teams[r.team] = teams[r.team] || []).push(r.player_id); } });
+      myRows.forEach(r => { if (r.team != null && r.team !== '') { const k = (kind === 'haxball') ? ('Team ' + r.team) : r.team; (teams[k] = teams[k] || []).push(r.player_id); } });
     }
     const teamKeys = Object.keys(teams).sort((a,b) => String(a).localeCompare(String(b), 'de', { numeric:true }));
     if (teamKeys.length) {
@@ -1303,6 +1335,24 @@
         const phs = discPhases('haxball') || ['Teams','2v2','1v1-Finale'];
         const ai = Math.max(0, phs.indexOf(currentDisc.phase || phs[0]));
         const sc = idx => idx < ai ? 'done' : (idx === ai ? 'now' : '');
+        // Partien (Jeder gegen jeden) aus disciplines.bracket
+        const br = currentDisc.bracket || {};
+        const games = br.games || {};
+        const teamNums = teamKeys.map(k => parseInt(String(k).replace(/\D/g,''))).filter(n => !isNaN(n)).sort((a,b)=>a-b);
+        let matchesHtml = '';
+        if (teamNums.length >= 2 && Object.keys(games).length) {
+          const mrows = [];
+          for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
+            const a=teamNums[i], b=teamNums[j], arr = games[`${a}-${b}`] || [];
+            const wa = arr.filter(x=>x===a).length, wb = arr.filter(x=>x===b).length;
+            mrows.push(`<div class="br-match"><span>Team ${a}</span><b>${wa}:${wb}</b><span>Team ${b}</span></div>`);
+          }
+          const wins = {}; teamNums.forEach(t => wins[t]=0);
+          Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w]=(wins[w]||0)+1; }));
+          const standing = teamNums.slice().sort((x,y)=>wins[y]-wins[x]);
+          matchesHtml = `<div class="br-matches"><div class="br-stage-label">Partien · jeder gegen jeden</div>${mrows.join('')}
+            <div class="br-wins">${standing.map(t=>`<span class="br-win"><b>Team ${t}</b> ${wins[t]}</span>`).join('')}</div></div>`;
+        }
         teamsHtml = `
           <div class="nd-block">
             <div class="nd-label">Turnierbaum${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
@@ -1313,6 +1363,7 @@
               <div class="br-sep">›</div>
               <div class="br-stage ${sc(2)}"><div class="br-stage-label">🏆 ${phs[2]}</div><div class="br-note">Einer gewinnt</div></div>
             </div>
+            ${matchesHtml}
           </div>`;
       } else {
         teamsHtml = `
@@ -1342,6 +1393,25 @@
         </div>`;
     }
 
+    // --- Stand nach Runde/Modus (Brawlhalla-Runden, Fall-Guys-Modi) ---
+    let modeTblHtml = '';
+    const mdefs = Array.isArray(currentDisc.modes) ? currentDisc.modes : [];
+    if (mdefs.length) {
+      const px = (kind === 'brawlhalla') ? 'R' : 'M';
+      const SP = [10,8,6,4,3,2,1], sp = r => (r && r >= 1) ? SP[Math.min(r, SP.length)-1] : 0;
+      const TP = [10,8,6,4], tp = r => (r && r >= 1) ? TP[Math.min(r, TP.length)-1] : 0;
+      const rws = myRows.filter(r => r.modes).map(r => {
+        const per = mdefs.map(m => { const md = r.modes[m.n] || {}; return (m.type === 'team') ? tp(md.placement) : sp(md.placement); });
+        return { pid: r.player_id, per, tot: per.reduce((a,b) => a+b, 0) };
+      }).filter(r => r.tot > 0);
+      if (rws.length) {
+        rws.sort((a,b) => b.tot - a.tot);
+        const head = `<th style="text-align:left">Spieler</th>${mdefs.map((m,i) => `<th>${px}${i+1}</th>`).join('')}<th>Σ</th>`;
+        const body = rws.map(r => `<tr><td style="text-align:left">${nameOf(r.pid)}</td>${r.per.map(p => `<td>${p||'–'}</td>`).join('')}<td><b>${r.tot}</b></td></tr>`).join('');
+        modeTblHtml = `<div class="nd-block"><div class="nd-label">Stand nach ${kind === 'brawlhalla' ? 'Runde' : 'Modus'}</div><table class="nd-modetbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      }
+    }
+
     // --- Ausklappbare Join-Anleitung ---
     let joinHtml = '';
     const steps = discJoin(kind);
@@ -1358,7 +1428,7 @@
         </div>`;
     }
 
-    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + gamePtsHtml + joinHtml;
+    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + (mdefs.length ? modeTblHtml : gamePtsHtml) + joinHtml;
     box.style.display = 'block';
 
     // Team-Reveal-Animation nach frischer Auslosung (einmalig pro Auslosung)

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freitags Bash · Statistik</title>
+<link rel="stylesheet" href="styles.css">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+  .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 0.8rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.2rem; }
+  .stat-card .label { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  .stat-card .who { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.02em; color: var(--text); line-height: 1; }
+  .stat-card .sub { font-size: 0.82rem; color: var(--primary); margin-top: 0.35rem; }
+
+  .stats-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .stats-table th { background: var(--bg-2); font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border); }
+  .stats-table th.l, .stats-table td.l { text-align: left; }
+  .stats-table td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .stats-table tbody tr:hover { background: var(--bg-2); }
+  .st-name { font-weight: 600; }
+  .st-av { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.66rem; font-weight: 700; color: var(--bg); vertical-align: middle; margin-right: 8px; background-size: cover; background-position: center; }
+
+  .recap-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.5rem 1.6rem; }
+  .recap-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .recap-title { font-family: var(--font-display); font-weight: 900; font-size: 1.6rem; letter-spacing: 0.02em; text-transform: uppercase; }
+  .recap-date { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+  .recap-line { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
+  .recap-line:last-child { border-bottom: none; }
+  .recap-ico { font-size: 1.1rem; width: 26px; text-align: center; }
+  .recap-k { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); min-width: 120px; }
+  .recap-v { color: var(--text); font-size: 0.95rem; }
+  .recap-v b { color: var(--primary); }
+  .recap-actions { margin-top: 1.2rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .recap-btn { background: var(--primary); color: var(--bg); border: none; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; padding: 0.6rem 1.1rem; cursor: pointer; }
+  .recap-btn.ghost { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
+  .empty-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem 1.6rem; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="scroll-prog" id="scrollProg"></div>
+
+<header class="site-header">
+  <div class="nav-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">Freitags Bash<small>Saison 1 · 2026</small></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="hide-sm">Start</a>
+      <a href="abend.html">Veto</a>
+      <a href="regeln.html">Regeln</a>
+      <a href="anmelden.html" class="nav-cta">Anmelden</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- RECAP -->
+  <section class="sec" style="padding-top:2.5rem">
+    <div class="sec-head reveal">
+      <div class="eyebrow"><span class="num">★</span> Rückblick</div>
+      <h2>Der letzte <span class="accent">Abend.</span></h2>
+      <p>Die Highlights des zuletzt abgeschlossenen Spielabends — zum Nachlesen und Teilen.</p>
+    </div>
+    <div id="recapWrap" class="reveal">
+      <div class="empty-box">Noch kein Abend abgeschlossen. Nach dem ersten Spielabend erscheint hier der Rückblick.</div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="sec">
+    <div class="sec-head reveal">
+      <div class="eyebrow"><span class="num">∑</span> Saison 1</div>
+      <h2>Statistik <span class="accent">der Crew.</span></h2>
+      <p>Über alle abgeschlossenen Abende zusammengerechnet.</p>
+    </div>
+    <div id="bestCards" class="stat-cards reveal"></div>
+    <div id="statsWrap" class="reveal">
+      <div class="empty-box">Sobald der erste Abend abgeschlossen ist, stehen hier die Statistiken aller Spieler.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"></span>
+      <span class="logo-text">Freitags Bash<small>Saison 1 · 2026</small></span>
+    </a>
+    <nav>
+      <a href="index.html">Start</a>
+      <a href="regeln.html">Regeln</a>
+      <a href="anmelden.html">Anmelden</a>
+    </nav>
+    <small>Saison 1 · Start 29.05.2026</small>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL      = 'https://bvaxeqkfozegeejdimdp.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const COLORS = [
+    ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
+    ['#ffd34a','#ff7a4a'], ['#6cf2a0','#d4ff3a'], ['#ff7ce0','#7df0ff'],
+    ['#d4ff3a','#6cf2a0'], ['#7df0ff','#d4ff3a']
+  ];
+  const grad = i => { const c = COLORS[i % COLORS.length]; return `linear-gradient(135deg,${c[0]},${c[1]})`; };
+  const ini = s => (s||'?').slice(0,2).toUpperCase();
+  const DISC_NAME = { geoguessr:'GeoGuessr', haxball:'Haxball', chess:'Chess Blitz', brawlhalla:'Brawlhalla', fallguys:'Fall Guys' };
+  const dName = k => DISC_NAME[k] || k;
+  const fmtDate = d => new Date(d).toLocaleDateString('de-DE', { day:'2-digit', month:'long', year:'numeric' });
+
+  async function load() {
+    const [{ data: pl }, { data: evs }] = await Promise.all([
+      sb.from('players').select('*'),
+      sb.from('events').select('*').eq('status', 'finalized')
+    ]);
+    const players = pl || [];
+    const events = (evs || []).sort((a,b) => String(a.event_date).localeCompare(String(b.event_date)));
+    const pName = id => (players.find(p => p.id === id) || {}).name || '—';
+    const pAvatar = id => (players.find(p => p.id === id) || {}).avatar_url || null;
+    const pIndex = id => Math.max(0, players.findIndex(p => p.id === id));
+
+    if (!events.length) { renderBestCards(null); return; }
+
+    // Disziplinen + Ergebnisse aller finalisierten Abende laden
+    const evIds = events.map(e => e.id);
+    const { data: discs } = await sb.from('disciplines').select('*').in('event_id', evIds);
+    const dIds = (discs || []).map(d => d.id);
+    let results = [];
+    if (dIds.length) { const { data } = await sb.from('results').select('*').in('discipline_id', dIds); results = data || []; }
+
+    const discById = {}; (discs || []).forEach(d => discById[d.id] = d);
+
+    // Pro Abend: Abendpunkte je Spieler summieren → Abendplatzierung
+    const perPlayer = {}; // pid -> aggregate
+    const ensure = pid => (perPlayer[pid] = perPlayer[pid] || { evenings:0, placementsSum:0, wins:0, totalPts:0, byKind:{} });
+
+    events.forEach(ev => {
+      const evDiscIds = (discs || []).filter(d => d.event_id === ev.id).map(d => d.id);
+      const evRes = results.filter(r => evDiscIds.includes(r.discipline_id));
+      const sums = {}; // pid -> evening discipline points
+      evRes.forEach(r => {
+        const pts = parseFloat(r.points) || 0;
+        const pid = r.player_id;
+        sums[pid] = (sums[pid] || 0) + pts;
+        const kind = (discById[r.discipline_id] || {}).kind;
+        if (kind) {
+          const a = ensure(pid);
+          a.byKind[kind] = a.byKind[kind] || { pts:0, wins:0, games:0 };
+          a.byKind[kind].pts += pts;
+          a.byKind[kind].games += 1;
+          if (parseInt(r.placement) === 1) { a.byKind[kind].wins += 1; a.wins += 1; }
+          a.totalPts += pts;
+        }
+      });
+      // Abendplatzierung
+      const ranked = Object.keys(sums).sort((x,y) => sums[y] - sums[x]);
+      let rank = 0, last = -1;
+      ranked.forEach((pid, i) => {
+        if (sums[pid] !== last) rank = i + 1;
+        last = sums[pid];
+        const a = ensure(pid);
+        a.evenings += 1;
+        a.placementsSum += rank;
+      });
+    });
+
+    const rows = players.map(p => {
+      const a = perPlayer[p.id] || { evenings:0, placementsSum:0, wins:0, totalPts:0, byKind:{} };
+      const avgPlace = a.evenings ? (a.placementsSum / a.evenings) : null;
+      let topKind = null, topPts = -1;
+      Object.entries(a.byKind).forEach(([k,v]) => { if (v.pts > topPts) { topPts = v.pts; topKind = k; } });
+      return { p, evenings:a.evenings, wins:a.wins, avgPlace, totalPts:a.totalPts, topKind };
+    }).filter(r => r.evenings > 0);
+
+    rows.sort((a,b) => b.totalPts - a.totalPts);
+    renderStatsTable(rows, pIndex);
+    renderBestCards(rows);
+    renderRecap(events[events.length - 1], discs || [], results, players, pName, pAvatar, pIndex);
+  }
+
+  function renderStatsTable(rows, pIndex) {
+    if (!rows.length) return;
+    const head = `<tr>
+      <th class="l">Spieler</th><th>Abende</th><th>Disz.-Siege</th><th>Ø Abendplatz</th><th>Top-Disziplin</th><th>Σ Disz.-Punkte</th>
+    </tr>`;
+    const body = rows.map(r => {
+      const av = r.p.avatar_url ? `background-image:url(${r.p.avatar_url});` : `background:${grad(pIndex(r.p.id))}`;
+      return `<tr>
+        <td class="l"><span class="st-av" style="${av}">${r.p.avatar_url ? '' : ini(r.p.name)}</span><span class="st-name">${r.p.name}</span></td>
+        <td>${r.evenings}</td>
+        <td>${r.wins}</td>
+        <td>${r.avgPlace != null ? r.avgPlace.toFixed(1) : '–'}</td>
+        <td>${r.topKind ? dName(r.topKind) : '–'}</td>
+        <td><b>${r.totalPts}</b></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('statsWrap').innerHTML = `<div class="leaderboard" style="overflow-x:auto"><table class="stats-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  }
+
+  function renderBestCards(rows) {
+    const wrap = document.getElementById('bestCards');
+    if (!rows || !rows.length) { wrap.innerHTML = ''; return; }
+    const mostWins = [...rows].sort((a,b) => b.wins - a.wins)[0];
+    const bestAvg = [...rows].filter(r => r.avgPlace != null).sort((a,b) => a.avgPlace - b.avgPlace)[0];
+    const mostPts = [...rows].sort((a,b) => b.totalPts - a.totalPts)[0];
+    const cards = [];
+    if (mostPts) cards.push(`<div class="stat-card"><div class="label">Meiste Disziplinpunkte</div><div class="who">${mostPts.p.name}</div><div class="sub">${mostPts.totalPts} Punkte</div></div>`);
+    if (mostWins && mostWins.wins > 0) cards.push(`<div class="stat-card"><div class="label">Meiste Disziplin-Siege</div><div class="who">${mostWins.p.name}</div><div class="sub">${mostWins.wins}× 1. Platz</div></div>`);
+    if (bestAvg) cards.push(`<div class="stat-card"><div class="label">Bester Abend-Schnitt</div><div class="who">${bestAvg.p.name}</div><div class="sub">Ø Platz ${bestAvg.avgPlace.toFixed(1)}</div></div>`);
+    wrap.innerHTML = cards.join('');
+  }
+
+  function renderRecap(ev, discs, results, players, pName, pAvatar, pIndex) {
+    const evDiscs = discs.filter(d => d.event_id === ev.id);
+    const evDiscIds = evDiscs.map(d => d.id);
+    const evRes = results.filter(r => evDiscIds.includes(r.discipline_id));
+    // Abend-Standings
+    const sums = {};
+    evRes.forEach(r => { sums[r.player_id] = (sums[r.player_id] || 0) + (parseFloat(r.points) || 0); });
+    const ranked = Object.keys(sums).sort((x,y) => sums[y] - sums[x]);
+    if (!ranked.length) return;
+    const podium = ranked.slice(0, 3).map((pid, i) => `${i+1}. ${pName(pid)} (${sums[pid]})`);
+    // Disziplin-Sieger
+    const discWinners = evDiscs.map(d => {
+      const w = evRes.filter(r => r.discipline_id === d.id && parseInt(r.placement) === 1).map(r => pName(r.player_id));
+      return { kind: d.kind, winners: w };
+    }).filter(x => x.winners.length);
+
+    const winnerId = ranked[0];
+    const av = pAvatar(winnerId) ? `background-image:url(${pAvatar(winnerId)});` : `background:${grad(pIndex(winnerId))}`;
+
+    const lines = [];
+    lines.push(`<div class="recap-line"><span class="recap-ico">🏆</span><span class="recap-k">Abend-Sieger</span><span class="recap-v"><b>${pName(winnerId)}</b> mit ${sums[winnerId]} Punkten</span></div>`);
+    lines.push(`<div class="recap-line"><span class="recap-ico">🥇</span><span class="recap-k">Podium</span><span class="recap-v">${podium.join(' · ')}</span></div>`);
+    discWinners.forEach(dw => {
+      lines.push(`<div class="recap-line"><span class="recap-ico">▸</span><span class="recap-k">${dName(dw.kind)}</span><span class="recap-v">${dw.winners.join(', ')}</span></div>`);
+    });
+
+    // Teilbarer Text
+    const shareText = [
+      `🎮 Freitags Bash — ${ev.name} (${fmtDate(ev.event_date)})`,
+      `🏆 Abend-Sieger: ${pName(winnerId)} (${sums[winnerId]} Pkt)`,
+      `🥇 Podium: ${podium.join(' · ')}`,
+      ...discWinners.map(dw => `▸ ${dName(dw.kind)}: ${dw.winners.join(', ')}`)
+    ].join('\n');
+
+    document.getElementById('recapWrap').innerHTML = `
+      <div class="recap-card">
+        <div class="recap-head">
+          <div style="display:flex;align-items:center;gap:0.8rem">
+            <span class="st-av" style="width:42px;height:42px;font-size:0.9rem;${av}">${pAvatar(winnerId) ? '' : ini(pName(winnerId))}</span>
+            <div>
+              <div class="recap-title">${ev.name}</div>
+              <div class="recap-date">${fmtDate(ev.event_date)}</div>
+            </div>
+          </div>
+        </div>
+        ${lines.join('')}
+        <div class="recap-actions">
+          <button class="recap-btn" id="recapCopy">Rückblick kopieren</button>
+        </div>
+      </div>`;
+    const btn = document.getElementById('recapCopy');
+    btn.addEventListener('click', () => {
+      try { navigator.clipboard.writeText(shareText); } catch (e) {}
+      const o = btn.textContent; btn.textContent = 'Kopiert ✓'; setTimeout(() => { btn.textContent = o; }, 1500);
+    });
+  }
+
+  load();
+
+  // Scroll-Fortschritt + Reveal
+  const prog = document.getElementById('scrollProg');
+  const onScroll = () => { const h = document.documentElement; const max = h.scrollHeight - h.clientHeight; prog.style.transform = 'scaleX(' + (max>0 ? h.scrollTop/max : 0) + ')'; };
+  document.addEventListener('scroll', onScroll, { passive:true }); onScroll();
+  const io = new IntersectionObserver((es) => { es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold:0.1 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
