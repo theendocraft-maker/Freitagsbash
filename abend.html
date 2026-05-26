@@ -470,6 +470,12 @@
   }
   .veto-item b { color: var(--text); }
   .veto-item .arrow { color: var(--muted); font-family: var(--font-mono); }
+  .veto-item .vi-av {
+    width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
+    background-size: cover; background-position: center;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; color: var(--bg);
+  }
   .veto-locked {
     padding: 2.5rem; text-align: center;
     color: var(--muted); font-size: 0.95rem; line-height: 1.6;
@@ -930,7 +936,9 @@
       ? '<div class="veto-item" style="opacity:0.7"><span class="joker">J</span> Noch keine Vetos gesetzt für „' + upcomingEvent.name + '".</div>'
       : evVetoes.map(v => {
           const pl = evPlayers.find(p => p.id === v.player_id);
-          return `<div class="veto-item"><span class="joker">J</span><b>${pl ? pl.name : '?'}</b><span class="arrow">→</span> ${discName(v.discipline_kind)}</div>`;
+          const idx = evPlayers.findIndex(p => p.id === v.player_id);
+          const av = pl && pl.avatar_url ? `background-image:url(${pl.avatar_url})` : `background:${grad(idx < 0 ? 0 : idx)}`;
+          return `<div class="veto-item"><span class="vi-av" style="${av}">${pl && !pl.avatar_url ? ini(pl.name) : ''}</span><b>${pl ? pl.name : '?'}</b><span class="arrow">→</span> ${discName(v.discipline_kind)}</div>`;
         }).join('');
   }
 

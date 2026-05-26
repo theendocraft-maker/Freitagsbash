@@ -189,8 +189,9 @@
       <a href="abend.html">Veto</a>
       <a href="regeln.html">Regeln</a>
       <a href="anmelden.html">Anmelden</a>
+      <a href="admin.html" style="border:1px solid var(--border-strong); padding:0.3rem 0.8rem; border-radius:999px;">⚙ Admin</a>
     </nav>
-    <small><span id="navCount" style="cursor:pointer">0 Spieler</span> · Start 29.05.2026</small>
+    <small><span id="navCount">0 Spieler</span> · Start 29.05.2026</small>
   </div>
 </footer>
 
@@ -262,7 +263,7 @@
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
   // Admin-Modus: 5× auf den Spielerzähler im Footer
-  const ADMIN_PASSWORD = 'freitagsbash';
+  const ADMIN_PASSWORD = 'halal';
   let adminClicks = 0, adminClickTimer = null;
   document.getElementById('navCount').addEventListener('click', () => {
     if (document.body.classList.contains('admin-mode')) return;
