@@ -259,6 +259,7 @@
     margin-bottom: 1.25rem;
   }
   .nd-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.5rem; }
+  .nd-logo { height: 44px; width: auto; max-width: 120px; object-fit: contain; border-radius: 8px; flex-shrink: 0; background: var(--bg-2); padding: 4px 6px; }
   .nd-glyph {
     font-family: var(--font-display); font-weight: 900;
     font-size: 1rem; letter-spacing: 0.04em;
@@ -341,8 +342,14 @@
   .nd-modetbl th { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; padding: 0.4rem 0.35rem; border-bottom: 1px solid var(--border); }
   .nd-modetbl td { text-align: center; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; color: var(--text); }
   .nd-modetbl td b { color: var(--primary); }
+  .nd-modetbl .r-rank { font-family: var(--font-mono); color: var(--muted); width: 24px; }
+  .nd-modetbl tr.tier-1 td { background: var(--primary-soft); }
+  .nd-modetbl tr.tier-1 td b { color: var(--primary); }
+  .nd-modetbl tr.tier-2 td, .nd-modetbl tr.tier-3 td { background: var(--bg-2); }
   .nd-modi { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .nd-mode-chip { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 0.35rem 0.75rem; }
+  .nd-mode-chip b { color: inherit; margin-right: 2px; }
+  .nd-mode-chip .mc-st { opacity: 0.7; font-size: 0.85em; margin-left: 2px; }
   .nd-mode-chip.now { border-color: var(--alert-line); background: var(--alert-soft); color: var(--text); font-weight: 600; }
   .nd-mode-chip.done { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); }
   .nd-join { margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.1rem; }
@@ -1293,9 +1300,11 @@
 
     // --- Regeln / Modus ---
     const rules = discRules(kind);
+    // Original-Logo des Spiels (Datei in logos/<kind>.png); fällt auf das Kürzel zurück, falls keins da ist
     const head = `
       <div class="nd-head">
-        <span class="nd-glyph">${discShort(kind)}</span>
+        <img class="nd-logo" src="logos/${kind}.png" alt="${discName(kind)}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+        <span class="nd-glyph" style="display:none">${discShort(kind)}</span>
         <div>
           <div class="nd-eyebrow">Aktuelles Spiel · ${discMode(kind)}</div>
           <div class="nd-title">${discName(kind)}</div>
@@ -1462,14 +1471,22 @@
       const px = (kind === 'brawlhalla') ? 'R' : 'M';
       const term = (kind === 'brawlhalla') ? 'Runde' : 'Modus';
       const lblOf = (m, i) => m.label || (term + ' ' + (i+1));
-      // „Welche Modi/Runden heute gespielt werden" — mit Aktiv-/Erledigt-Status
-      let activeShown = false;
+      // Status je Modus: fertig (Platzierung gesetzt) / läuft (Teams stehen) / kommt
+      const modeStatus = m => {
+        const rs = myRows.map(r => r.modes && r.modes[m.n]).filter(Boolean);
+        if (rs.some(x => x.placement)) return 'done';
+        if (rs.some(x => x.team)) return 'live';
+        return 'next';
+      };
+      const firstNext = mdefs.findIndex(m => modeStatus(m) === 'next');
+      const hasLive = mdefs.some(m => modeStatus(m) === 'live');
+      // Modus-Fortschritt
       modesListHtml = `<div class="nd-block"><div class="nd-label">${kind === 'brawlhalla' ? 'Runden heute' : 'Modi heute'}</div><div class="nd-modi">${mdefs.map((m,i) => {
-        const done = myRows.some(r => r.modes && r.modes[m.n] && (r.modes[m.n].placement || r.modes[m.n].team));
-        let cls = '';
-        if (done) cls = 'done'; else if (!activeShown) { cls = 'now'; activeShown = true; }
+        const st = modeStatus(m);
+        const cls = st === 'done' ? 'done' : (st === 'live' || (!hasLive && i === firstNext) ? 'now' : '');
+        const word = st === 'done' ? '✓ fertig' : (cls === 'now' ? '● läuft' : 'kommt');
         const badge = (kind === 'brawlhalla') ? '' : ` · ${m.type === 'team' ? 'Team' : 'Solo'}`;
-        return `<span class="nd-mode-chip ${cls}">${lblOf(m,i)}${badge}${done ? ' ✓' : ''}</span>`;
+        return `<span class="nd-mode-chip ${cls}"><b>${i+1}</b> ${lblOf(m,i)}${badge} <span class="mc-st">${word}</span></span>`;
       }).join('')}</div></div>`;
 
       const SP = [10,8,6,4,3,2,1], sp = r => (r && r >= 1) ? SP[Math.min(r, SP.length)-1] : 0;
@@ -1480,9 +1497,14 @@
       }).filter(r => r.tot > 0);
       if (rws.length) {
         rws.sort((a,b) => b.tot - a.tot);
-        const head = `<th style="text-align:left">Spieler</th>${mdefs.map((m,i) => `<th title="${lblOf(m,i)}">${px}${i+1}</th>`).join('')}<th>Σ</th>`;
-        const body = rws.map(r => `<tr><td style="text-align:left">${nameOf(r.pid)}</td>${r.per.map(p => `<td>${p||'–'}</td>`).join('')}<td><b>${r.tot}</b></td></tr>`).join('');
-        modeTblHtml = `<div class="nd-block"><div class="nd-label">Stand nach ${term}</div><table class="nd-modetbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+        let rank = 0, last = -1;
+        rws.forEach((r,i) => { if (r.tot !== last) rank = i + 1; r.rank = rank; last = r.tot; });
+        const head = `<th>#</th><th style="text-align:left">Spieler</th>${mdefs.map((m,i) => `<th title="${lblOf(m,i)}">${px}${i+1}</th>`).join('')}<th>Σ</th>`;
+        const body = rws.map(r => {
+          const tier = r.rank <= 3 ? ` class="tier-${r.rank}"` : '';
+          return `<tr${tier}><td class="r-rank">${r.rank}</td><td style="text-align:left">${nameOf(r.pid)}</td>${r.per.map(p => `<td>${p||'–'}</td>`).join('')}<td><b>${r.tot}</b></td></tr>`;
+        }).join('');
+        modeTblHtml = `<div class="nd-block"><div class="nd-label">${kind === 'brawlhalla' ? 'Runden-Wertung' : 'Cup-Wertung'} · Gesamt</div><table class="nd-modetbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       }
     }
 
