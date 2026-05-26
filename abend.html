@@ -259,7 +259,7 @@
     margin-bottom: 1.25rem;
   }
   .nd-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.5rem; }
-  .nd-logo { height: 44px; width: auto; max-width: 120px; object-fit: contain; border-radius: 8px; flex-shrink: 0; background: var(--bg-2); padding: 4px 6px; }
+  .nd-logo { height: 46px; width: auto; max-width: 170px; object-fit: contain; border-radius: 8px; flex-shrink: 0; background: var(--bg-2); padding: 4px 8px; }
   .nd-glyph {
     font-family: var(--font-display); font-weight: 900;
     font-size: 1rem; letter-spacing: 0.04em;
@@ -1303,7 +1303,7 @@
     // Original-Logo des Spiels (Datei in logos/<kind>.png); fällt auf das Kürzel zurück, falls keins da ist
     const head = `
       <div class="nd-head">
-        <img class="nd-logo" src="logos/${kind}.png" alt="${discName(kind)}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+        <img class="nd-logo" src="logos/${kind}.svg" alt="${discName(kind)}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
         <span class="nd-glyph" style="display:none">${discShort(kind)}</span>
         <div>
           <div class="nd-eyebrow">Aktuelles Spiel · ${discMode(kind)}</div>

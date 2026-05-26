@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 188 44">
+  <rect x="3" y="4" width="36" height="36" rx="9" fill="#e07b2e"/>
+  <g stroke="#fff" stroke-width="3" stroke-linecap="round">
+    <line x1="14" y1="14" x2="28" y2="30"/>
+    <line x1="28" y1="14" x2="14" y2="30"/>
+  </g>
+  <circle cx="21" cy="22" r="2.6" fill="#fff"/>
+  <text x="48" y="29" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="18" letter-spacing="0.3" fill="#fbe9da">Brawlhalla</text>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 44">
+  <rect x="3" y="4" width="36" height="36" rx="9" fill="#ff5ca0"/>
+  <rect x="14" y="11" width="14" height="22" rx="7" fill="#fff"/>
+  <circle cx="18.5" cy="19" r="2" fill="#ff5ca0"/>
+  <circle cx="23.5" cy="19" r="2" fill="#ff5ca0"/>
+  <text x="48" y="29" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="19" letter-spacing="0.3" fill="#ffe6f1">Fall Guys</text>
+</svg>
