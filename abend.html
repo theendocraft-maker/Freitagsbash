@@ -291,6 +291,24 @@
   }
   .nd-team-players { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-tp { font-size: 0.88rem; color: var(--text); }
+  .bracket { display: flex; align-items: stretch; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem; }
+  .br-stage {
+    flex: 1; min-width: 120px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg-2); padding: 0.6rem; opacity: 0.55; transition: opacity 0.2s, border-color 0.2s;
+  }
+  .br-stage.done { opacity: 0.85; }
+  .br-stage.now { opacity: 1; border-color: var(--alert-line); background: var(--alert-soft); }
+  .br-stage-label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  .br-stage.now .br-stage-label { color: var(--alert); }
+  .br-teams { display: flex; flex-direction: column; gap: 0.4rem; }
+  .br-note { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+  .br-sep { display: flex; align-items: center; color: var(--muted); font-size: 1.1rem; }
+  .nd-gpts { display: flex; flex-direction: column; gap: 0.3rem; }
+  .nd-gpt { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem 0.6rem; background: var(--bg-2); border-radius: var(--radius-sm); }
+  .nd-gpt-pos { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); width: 24px; }
+  .nd-gpt-name { flex: 1; font-size: 0.92rem; color: var(--text); }
+  .nd-gpt-val { font-family: var(--font-display); font-size: 1.2rem; color: var(--primary); min-width: 28px; text-align: right; }
   .nd-join { margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.1rem; }
   .join-toggle {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
@@ -888,6 +906,14 @@
         results.push({ id:`r-hax-team-${pid}`, discipline_id:haxDisc.id, player_id:pid, placement:null, points:null, team:tn });
       }));
     }
+    // Fall Guys Demo: ein Team-Modus mit ausgelosten Teams (für die Live-Team-Anzeige)
+    const fgDisc = disciplines.find(d => d.kind === 'fallguys');
+    fgDisc.modes = [{ n:1, type:'team' }, { n:2, type:'solo' }];
+    fgDisc.teams_drawn_at = new Date().toISOString();
+    const fgTeams = { 1:['p1','p3'], 2:['p2','p5'], 3:['p6'] };
+    Object.entries(fgTeams).forEach(([t, pids]) => pids.forEach(pid => {
+      results.push({ id:`r-fg-${pid}`, discipline_id:fgDisc.id, player_id:pid, placement:null, points:null, team:null, modes:{ 1:{ team:Number(t) } } });
+    }));
     const vetoes = [{ event_id:'e1', player_id:'p4', discipline_kind:'fallguys' }];
     return { players, event, disciplines, results, vetoes };
   }
@@ -1244,22 +1270,73 @@
     let teamsHtml = '';
     const drawnAt = currentDisc.teams_drawn_at || null;
     const animateTeams = !!drawnAt && teamsRevealed[currentDisc.id] !== drawnAt && !demoFirstRender;
-    const myResults = (results || []).filter(r => r.discipline_id === currentDisc.id && r.team != null && r.team !== '');
-    if (myResults.length) {
-      const teams = {};
-      myResults.forEach(r => { (teams[r.team] = teams[r.team] || []).push(r.player_id); });
-      const teamKeys = Object.keys(teams).sort((a,b) => String(a).localeCompare(String(b), 'de', { numeric:true }));
+    const myRows = (results || []).filter(r => r.discipline_id === currentDisc.id);
+    // Teams gruppieren: Haxball/normal aus results.team der Zeile;
+    // Fall Guys aus dem aktuellen Team-Modus (results.modes[n].team).
+    const teams = {};
+    let teamLabel = 'Teams';
+    if (kind === 'fallguys') {
+      const modeDefs = Array.isArray(currentDisc.modes) ? currentDisc.modes : [];
+      const teamModes = modeDefs.filter(m => m.type === 'team');
+      let targetN = null, targetIdx = -1;
+      for (let i = teamModes.length - 1; i >= 0; i--) {
+        const mn = teamModes[i].n;
+        if (myRows.some(r => r.modes && r.modes[mn] && r.modes[mn].team)) { targetN = mn; targetIdx = modeDefs.findIndex(m => m.n === mn); break; }
+      }
+      if (targetN != null) {
+        teamLabel = `Teams · Modus ${targetIdx + 1}`;
+        myRows.forEach(r => { const md = r.modes && r.modes[targetN]; if (md && md.team) { const k = 'Team ' + md.team; (teams[k] = teams[k] || []).push(r.player_id); } });
+      }
+    } else {
+      myRows.forEach(r => { if (r.team != null && r.team !== '') { (teams[r.team] = teams[r.team] || []).push(r.player_id); } });
+    }
+    const teamKeys = Object.keys(teams).sort((a,b) => String(a).localeCompare(String(b), 'de', { numeric:true }));
+    if (teamKeys.length) {
       const hideStyle = animateTeams ? ' style="opacity:0;transform:translateY(8px) scale(0.85)"' : '';
-      teamsHtml = `
+      const teamBoxes = teamKeys.map((tk,ti) => `
+        <div class="nd-team">
+          <div class="nd-team-name" style="background:${grad(ti)}">${tk}</div>
+          <div class="nd-team-players">${teams[tk].map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}</div>
+        </div>`).join('');
+      if (kind === 'haxball') {
+        // Turnierbaum (Trichter): Teams → 2v2 → 1v1-Finale, aktive Phase hervorgehoben
+        const phs = discPhases('haxball') || ['Teams','2v2','1v1-Finale'];
+        const ai = Math.max(0, phs.indexOf(currentDisc.phase || phs[0]));
+        const sc = idx => idx < ai ? 'done' : (idx === ai ? 'now' : '');
+        teamsHtml = `
+          <div class="nd-block">
+            <div class="nd-label">Turnierbaum${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
+            <div class="bracket">
+              <div class="br-stage ${sc(0)}"><div class="br-stage-label">${phs[0]}</div><div class="nd-teams br-teams">${teamBoxes}</div></div>
+              <div class="br-sep">›</div>
+              <div class="br-stage ${sc(1)}"><div class="br-stage-label">${phs[1]}</div><div class="br-note">Die Besten ziehen weiter</div></div>
+              <div class="br-sep">›</div>
+              <div class="br-stage ${sc(2)}"><div class="br-stage-label">🏆 ${phs[2]}</div><div class="br-note">Einer gewinnt</div></div>
+            </div>
+          </div>`;
+      } else {
+        teamsHtml = `
+          <div class="nd-block">
+            <div class="nd-label">${teamLabel}${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
+            <div class="nd-teams">${teamBoxes}</div>
+          </div>`;
+      }
+    }
+
+    // --- Aktuelle Punkte in DIESEM Spiel ---
+    let gamePtsHtml = '';
+    const scored = myRows.filter(r => (parseFloat(r.points) || 0) > 0 || r.placement);
+    if (scored.length) {
+      scored.sort((a,b) => ((parseFloat(b.points)||0) - (parseFloat(a.points)||0)) || ((a.placement||99) - (b.placement||99)));
+      gamePtsHtml = `
         <div class="nd-block">
-          <div class="nd-label">Teams${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
-          <div class="nd-teams">
-            ${teamKeys.map((tk,ti) => `
-              <div class="nd-team">
-                <div class="nd-team-name" style="background:${grad(ti)}">${tk}</div>
-                <div class="nd-team-players">
-                  ${teams[tk].map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}
-                </div>
+          <div class="nd-label">Punkte in diesem Spiel</div>
+          <div class="nd-gpts">
+            ${scored.map((r,i) => `
+              <div class="nd-gpt">
+                <span class="nd-gpt-pos">${r.placement ? r.placement + '.' : '–'}</span>
+                <span class="nd-gpt-name">${nameOf(r.player_id)}</span>
+                <span class="nd-gpt-val">${parseFloat(r.points) || 0}</span>
               </div>`).join('')}
           </div>
         </div>`;
@@ -1281,7 +1358,7 @@
         </div>`;
     }
 
-    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + joinHtml;
+    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + gamePtsHtml + joinHtml;
     box.style.display = 'block';
 
     // Team-Reveal-Animation nach frischer Auslosung (einmalig pro Auslosung)

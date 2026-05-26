@@ -376,6 +376,12 @@
   }
   .fg-standings td { text-align: center; padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
   .fg-standings td b { color: var(--primary); }
+  .fg-suggest {
+    background: var(--primary-soft); border: 1px solid var(--primary-line);
+    border-radius: var(--radius-sm); padding: 0.7rem 0.9rem; margin-bottom: 0.9rem;
+  }
+  .fg-suggest-head { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; color: var(--primary); margin-bottom: 0.3rem; }
+  .fg-suggest-body { font-size: 0.85rem; line-height: 1.45; color: var(--text); }
 
   .haxball-step { margin-top: 0.5rem; }
   .haxball-step-title {
@@ -1108,9 +1114,25 @@
   // --- Fall Guys: Mini-Turnier (mehrere Modi, je solo/Team, summiert) ---
   const fgModeOf = (discId, pid, n) => ((currentResults[discId]?.[pid]?.modes) || {})[n] || {};
 
+  // Vorschlag: welche Modi passen zur aktuellen Spielerzahl (Min.: Finals ab 2, Solo ab 4, Roll Call ab 6, Team ab 8, Slime ab 10, Gauntlet ab 12)
+  function suggestFallguys(count) {
+    if (count < 4)  return { mix:'1× Solo-Finale', body:`Custom Shows starten erst ab 4 Spielern. Mit ${count} gehen nur FINAL-Level (ab 2), z.B. Tip Toe Finale.` };
+    if (count < 6)  return { mix:'2× Solo + Finale', body:'Solo-Runden empfohlen (Jump Around, Hex-a-gone Trials ab 4) plus ein Finale. Team-Modi brauchen 8 Spieler — noch nicht möglich.' };
+    if (count < 8)  return { mix:'2–3× Solo', body:'Solo-Runden inkl. Roll Call (ab 6). Team-Modi (Volleyfall, Fall Ball Cup) brauchen 8 — also bei Solo bleiben.' };
+    if (count < 10) return { mix:'2× Solo + 1× Team', body:'Jetzt geht auch Team: Volleyfall, Fall Ball Cup, Sweet Thieves (ab 8). Schöner Mix aus Solo-Runden + 1 Team-Modus.' };
+    if (count < 12) return { mix:'2–3× Solo/Team gemischt', body:'Voll dabei: zusätzlich Slime Survivors (ab 10). Solo und Team frei mischbar.' };
+    return { mix:'3× beliebig', body:'Alles möglich, inkl. Gauntlet Showdown & Hard Mode X-treme (ab 12).' };
+  }
+
   function renderFallguysBody(d, participants) {
     const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
     const modes = Array.isArray(d.modes) ? d.modes : [];
+    const sug = suggestFallguys(playing.length);
+    const suggestBox = `
+      <div class="fg-suggest">
+        <div class="fg-suggest-head">💡 Vorschlag für ${playing.length} Spieler · ${sug.mix}</div>
+        <div class="fg-suggest-body">${sug.body}</div>
+      </div>`;
     const addBar = `
       <div class="draw-control">
         <span class="draw-label">+ Modus:</span>
@@ -1123,6 +1145,7 @@
     return `
       <div style="padding-top:1rem">
         <p class="section-desc">Mini-Turnier: 2–3 Modi, jeder einzeln solo oder Team. Punkte werden über alle Modi summiert → Fall-Guys-Gesamtwertung.</p>
+        ${suggestBox}
         ${addBar}
         ${modesHtml}
         ${renderFallguysStandings(d, playing)}
