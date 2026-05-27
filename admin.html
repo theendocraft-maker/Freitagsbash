@@ -356,6 +356,10 @@
   .dur-hint { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.9rem; }
   .copter-score-input { width: 90px; background: var(--bg); border: 1px solid var(--border-strong); color: var(--text); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; font-family: var(--font-mono); font-size: 0.85rem; text-align: right; }
   .copter-score-input:focus { outline: none; border-color: var(--cool); }
+  .adv-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .adv-chip { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 999px; padding: 0.4rem 0.85rem; font-family: var(--font-mono); font-size: 0.82rem; cursor: pointer; transition: all 0.15s; }
+  .adv-chip:hover { border-color: var(--border-strong); color: var(--text); }
+  .adv-chip.on { background: var(--primary-soft); border-color: var(--primary-line); color: var(--primary); font-weight: 700; }
 
   .mode-block {
     border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -1084,6 +1088,7 @@
         ${drawControlHtml(d.id, 'haxball')}
         ${teamRows}
         ${renderHaxballMatches(d, playing)}
+        ${renderPhaseAdvance(d, playing)}
         <div class="haxball-step-title">Endplatzierung (zählt für die Wertung)</div>
         <p class="section-desc">Tippe die Spieler in <b>Zielreihenfolge</b> an — 1. Klick = Platz 1.${ranked.length ? ` · <a onclick="resetSolo('${d.id}')" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : ''}</p>
         <div class="rank-list">${rankedHtml}</div>
@@ -1165,6 +1170,57 @@
     await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
     d.bracket = br; renderDisciplineBodyFor(discId);
     if (typeof toast === 'function') toast('Sieg eingetragen', 'ok');
+  };
+
+  // --- Phasenwechsel: Aufsteiger wählen → System bildet die neuen Teams (per Los) ---
+  let haxAdvanceSel = {};
+  const ADV_TARGET = { '2v2': 4, '1v1-Finale': 2 };
+  const nextPhaseOf = p => p === 'Teams' ? '2v2' : (p === '2v2' ? '1v1-Finale' : null);
+  function renderPhaseAdvance(d, playing) {
+    const phase = d.phase || 'Teams';
+    const next = nextPhaseOf(phase);
+    if (!next || playing.length < 2) return '';
+    const target = ADV_TARGET[next] || 2;
+    if (!haxAdvanceSel[d.id]) {
+      // Vorauswahl: Mitglieder der siegreichsten Teams bis zur Zielzahl
+      const br = normBracket(d); const games = br.games[phase] || {};
+      const wins = {}; Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w] = (wins[w]||0)+1; }));
+      const teamsByWins = haxTeamsPresent(d, playing).sort((a,b) => (wins[b]||0) - (wins[a]||0));
+      const sel = new Set();
+      for (const t of teamsByWins) for (const p of playing.filter(pp => currentResults[d.id]?.[pp.id]?.team === t)) { if (sel.size < target) sel.add(p.id); }
+      haxAdvanceSel[d.id] = sel;
+    }
+    const sel = haxAdvanceSel[d.id];
+    const chips = playing.map(p => `<button class="adv-chip ${sel.has(p.id) ? 'on' : ''}" onclick="toggleHaxAdvance('${d.id}','${p.id}')">${p.name}</button>`).join('');
+    return `<div class="haxball-step-title">Phase weiter → ${next}</div>
+      <p class="section-desc">Aufsteiger wählen (empfohlen <b>${target}</b>). Beim Weiterklicken werden daraus automatisch die neuen Teams <b>ausgelost</b> — die Spieler sehen live die Auslos-Animation. Nicht-Aufsteiger scheiden aus.</p>
+      <div class="adv-chips">${chips}</div>
+      <div class="draw-control" style="margin-top:0.6rem"><button class="draw-btn" onclick="applyHaxAdvance('${d.id}','${next}')">→ Weiter zu ${next} (${sel.size} gewählt)</button></div>`;
+  }
+  window.toggleHaxAdvance = function(discId, pid) {
+    const sel = haxAdvanceSel[discId] = haxAdvanceSel[discId] || new Set();
+    if (sel.has(pid)) sel.delete(pid); else sel.add(pid);
+    renderDisciplineBodyFor(discId);
+  };
+  window.applyHaxAdvance = async function(discId, next) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const advancers = [...(haxAdvanceSel[discId] || new Set())];
+    if (advancers.length < 2) { toast('Mindestens 2 Aufsteiger wählen', 'error'); return; }
+    if (!confirm(`${advancers.length} Spieler ziehen weiter in „${next}". Nicht-Aufsteiger scheiden aus, neue Teams werden ausgelost.`)) return;
+    const arr = advancers.slice();
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    const nTeams = (next === '1v1-Finale') ? arr.length : 2; // 1v1: jeder eigenes Team, sonst 2 Teams
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    for (const p of playing) {
+      const idx = arr.indexOf(p.id);
+      await upsertResult(discId, p.id, { team: idx >= 0 ? (idx % nTeams) + 1 : null });
+    }
+    const ts = new Date().toISOString();
+    await sb.from('disciplines').update({ phase: next, teams_drawn_at: ts }).eq('id', discId);
+    d.phase = next; d.teams_drawn_at = ts;
+    delete haxAdvanceSel[discId];
+    renderDisciplineBodyFor(discId); renderOverview();
+    toast(`Weiter zu ${next} — Teams ausgelost 🎲`, 'ok');
   };
 
   // --- Solo: Klick-Reihenfolge ---

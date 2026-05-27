@@ -356,6 +356,7 @@
   .nt-score { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700; background: rgba(10,10,15,0.35); color: var(--bg); border-radius: 999px; padding: 0.1rem 0.45rem; }
   .nd-team-players { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-tp { font-size: 0.88rem; color: var(--text); }
+  .nd-tp.shuffling { color: var(--muted); opacity: 0.85; }
   .bracket { display: flex; align-items: stretch; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem; }
   .br-stage {
     flex: 1; min-width: 120px;
@@ -1836,13 +1837,28 @@
     // Team-Reveal-Animation nach frischer Auslosung (einmalig pro Auslosung)
     if (animateTeams) {
       teamsRevealed[currentDisc.id] = drawnAt;
-      box.querySelectorAll('.nd-tp').forEach((el, i) => {
-        setTimeout(() => {
-          el.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
-          el.style.opacity = '1';
-          el.style.transform = 'none';
-        }, i * 220);
-      });
+      const tps = [...box.querySelectorAll('.nd-tp')];
+      const realNames = tps.map(el => el.textContent);
+      const pool = realNames.slice();
+      if (tps.length && pool.length) {
+        // Phase 1: kurzes „Mischen" — Namen rotieren in jeder Zelle (Slot-Machine)
+        tps.forEach(el => { el.style.opacity = '1'; el.style.transform = 'none'; el.classList.add('shuffling'); });
+        let ticks = 0;
+        const shuf = setInterval(() => {
+          tps.forEach(el => { el.textContent = pool[Math.floor(Math.random() * pool.length)]; });
+          if (++ticks >= 13) {
+            clearInterval(shuf);
+            // Phase 2: „Austeilen" — echte Namen gestaffelt einrasten
+            tps.forEach((el, i) => setTimeout(() => {
+              el.textContent = realNames[i];
+              el.classList.remove('shuffling');
+              el.style.transition = 'transform 0.3s ease';
+              el.style.transform = 'scale(1.18)';
+              setTimeout(() => { el.style.transform = 'none'; }, 200);
+            }, i * 180));
+          }
+        }, 80);
+      }
     }
   }
 
