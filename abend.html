@@ -909,6 +909,7 @@
           </div>
           <button class="btn btn-primary" id="vetoSaveBtn">Veto speichern</button>
         </div>
+        <p class="section-desc" id="vetoLeaderNote" style="display:none; color:var(--muted)"></p>
         <div class="veto-list" id="vetoList"></div>
       </div>
       <div id="vetoClosed" class="veto-locked" style="display:none">
@@ -1833,6 +1834,35 @@
     if (btn)   btn.setAttribute('aria-expanded', joinGuideOpen);
   };
 
+  // Saison-Tabellenführer aus finalisierten Abenden (Abendplatzierung → Saisonpunkte, 1 Streicher); null = noch keiner
+  async function computeLeaderId() {
+    const { data: evs } = await sb.from('events').select('id,status').eq('status', 'finalized');
+    const events = evs || [];
+    if (!events.length) return null;
+    const evIds = events.map(e => e.id);
+    const { data: discs } = await sb.from('disciplines').select('id,event_id').in('event_id', evIds);
+    const dIds = (discs || []).map(d => d.id);
+    if (!dIds.length) return null;
+    const { data: res } = await sb.from('results').select('discipline_id,player_id,points').in('discipline_id', dIds);
+    const SP = [25,18,15,12,10,8,6,4];
+    const perPlayer = {};
+    events.forEach(ev => {
+      const evDiscIds = (discs || []).filter(d => d.event_id === ev.id).map(d => d.id);
+      const sums = {};
+      (res || []).forEach(r => { if (evDiscIds.includes(r.discipline_id)) sums[r.player_id] = (sums[r.player_id] || 0) + (parseFloat(r.points) || 0); });
+      const ranked = Object.keys(sums).sort((a,b) => sums[b] - sums[a]);
+      let rank = 0, last = -1;
+      ranked.forEach((pid,i) => { if (sums[pid] !== last) rank = i + 1; last = sums[pid]; (perPlayer[pid] = perPlayer[pid] || []).push(SP[Math.min(rank, SP.length) - 1]); });
+    });
+    let best = null, bestPts = -1;
+    Object.entries(perPlayer).forEach(([pid, arr]) => {
+      const a = arr.slice(); if (a.length > 1) { a.sort((x,y) => x - y); a.shift(); }
+      const tot = a.reduce((s,v) => s + v, 0);
+      if (tot > bestPts) { bestPts = tot; best = pid; }
+    });
+    return best;
+  }
+
   async function renderVeto() {
     const open = document.getElementById('vetoOpen');
     const closed = document.getElementById('vetoClosed');
@@ -1854,8 +1884,15 @@
     evVetoes = vts || [];
     const psel = document.getElementById('vetoPlayer');
     const cur = psel.value;
-    psel.innerHTML = '<option value="">— wähle deinen Namen —</option>' + evPlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    if (cur) psel.value = cur;
+    const leaderId = await computeLeaderId();
+    psel.innerHTML = '<option value="">— wähle deinen Namen —</option>' + evPlayers.filter(p => p.id !== leaderId).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    if (cur && cur !== leaderId) psel.value = cur;
+    const note = document.getElementById('vetoLeaderNote');
+    if (note) {
+      const lp = evPlayers.find(p => p.id === leaderId);
+      if (lp) { note.textContent = `👑 ${lp.name} führt die Saison an und hat diesen Abend kein Veto.`; note.style.display = 'block'; }
+      else { note.style.display = 'none'; }
+    }
     const dsel = document.getElementById('vetoDisc');
     if (dsel.options.length === 0) {
       dsel.innerHTML = '<option value="">— kein Veto —</option>' + VDISCS.map(d => `<option value="${d.kind}">${d.name}</option>`).join('');

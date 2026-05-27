@@ -498,6 +498,13 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); animation: toastpop 0.32s ease; }
   @keyframes toastpop { 0% { transform: translateX(-50%) translateY(8px) scale(0.92); } 60% { transform: translateX(-50%) translateY(-7px) scale(1.03); } 100% { transform: translateX(-50%) translateY(-4px) scale(1); } }
+  /* Kleine Aktions-Animationen: Sieger/Team-Auswahl poppen, Rang-Zeilen faden ein */
+  @keyframes adminPop { 0% { transform: scale(0.88); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  .mg-btn.win { animation: adminPop 0.28s ease; }
+  .team-btn.selected-t1, .team-btn.selected-t2, .team-btn.selected-t3 { animation: adminPop 0.28s ease; }
+  @keyframes rrIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+  .rank-row { animation: rrIn 0.25s ease; }
+  .phase-btn.active, .fmt-btn.active { animation: adminPop 0.28s ease; }
   .toast.error { border-color: var(--alert-line); color: var(--alert); }
   .toast.ok    { border-color: var(--primary-line); color: var(--primary); }
 </style>

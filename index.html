@@ -68,6 +68,7 @@
   .pc-delete { top: 0.5rem; right: 0.5rem; }
   body.admin-mode .lb-del, body.admin-mode .pc-delete { display: flex; }
   .lb-del:hover, .pc-delete:hover { background: var(--alert); color: white; }
+  .lb-streak { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; color: var(--alert); margin-left: 0.3rem; }
 
   /* LIVE-Banner */
   .live-banner {
@@ -258,6 +259,7 @@
   const ini = s => s.slice(0,2).toUpperCase();
   const pad2 = n => String(n).padStart(2,'0');
   let players = [];
+  let streaks = {}; // pid -> Anzahl aufeinanderfolgender Abend-Siege
 
   async function loadAndRender() {
     const { data, error } = await sb.from('players').select('*').order('joined', { ascending: true });
@@ -278,15 +280,41 @@
           <div class="lb-rank ${ranks[i]||''} tnum">${pad2(i+1)}</div>
           <div class="lb-player">
             <div class="lb-avatar" style="${p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${grad(i)}`}">${p.avatar_url ? '' : ini(p.name)}</div>
-            <div><div class="lb-name">${p.name}</div><div class="lb-cry">„${p.cry}"</div></div>
+            <div><div class="lb-name">${p.name}${streaks[p.id] >= 2 ? ` <span class="lb-streak" title="${streaks[p.id]} Abende in Folge gewonnen">🔥${streaks[p.id]}</span>` : ''}</div><div class="lb-cry">„${p.cry}"</div></div>
           </div>
           <div class="lb-pts">—</div>
           <div class="lb-w">—</div>
         </div>`).join('');
   }
 
-  loadAndRender();
-  sb.channel('players-live').on('postgres_changes', { event:'*', schema:'public', table:'players' }, () => loadAndRender()).subscribe();
+  // 🔥-Streak: aufeinanderfolgende Abend-Siege aus finalisierten Abenden
+  async function loadStreaks() {
+    const { data: evs } = await sb.from('events').select('id,event_date,status').eq('status', 'finalized');
+    const events = (evs || []).sort((a,b) => String(a.event_date).localeCompare(String(b.event_date)));
+    if (!events.length) return;
+    const evIds = events.map(e => e.id);
+    const { data: discs } = await sb.from('disciplines').select('id,event_id').in('event_id', evIds);
+    const dIds = (discs || []).map(d => d.id); if (!dIds.length) return;
+    const { data: res } = await sb.from('results').select('discipline_id,player_id,points').in('discipline_id', dIds);
+    const winners = events.map(ev => {
+      const evDiscIds = (discs || []).filter(d => d.event_id === ev.id).map(d => d.id);
+      const sums = {};
+      (res || []).forEach(r => { if (evDiscIds.includes(r.discipline_id)) sums[r.player_id] = (sums[r.player_id] || 0) + (parseFloat(r.points) || 0); });
+      let win = null, best = -1;
+      Object.entries(sums).forEach(([pid,v]) => { if (v > best) { best = v; win = pid; } });
+      return win;
+    });
+    streaks = {};
+    players.forEach(p => {
+      let s = 0;
+      for (let i = winners.length - 1; i >= 0; i--) { if (winners[i] === p.id) s++; else break; }
+      streaks[p.id] = s;
+    });
+    render();
+  }
+
+  loadAndRender().then(loadStreaks);
+  sb.channel('players-live').on('postgres_changes', { event:'*', schema:'public', table:'players' }, () => loadAndRender().then(loadStreaks)).subscribe();
 
   // LIVE-Banner: zeigen, sobald ein Abend status='live' hat
   async function checkLive() {
@@ -303,7 +331,7 @@
     }
   }
   checkLive();
-  sb.channel('events-live').on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => checkLive()).subscribe();
+  sb.channel('events-live').on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => { checkLive(); loadStreaks(); }).subscribe();
 
   // Scroll-Fortschritt + Reveal
   const prog = document.getElementById('scrollProg');
