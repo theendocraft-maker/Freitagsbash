@@ -454,26 +454,29 @@
   .nd-mode-chip .mc-st { opacity: 0.7; font-size: 0.85em; margin-left: 2px; }
   .nd-mode-chip.now { border-color: var(--alert-line); background: var(--alert-soft); color: var(--text); font-weight: 600; }
   .nd-mode-chip.done { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); }
-  .lob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; margin-top: 0.5rem; }
-  .lob-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.7rem; }
-  .lob-head { font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.3rem; }
-  .lob-code { font-family: var(--font-mono); font-size: 1.05rem; color: var(--cool); margin-bottom: 0.35rem; }
-  .lob-code b { color: var(--cool); letter-spacing: 0.06em; }
+  .lob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.9rem; margin-top: 0.6rem; }
+  .lob-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; }
+  .lob-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.6rem; }
+  .lob-head .lh-n { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.02em; color: var(--text); }
+  .lob-head .lh-meta { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .lob-code { font-family: var(--font-mono); font-size: 1.15rem; color: var(--cool); margin-bottom: 0.7rem; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+  .lob-code b { color: var(--cool); letter-spacing: 0.08em; }
   .lob-code.lob-code-wait { color: var(--muted); font-size: 0.85rem; }
   .lob-mem { font-size: 0.9rem; color: var(--text); line-height: 1.4; }
   .nd-sub { font-size: 0.85rem; color: var(--muted); margin: 0.2rem 0 0.4rem; }
-  .lob-tally { margin: 0.3rem 0 0.6rem; display: flex; flex-direction: column; gap: 0.15rem; }
-  .lob-row { display: grid; grid-template-columns: 1.3rem 1fr auto; gap: 0.55rem; align-items: center; padding: 0.3rem 0; border-top: 1px solid var(--border); }
-  .lob-row:first-child { border-top: none; }
-  .lob-rk { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); text-align: center; }
-  .lob-rmid { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
-  .lob-rname { color: var(--text); font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lob-rgames { color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; margin-top: 1px; }
-  .lob-rp { color: var(--primary); font-weight: 800; font-family: var(--font-mono); font-size: 1.05rem; min-width: 1.6rem; text-align: right; }
-  .lob-code-edit { color: var(--muted); font-size: 0.78rem; margin-left: 0.4rem; cursor: pointer; text-decoration: underline; }
-  .lob-codeform { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
-  .lob-codeinput { flex: 1; min-width: 0; padding: 0.45rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-2); color: var(--text); font-family: var(--font-mono); }
-  .lob-codeok { padding: 0.45rem 0.85rem; border-radius: var(--radius-sm); border: none; background: var(--cool); color: #0b0d10; font-weight: 700; cursor: pointer; }
+  .lob-tally { margin: 0.3rem 0 0.7rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .lob-row { display: grid; grid-template-columns: 1.8rem 1fr auto; gap: 0.65rem; align-items: center; padding: 0.45rem 0.55rem; border-radius: var(--radius-sm); background: var(--surface); }
+  .lob-row.lead { background: var(--primary-soft); border: 1px solid var(--primary-line); }
+  .lob-rk { width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--bg); color: var(--muted); font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
+  .lob-row.lead .lob-rk { background: var(--primary); color: #0b0d10; }
+  .lob-rmid { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+  .lob-rname { color: var(--text); font-weight: 700; font-size: 1rem; overflow-wrap: anywhere; }
+  .lob-rgames { color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; margin-top: 2px; }
+  .lob-rp { font-weight: 800; font-family: var(--font-mono); font-size: 1.2rem; color: var(--primary); min-width: 2rem; text-align: right; }
+  .lob-code-edit { color: var(--muted); font-size: 0.78rem; cursor: pointer; text-decoration: underline; }
+  .lob-codeform { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .lob-codeinput { flex: 1; min-width: 0; padding: 0.55rem 0.7rem; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 1rem; }
+  .lob-codeok { padding: 0.55rem 1rem; border-radius: var(--radius-sm); border: none; background: var(--cool); color: #0b0d10; font-weight: 700; cursor: pointer; }
   .brawl-entry { border-top: 1px dashed var(--border); padding-top: 0.5rem; margin-top: 0.3rem; }
   .brawl-hint { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; }
   .brawl-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
@@ -2125,7 +2128,7 @@
                   : `<div class="lob-codeform"><input id="${codeId}" class="lob-codeinput" placeholder="🔑 Raum-Code eintragen" value="${(code||'').replace(/"/g,'&quot;')}"><button class="lob-codeok" onclick="saveBrawlCodeLive('${currentDisc.id}',${n},${l})">OK</button></div>`);
               const tally = memRows.map(r => ({ pid: r.player_id, g: brawlGamesOf(r, n), pts: brawlPts(brawlGamesOf(r, n)) }))
                 .sort((a,b) => b.pts - a.pts)
-                .map((x, i) => `<div class="lob-row"><span class="lob-rk">${i+1}</span><div class="lob-rmid"><span class="lob-rname">${nameOf(x.pid)}</span>${x.g.length ? `<span class="lob-rgames">Spiele ${x.g.join('·')}</span>` : ''}</div><span class="lob-rp">${x.pts}</span></div>`).join('');
+                .map((x, i) => `<div class="lob-row${i===0 && x.pts>0 ? ' lead' : ''}"><span class="lob-rk">${i+1}</span><div class="lob-rmid"><span class="lob-rname">${nameOf(x.pid)}</span>${x.g.length ? `<span class="lob-rgames">${x.g.join(' · ')}</span>` : '<span class="lob-rgames">noch kein Spiel</span>'}</div><span class="lob-rp">${x.pts}</span></div>`).join('');
               let entry = '';
               if (!isDemo) {
                 const buf = brawlBuf[bkey(currentDisc.id, n, l)] || [];
@@ -2146,7 +2149,7 @@
               } else {
                 entry = `<div class="brawl-hint">Die Spieler tippen hier live nach jedem Spiel ihre Reihenfolge ein.</div>`;
               }
-              return `<div class="lob-card"><div class="lob-head">Lobby ${l} · ${gamesCount} Spiele</div>${codeHtml}<div class="lob-tally">${tally}</div>${entry}</div>`;
+              return `<div class="lob-card"><div class="lob-head"><span class="lh-n">Lobby ${l}</span><span class="lh-meta">${gamesCount} ${gamesCount===1?'Spiel':'Spiele'}</span></div>${codeHtml}<div class="lob-tally">${tally}</div>${entry}</div>`;
             }).join('');
             modesListHtml += `<div class="nd-block"><div class="nd-label">Lobbies · ${lblOf(active, mdefs.indexOf(active))}</div><p class="nd-sub">Feste Lobbies (eigener Voice-Channel). Jede Lobby spielt mehrere Spiele und trägt nach jedem Spiel die Reihenfolge selbst ein. Richtwert ~3 Spiele pro Phase.</p><div class="lob-grid">${cards}</div></div>`;
           }
