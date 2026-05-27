@@ -1799,14 +1799,20 @@
         if (Object.keys(games).length) {
           const advCount = curPhase === 'Teams' ? 2 : (curPhase === '2v2' ? 1 : 0); // wie viele Teams weiter
           const rankedT = teamNums.slice().sort((a,b) => (winsByTeam[b]||0) - (winsByTeam[a]||0));
+          // Aufstiegsgrenze: Team an Platz advCount-1 (letzter Aufsteiger) vs. advCount (erster Out).
+          // Sind diese gleich, ist die Grenze umkämpft → ALLE Teams mit dieser Siegzahl müssen ins
+          // Stechen (Sudden Death), egal ob sie über oder unter der Linie stehen.
+          const everyoneAdvances = advCount > 0 && rankedT.length <= advCount;
+          const inW  = (advCount > 0 && !everyoneAdvances) ? (winsByTeam[rankedT[advCount-1]] || 0) : null;
+          const outW = (advCount > 0 && !everyoneAdvances) ? (winsByTeam[rankedT[advCount]]   || 0) : null;
+          const contestedWins = (inW != null && inW === outW) ? inW : null; // null = saubere Trennung
           const wrows = rankedT.map((t,i) => {
             const w = winsByTeam[t] || 0;
             let tag = '';
             if (advCount > 0) {
-              const tieAtCut = (i === advCount - 1 && rankedT[i+1] != null && (winsByTeam[rankedT[i+1]]||0) === w)
-                            || (i === advCount && rankedT[i-1] != null && (winsByTeam[rankedT[i-1]]||0) === w);
-              if (tieAtCut) tag = '<span class="wt-tie">Stechen?</span>';
-              else if (i < advCount) tag = '<span class="wt-go">✓ weiter</span>';
+              if (everyoneAdvances) tag = '<span class="wt-go">✓ weiter</span>';
+              else if (contestedWins != null && w === contestedWins) tag = '<span class="wt-tie">Stechen?</span>';
+              else if (w > outW) tag = '<span class="wt-go">✓ weiter</span>';
               else tag = '<span class="wt-out">✗ raus</span>';
             }
             return `<div class="wt-row"><span class="wt-rank">${i+1}.</span><span class="wt-team">Team ${t} <small>${memOf(t)}</small></span><span class="wt-wins">${w} ${w===1?'Sieg':'Siege'}</span>${tag}</div>`;
