@@ -586,7 +586,11 @@
         </div>
       </div>
       <div class="form-group" style="margin-top:0.5rem">
-        <label>Teilnehmer</label>
+        <label>Teilnehmer <span id="participantsCount" style="font-weight:400;color:var(--muted)"></span></label>
+        <div class="draw-control" style="margin:0 0 0.5rem">
+          <button class="draw-btn" type="button" onclick="selectAllParticipants(true)">Alle</button>
+          <button class="draw-btn" type="button" onclick="selectAllParticipants(false)">Keine</button>
+        </div>
         <div class="participants-grid" id="participantsGrid"></div>
       </div>
     </div>
@@ -835,13 +839,15 @@
     }
 
     // Teilnehmer laden — Quelle der Wahrheit für „Heute am Start" ist events.roster.
-    if (currentEvent && Array.isArray(currentEvent.roster) && currentEvent.roster.length) {
+    // Wurde der roster schon gesetzt (auch leer), gilt GENAU diese Auswahl. Sonst:
+    // ältere Abende aus event_participation; ganz neue Abende starten leer
+    // (du klickst die Teilnehmer des Tages explizit an — keine Vorauswahl mehr).
+    if (currentEvent && Array.isArray(currentEvent.roster)) {
       currentParticipantIds = new Set(currentEvent.roster);
     } else {
-      // Fallback: aus event_participation (ältere Abende) bzw. Default = alle vorauswählen.
       const { data: pData } = await sb.from('event_participation').select('*').eq('event_id', id);
       const attended = (pData || []).filter(p => p.attended).map(p => p.player_id);
-      currentParticipantIds = attended.length ? new Set(attended) : new Set(players.map(p => p.id));
+      currentParticipantIds = new Set(attended);
     }
 
     // Vetos laden (von Spielern auf der Hauptseite gesetzt)
@@ -917,6 +923,8 @@
           <div>${p.name}</div>
         </div>`;
     }).join('');
+    const pc = $('participantsCount');
+    if (pc) pc.textContent = `· ${currentParticipantIds.size} von ${players.length} am Start`;
 
     // Disziplinen
     renderDisciplines();
@@ -955,6 +963,13 @@
     await persistParticipants();
   };
 
+  // „Alle" / „Keine" schnell setzen
+  window.selectAllParticipants = async function(all) {
+    currentParticipantIds = all ? new Set(players.map(p => p.id)) : new Set();
+    renderDetail();
+    await persistParticipants();
+  };
+
   // Teilnehmer-Auswahl sofort auf dem Event speichern (events.roster jsonb), damit
   // „Heute am Start" auf der Spielabend-Seite live mit dem Admin übereinstimmt.
   // Bewusst auf der events-Zeile (nicht event_participation): events-Updates + Realtime
@@ -964,8 +979,13 @@
     if (!currentEvent || currentEvent.status === 'finalized') return;
     const roster = [...currentParticipantIds];
     const { error } = await sb.from('events').update({ roster }).eq('id', currentEvent.id);
-    if (error) { console.error(error); toast('Teilnehmer speichern fehlgeschlagen', 'error'); return; }
+    if (error) {
+      console.error('roster save failed', error);
+      toast('Teilnehmer speichern fehlgeschlagen — Spalte events.roster fehlt? (SQL Abschnitt 9)', 'error');
+      return;
+    }
     currentEvent.roster = roster;
+    toast(`${roster.length} Teilnehmer gespeichert`, 'ok');
   }
 
   // ===== Disziplinen rendern =====
@@ -1421,6 +1441,7 @@
       </div>`;
     const lobbyCount = Math.max(0, ...playing.map(lobOf));
     const draw = `<div class="draw-control"><span class="draw-label">🎲 Lobbies:</span><button class="draw-btn" onclick="drawBrawlLobbies('${d.id}',${n})">${assigned ? 'neu auslosen' : 'auslosen'}</button>${assigned ? ` · <a onclick="resetBrawlRound('${d.id}',${n})" style="color:var(--alert);cursor:pointer">leeren</a>` : ''}</div>`;
+    const codeOf = l => (m.codes || {})[l] || '';
     let lobbiesHtml = '';
     if (assigned) {
       for (let l = 1; l <= lobbyCount; l++) {
@@ -1435,11 +1456,27 @@
         const poolHtml = unranked.length
           ? `<div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankBrawl('${d.id}',${n},'${p.id}')">${p.name}</button>`).join('')}</div>`
           : '<div class="rank-done">✓ Lobby fertig.</div>';
-        lobbiesHtml += `<div class="haxball-step"><div class="haxball-step-title">Lobby ${l} · ${members.length} Spieler</div><div class="rank-list">${rankedHtml}</div>${poolHtml}</div>`;
+        const codeInput = `<div class="join-field" style="margin:0.3rem 0 0.5rem"><label class="join-field-label">🔑 Raum-Code Lobby ${l} — wird live angezeigt</label><input type="text" class="join-field-input" value="${codeOf(l).replace(/"/g,'&quot;')}" placeholder="z.B. 482913" onchange="setBrawlLobbyCode('${d.id}',${n},${l},this.value)"></div>`;
+        lobbiesHtml += `<div class="haxball-step"><div class="haxball-step-title">Lobby ${l} · ${members.length} Spieler</div>${codeInput}<div class="rank-list">${rankedHtml}</div>${poolHtml}</div>`;
       }
     }
     return `<div class="mode-block">${head}${draw}${lobbiesHtml}</div>`;
   }
+
+  window.setBrawlLobbyCode = async function(discId, n, l, value) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const v = value.trim() || null;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).map(m => {
+      if (m.n !== n) return m;
+      const codes = Object.assign({}, m.codes || {});
+      if (v) codes[l] = v; else delete codes[l];
+      return Object.assign({}, m, { codes });
+    });
+    const { error } = await sb.from('disciplines').update({ modes }).eq('id', discId);
+    if (error) { console.error(error); toast('Code speichern fehlgeschlagen', 'error'); return; }
+    d.modes = modes;
+    toast(v ? `Lobby ${l}: Code gespeichert` : `Lobby ${l}: Code entfernt`, 'ok');
+  };
 
   function renderBrawlStandings(d, playing) {
     const rounds = (Array.isArray(d.modes) ? d.modes : []).filter(m => m.type === 'brawl');

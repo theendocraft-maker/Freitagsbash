@@ -454,6 +454,29 @@
   .nd-mode-chip .mc-st { opacity: 0.7; font-size: 0.85em; margin-left: 2px; }
   .nd-mode-chip.now { border-color: var(--alert-line); background: var(--alert-soft); color: var(--text); font-weight: 600; }
   .nd-mode-chip.done { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); }
+  .lob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; margin-top: 0.5rem; }
+  .lob-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.7rem; }
+  .lob-head { font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.3rem; }
+  .lob-code { font-family: var(--font-mono); font-size: 1.05rem; color: var(--cool); margin-bottom: 0.35rem; }
+  .lob-code b { color: var(--cool); letter-spacing: 0.06em; }
+  .lob-code.lob-code-wait { color: var(--muted); font-size: 0.85rem; }
+  .lob-mem { font-size: 0.9rem; color: var(--text); line-height: 1.4; }
+  /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
+  .live-status { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; color: var(--text); line-height: 1.35; }
+  .live-status.now { border-left-color: var(--alert); }
+  .live-status.pause { border-left-color: var(--cool); color: var(--cool); }
+  .live-status.done { border-left-color: var(--primary); color: var(--primary); }
+  .live-status .ls-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--primary); flex: none; }
+  .live-status.now .ls-dot { background: var(--alert); animation: lsPulse 1.4s ease-in-out infinite; }
+  @keyframes lsPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+
+  /* Ereignis-Toasts: kurze Einblendungen oben mittig */
+  .live-toasts { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 120; display: flex; flex-direction: column; gap: 0.5rem; align-items: center; pointer-events: none; width: min(92vw, 460px); }
+  .live-toast { width: 100%; box-sizing: border-box; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px; padding: 0.7rem 1.2rem; font-size: 0.98rem; font-weight: 600; color: var(--text); box-shadow: var(--shadow); text-align: center; opacity: 0; transform: translateY(-12px); transition: opacity 0.3s ease, transform 0.3s ease; }
+  .live-toast.show { opacity: 1; transform: translateY(0); }
+  .live-toast.t-start { border-color: var(--alert-line); background: var(--alert-soft); }
+  .live-toast.t-win { border-color: var(--primary-line); background: var(--primary-soft); }
+  .live-toast.t-draw { border-color: var(--cool-soft); }
   .nd-join { margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.1rem; }
   .join-toggle {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
@@ -913,6 +936,10 @@
       <div class="disc-strip" id="liveDiscStrip"></div>
     </div>
 
+    <div class="live-status" id="liveStatusLine" style="display:none;"></div>
+
+    <div class="live-toasts" id="liveToasts" aria-live="polite"></div>
+
     <div class="cry-flash" id="cryFlash" style="display:none;"></div>
 
     <div class="now-detail" id="liveNowDetail"></div>
@@ -1100,7 +1127,7 @@
       id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1,
       phase: d.kind === 'haxball' ? demoHaxPhase : null,
       join_link: DEMO_JOIN[d.kind] || null,
-      teams_drawn_at: d.kind === 'haxball' ? new Date().toISOString() : null,
+      teams_drawn_at: d.kind === 'haxball' ? '2026-05-29T18:05:00Z' : null,
       bracket: d.kind === 'haxball' ? { gpp: { 'Teams':1, '2v2':3, '1v1-Finale':1 }, games: { 'Teams': { '1-2':[1] }, '2v2': { '1-2':[1,2] }, '1v1-Finale': { '1-2':[1] } } } : null
     }));
     const placements = [
@@ -1141,7 +1168,7 @@
     const fgDisc = disciplines.find(d => d.kind === 'fallguys');
     if (step === 4) {
       fgDisc.modes = [{ n:1, type:'team', label:'Volleyfall' }, { n:2, type:'solo', label:'Hex-a-gone' }];
-      fgDisc.teams_drawn_at = new Date().toISOString();
+      fgDisc.teams_drawn_at = '2026-05-29T20:30:00Z';
       const fgTeams = { 1:['p1','p3'], 2:['p2','p5'], 3:['p6'] };
       Object.entries(fgTeams).forEach(([t, pids]) => pids.forEach(pid => {
         results.push({ id:`r-fg-${pid}`, discipline_id:fgDisc.id, player_id:pid, placement:null, points:null, team:null, modes:{ 1:{ team:Number(t) } } });
@@ -1150,8 +1177,8 @@
     // Brawlhalla Demo (nur wenn Brawlhalla gerade dran ist = Step 2)
     const brawlDisc = disciplines.find(d => d.kind === 'brawlhalla');
     if (step === 2) {
-      brawlDisc.modes = [{ n:1, type:'brawl', label:'Runde 1' }, { n:2, type:'brawl', label:'Runde 2' }];
-      brawlDisc.teams_drawn_at = new Date().toISOString();
+      brawlDisc.modes = [{ n:1, type:'brawl', label:'Runde 1', codes:{ 1:'482913', 2:'557104' } }, { n:2, type:'brawl', label:'Runde 2', codes:{ 1:'330815', 2:'904277' } }];
+      brawlDisc.teams_drawn_at = '2026-05-29T19:15:00Z';
       // 6 Spieler → 2 Lobbies à 3; pro Lobby Platz 1–3 (Punkte 4/3/2). Runde 2 neu gemischt.
       const r1 = { p1:{lobby:1,placement:1}, p3:{lobby:1,placement:2}, p5:{lobby:1,placement:3}, p2:{lobby:2,placement:1}, p4:{lobby:2,placement:2}, p6:{lobby:2,placement:3} };
       const r2 = { p2:{lobby:1,placement:1}, p1:{lobby:1,placement:2}, p6:{lobby:1,placement:3}, p3:{lobby:2,placement:1}, p4:{lobby:2,placement:2}, p5:{lobby:2,placement:3} };
@@ -1164,6 +1191,33 @@
   let evPlayers = [], liveEvent = null, upcomingEvent = null, evVetoes = [], evParticipants = [];
   let lastSnapshot = {}; // pid -> { rank, total }
   let demoFirstRender = true;
+
+  // === Ereignis-Toasts (Einblendungen, einzeln nacheinander) ===
+  const toastQueue = [];
+  let toastBusy = false;
+  function showLiveToast(msg, kind) {
+    toastQueue.push({ msg, kind: kind || '' });
+    if (!toastBusy) nextLiveToast();
+  }
+  function nextLiveToast() {
+    const wrap = document.getElementById('liveToasts');
+    if (!wrap || !toastQueue.length) { toastBusy = false; return; }
+    toastBusy = true;
+    const { msg, kind } = toastQueue.shift();
+    const el = document.createElement('div');
+    el.className = 'live-toast ' + kind;
+    el.textContent = msg;
+    wrap.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => { el.remove(); nextLiveToast(); }, 320);
+    }, 3400);
+  }
+
+  // Trackt Zustandsübergänge zwischen zwei Renders, um die richtigen Toasts auszulösen
+  let lastCurrentDiscId = null;       // für „Spiel startet"
+  const lastDrawnByDisc = {};         // discId -> teams_drawn_at (für „Teams/Lobbies ausgelost")
 
   async function refreshEvents() {
     if (isDemo) {
@@ -1473,6 +1527,50 @@
       } else { sbEl.style.display = 'none'; }
     }
 
+    // === Klartext-Statuszeile: in einfachen Worten, was gerade passiert ===
+    const stEl = document.getElementById('liveStatusLine');
+    if (stEl) {
+      const pauseMsg = liveEvent.pause_msg;
+      const started = doneCount > 0 || useStatus || (results && results.length > 0);
+      let txt = '', cls = '';
+      if (pauseMsg) {
+        const pm = String(pauseMsg).trim();
+        txt = '☕ Pause' + (pm && pm !== '1' ? ' — ' + pm : ' läuft'); cls = 'pause';
+      } else if (!started) {
+        txt = '🎬 Gleich geht’s los — die Spiele werden gerade vorgestellt';
+      } else if (!currentDisc) {
+        const champ = rows[0] ? rows[0].player.name : null;
+        txt = champ ? `🏁 Abend beendet — ${champ} gewinnt!` : '🏁 Abend beendet'; cls = 'done';
+      } else {
+        const idx = orderedDiscs.findIndex(d => d.id === currentDisc.id);
+        const pos = `Spiel ${idx + 1} von ${totalCount}`;
+        let detail = '';
+        if (currentDisc.kind === 'haxball' && currentDisc.phase) detail = ' · ' + currentDisc.phase;
+        const isLive = isDemo || !!(liveDisc && liveDisc.id === currentDisc.id);
+        if (isLive) { txt = `🎮 Jetzt: ${discName(currentDisc.kind)}${detail} · ${pos}`; cls = 'now'; }
+        else { txt = `⏭ Als Nächstes: ${discName(currentDisc.kind)} · ${pos}`; }
+      }
+      stEl.className = 'live-status ' + cls;
+      stEl.innerHTML = `<span class="ls-dot"></span><span>${txt}</span>`;
+      stEl.style.display = 'flex';
+    }
+
+    // === Ereignis-Toasts bei Zustandswechseln (nicht beim allerersten Render) ===
+    if (!demoFirstRender) {
+      const curId = currentDisc ? currentDisc.id : null;
+      if (curId && lastCurrentDiscId !== null && curId !== lastCurrentDiscId && (!liveEvent.pause_msg)) {
+        showLiveToast(`🎮 Jetzt: ${discName(currentDisc.kind)}`, 't-start');
+      }
+      orderedDiscs.forEach(d => {
+        const da = d.teams_drawn_at || null;
+        if (da && lastDrawnByDisc[d.id] !== undefined && lastDrawnByDisc[d.id] !== da) {
+          showLiveToast(d.kind === 'brawlhalla' ? '🎲 Neue Lobbies ausgelost' : `🎲 Teams stehen — ${discName(d.kind)}`, 't-draw');
+        }
+      });
+    }
+    lastCurrentDiscId = currentDisc ? currentDisc.id : null;
+    orderedDiscs.forEach(d => { lastDrawnByDisc[d.id] = d.teams_drawn_at || null; });
+
     // „Letzte Chance"-Banner: nach Disziplin 4, bevor das letzte Spiel (Fall Guys) startet
     const lcEl = document.getElementById('lastChance');
     if (lcEl) {
@@ -1493,6 +1591,8 @@
     // Schlachtruf-Moment + Endstand, wenn gerade ein Spiel fertig wurde
     if (newlyDoneDisc) {
       const winPid = ((results || []).find(r => r.discipline_id === newlyDoneDisc.id && parseInt(r.placement) === 1) || {}).player_id;
+      const winName = winPid ? (evPlayers.find(p => p.id === winPid) || {}).name : null;
+      showLiveToast(winName ? `🏆 ${discName(newlyDoneDisc.kind)} — Sieg: ${winName}` : `🏁 ${discName(newlyDoneDisc.kind)} beendet`, 't-win');
       if (winPid) {
         showWinnerCry(winPid, newlyDoneDisc);
         setTimeout(() => showGameEndscore(newlyDoneDisc, results, rows), 2600);
@@ -1878,6 +1978,33 @@
         const badge = (kind === 'brawlhalla') ? '' : ` · ${m.type === 'team' ? 'Team' : 'Solo'}`;
         return `<span class="nd-mode-chip ${cls}"><b>${i+1}</b> ${lblOf(m,i)}${badge} <span class="mc-st">${word}</span></span>`;
       }).join('')}</div></div>`;
+
+      // --- Brawlhalla: Lobbies der aktiven Runde mit eigenem Raum-Code + Besetzung ---
+      if (kind === 'brawlhalla') {
+        let active = mdefs.find(m => modeStatus(m) === 'live');
+        if (!active && firstNext >= 0) active = mdefs[firstNext];
+        if (active) {
+          const n = active.n;
+          const lobbies = {};
+          myRows.forEach(r => {
+            const md = r.modes && r.modes[n];
+            if (md && md.lobby) (lobbies[md.lobby] = lobbies[md.lobby] || []).push({ pid: r.player_id, pl: md.placement });
+          });
+          const lobNums = Object.keys(lobbies).map(Number).sort((a,b) => a-b);
+          if (lobNums.length) {
+            const codes = active.codes || {};
+            const cards = lobNums.map(l => {
+              const mem = lobbies[l].slice().sort((a,b) => (a.pl||99)-(b.pl||99)).map(x => nameOf(x.pid)).join(', ');
+              const code = codes[l];
+              const codeHtml = code
+                ? `<div class="lob-code">🔑 Code: <b>${code}</b></div>`
+                : `<div class="lob-code lob-code-wait">🔑 Code folgt …</div>`;
+              return `<div class="lob-card"><div class="lob-head">Lobby ${l}</div>${codeHtml}<div class="lob-mem">${mem}</div></div>`;
+            }).join('');
+            modesListHtml += `<div class="nd-block"><div class="nd-label">Lobbies · ${lblOf(active, mdefs.indexOf(active))}</div><div class="lob-grid">${cards}</div></div>`;
+          }
+        }
+      }
 
       const SP = [10,8,6,4,3,2,1], sp = r => (r && r >= 1) ? SP[Math.min(r, SP.length)-1] : 0;
       const TP = [10,8,6,4], tp = r => (r && r >= 1) ? TP[Math.min(r, TP.length)-1] : 0;
