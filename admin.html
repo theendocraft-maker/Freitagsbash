@@ -952,7 +952,24 @@
       currentParticipantIds.add(playerId);
     }
     renderDetail();
+    await persistParticipants();
   };
+
+  // Teilnehmer-Auswahl sofort in event_participation schreiben, damit „Heute am Start"
+  // auf der Spielabend-Seite live mit dem Admin übereinstimmt (nicht erst beim Finalisieren).
+  async function persistParticipants() {
+    if (!currentEvent || currentEvent.status === 'finalized') return;
+    await sb.from('event_participation').delete().eq('event_id', currentEvent.id);
+    const rows = [...currentParticipantIds].map(pid => ({
+      event_id: currentEvent.id, player_id: pid, attended: true,
+      evening_points: 0, evening_rank: null, season_points: 0,
+      was_leader_at_start: false, was_host: false, penalty_factor: 1.0
+    }));
+    if (rows.length) {
+      const { error } = await sb.from('event_participation').insert(rows);
+      if (error) { console.error(error); toast('Teilnehmer speichern fehlgeschlagen', 'error'); }
+    }
+  }
 
   // ===== Disziplinen rendern =====
   function renderDisciplines() {
@@ -2049,6 +2066,7 @@
     const { error } = await sb.from('events').update({ status: newStatus }).eq('id', currentEvent.id);
     if (error) { console.error(error); toast('Status-Update fehlgeschlagen', 'error'); return; }
     currentEvent.status = newStatus;
+    if (goLive) await persistParticipants(); // genau die aktuelle Auswahl live sichtbar machen
     toast(goLive ? '🔴 Abend ist live' : 'Zurück auf Entwurf', 'ok');
     renderDetail();
   });

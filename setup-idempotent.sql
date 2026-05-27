@@ -86,3 +86,16 @@ alter table events add column if not exists pause_msg text;
 -- copter_active: Joker-Minispiel (Fly the Copter) wird erst angezeigt, wenn true.
 alter table events add column if not exists intro_step int;
 alter table events add column if not exists copter_active boolean;
+
+-- ============================================================
+-- 9) REALTIME für event_participation (Live-Roster „Heute am Start")
+-- ============================================================
+-- Die Teilnehmer-Auswahl im Admin wird sofort in event_participation geschrieben.
+-- Damit die Spielabend-Seite sie live (ohne Reload) übernimmt, muss die Tabelle
+-- in der Realtime-Publication sein. Fehler ignorieren, falls schon publiziert.
+do $$
+begin
+  alter publication supabase_realtime add table event_participation;
+exception
+  when duplicate_object then null;
+end $$;

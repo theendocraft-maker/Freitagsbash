@@ -1199,7 +1199,7 @@
     let results = [];
     if (dIds.length) { const { data } = await sb.from('results').select('*').in('discipline_id', dIds); results = data || []; }
     const { data: vts } = await sb.from('vetoes').select('*').eq('event_id', liveEvent.id);
-    const { data: parts } = await sb.from('event_participation').select('player_id').eq('event_id', liveEvent.id);
+    const { data: parts } = await sb.from('event_participation').select('player_id, attended').eq('event_id', liveEvent.id).eq('attended', true);
     evParticipants = (parts || []).map(pp => evPlayers.find(p => p.id === pp.player_id)).filter(Boolean);
     await renderLiveFromData(dList, results, vts || []);
   }
