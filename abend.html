@@ -222,6 +222,34 @@
   .copter-entry select { flex: 1; min-width: 100px; }
   .copter-entry input { width: 100px; }
   .copter-entry button { background: var(--cool); color: var(--bg); border: none; border-radius: var(--radius-sm); padding: 0.45rem 0.9rem; font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; cursor: pointer; }
+
+  /* Schlachtruf-Moment */
+  .cry-flash { margin-bottom: 1.25rem; }
+  .cf-inner {
+    display: flex; align-items: center; gap: 1rem;
+    background: var(--primary-soft); border: 1px solid var(--primary-line);
+    border-radius: var(--radius-lg); padding: 1.1rem 1.4rem;
+    animation: cryIn 0.5s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes cryIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: none; } }
+  .cf-av { width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--bg); font-size: 1.2rem; }
+  .cf-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary); }
+  .cf-name { font-family: var(--font-display); font-weight: 900; font-size: 1.9rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); line-height: 1; }
+  .cf-cry { font-style: italic; color: var(--muted); margin-top: 0.2rem; }
+
+  /* „Letzte Chance"-Banner */
+  .last-chance { margin-bottom: 1.25rem; background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; }
+  .lc-title { font-family: var(--font-display); font-weight: 900; font-size: 1.1rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--alert); margin-bottom: 0.5rem; }
+  .lc-rows { display: flex; flex-direction: column; gap: 0.25rem; }
+  .lc-row { font-size: 0.9rem; color: var(--text); }
+  .lc-row b { color: var(--text); }
+  .lc-row .lc-need { font-family: var(--font-display); color: var(--alert); font-size: 1.05rem; padding: 0 0.15rem; }
+
+  /* Bounce bei Aufstieg + Trichter-Flash */
+  .sb-table tr.bump { animation: sbBump 0.6s ease; }
+  @keyframes sbBump { 0%,100% { transform: none; } 30% { transform: translateY(-5px); } 55% { transform: translateY(0); } 72% { transform: translateY(-2px); } }
+  .bracket.just-scored { animation: brFlash 0.7s ease; }
+  @keyframes brFlash { 0% { box-shadow: 0 0 0 0 var(--primary-line); } 40% { box-shadow: 0 0 0 4px var(--primary-soft); } 100% { box-shadow: 0 0 0 0 transparent; } }
   .pause-banner {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
     background: var(--cool-soft); border: 1px solid var(--cool);
@@ -846,9 +874,13 @@
       <div class="disc-strip" id="liveDiscStrip"></div>
     </div>
 
+    <div class="cry-flash" id="cryFlash" style="display:none;"></div>
+
     <div class="now-detail" id="liveNowDetail"></div>
 
     <div class="ranking-reveal" id="rankingReveal" style="display:none;"></div>
+
+    <div class="last-chance" id="lastChance" style="display:none;"></div>
 
     <div class="scoreboard">
       <div id="liveBody"></div>
@@ -1289,6 +1321,7 @@
       const rowsHtml = rows.map((r,i) => {
         const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
         const flash = r.pointsDelta > 0 && !demoFirstRender ? ' flash' : '';
+        const bump = (r.delta.kind === 'up' && !demoFirstRender) ? ' bump' : '';
         const av = r.player.avatar_url
           ? `background-image:url(${r.player.avatar_url});`
           : `background:${grad(i)}`;
@@ -1311,7 +1344,7 @@
         if (r.delta.kind === 'new')  deltaBadge = `<span class="rank-delta new">NEU</span>`;
         const pointsFlash = r.pointsDelta > 0 && !demoFirstRender ? `<span class="pts-flash">+${r.pointsDelta}</span>` : '';
         return `
-          <tr class="${tier}${flash}" data-pid="${r.player.id}">
+          <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}">
             <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span>${deltaBadge}</td>
             <td class="player-col">
               <div class="sb-player">
@@ -1366,8 +1399,53 @@
       }
     }
 
-    // Ranking-Reveal-Animation, wenn gerade ein Spiel fertig eingetragen wurde
-    if (newlyDoneDisc) showGameEndscore(newlyDoneDisc, results, rows);
+    // „Letzte Chance"-Banner: nach Disziplin 4, bevor das letzte Spiel (Fall Guys) startet
+    const lcEl = document.getElementById('lastChance');
+    if (lcEl) {
+      const lastDisc = orderedDiscs[orderedDiscs.length - 1];
+      const onlyLastLeft = doneCount === orderedDiscs.length - 1 && lastDisc && !discDone[lastDisc.id];
+      const items = onlyLastLeft ? rows.map((r,i) => {
+        if (i === 0) return null;
+        const above = rows[i - 1];
+        const need = (above.total - r.total) + 1;
+        return need <= 10 ? { name: r.player.name, need, above: above.player.name } : null;
+      }).filter(Boolean) : [];
+      if (items.length) {
+        lcEl.innerHTML = `<div class="lc-title">⚠️ Letzte Chance — ${discName(lastDisc.kind)} entscheidet!</div><div class="lc-rows">${items.map(x => `<div class="lc-row"><b>${x.name}</b> braucht <span class="lc-need">${x.need}</span> auf ${x.above}</div>`).join('')}</div>`;
+        lcEl.style.display = 'block';
+      } else { lcEl.style.display = 'none'; }
+    }
+
+    // Schlachtruf-Moment + Endstand, wenn gerade ein Spiel fertig wurde
+    if (newlyDoneDisc) {
+      const winPid = ((results || []).find(r => r.discipline_id === newlyDoneDisc.id && parseInt(r.placement) === 1) || {}).player_id;
+      if (winPid) {
+        showWinnerCry(winPid, newlyDoneDisc);
+        setTimeout(() => showGameEndscore(newlyDoneDisc, results, rows), 2600);
+      } else {
+        showGameEndscore(newlyDoneDisc, results, rows);
+      }
+    }
+  }
+
+  // Schlachtruf-Splash beim Disziplin-Sieg
+  function showWinnerCry(pid, disc) {
+    const box = document.getElementById('cryFlash'); if (!box) return;
+    const idx = Math.max(0, evPlayers.findIndex(x => x.id === pid));
+    const p = evPlayers[idx] || {};
+    const av = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${grad(idx)}`;
+    box.innerHTML = `
+      <div class="cf-inner">
+        <div class="cf-av" style="${av}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
+        <div class="cf-txt">
+          <div class="cf-eyebrow">🏆 ${discName(disc.kind)} — Sieg!</div>
+          <div class="cf-name">${p.name || '—'}</div>
+          ${p.cry ? `<div class="cf-cry">„${p.cry}"</div>` : ''}
+        </div>
+      </div>`;
+    box.style.display = 'block';
+    clearTimeout(showWinnerCry._t);
+    showWinnerCry._t = setTimeout(() => { box.style.display = 'none'; }, 2500);
   }
 
   // Game-Endscore: zeigt nach jedem fertigen Spiel den Endstand DIESES Spiels (Mario-Kart-Style)
@@ -1564,6 +1642,10 @@
         const games = gamesOf(curPhase);
         const gpp = gppOf(curPhase);
         const bo = gpp === 1 ? '1 Spiel je Paarung' : 'Best of ' + gpp;
+        // Trichter füllt sich kurz animiert, wenn ein neues Match-Ergebnis dazukommt
+        const curGameCount = Object.values(games).reduce((a,arr) => a + arr.filter(Boolean).length, 0);
+        const haxFlash = (lastHaxGames[currentDisc.id] != null && curGameCount > lastHaxGames[currentDisc.id] && !demoFirstRender) ? ' just-scored' : '';
+        lastHaxGames[currentDisc.id] = curGameCount;
         const teamNums = teamKeys.map(k => parseInt(String(k).replace(/\D/g,''))).filter(n => !isNaN(n)).sort((a,b)=>a-b);
         const memOf = t => (teams['Team ' + t] || []).map(nameOf).join(' & ');
         // Punktestand je Team (aktuelle Phase)
@@ -1623,7 +1705,7 @@
         teamsHtml = `
           <div class="nd-block">
             <div class="nd-label">Turnierbaum · ${bo}${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
-            <div class="bracket">${stages}</div>
+            <div class="bracket${haxFlash}">${stages}</div>
             ${nextHtml}${pendHtml}${histHtml}
           </div>`;
       } else {
@@ -1732,6 +1814,7 @@
 
   // Join-Link/Code kopieren (kurzes visuelles Feedback am Button)
   const teamsRevealed = {};
+  let lastHaxGames = {};
   window.copyJoin = function(txt) {
     try { navigator.clipboard.writeText(txt); } catch (e) {}
     const b = (typeof event !== 'undefined') ? event.target : null;
