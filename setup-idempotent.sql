@@ -95,3 +95,10 @@ alter table events add column if not exists copter_active boolean;
 -- genau diese Liste als „Heute am Start" an. events ist bereits in der Realtime-
 -- Publication, daher übernimmt die Live-Seite Änderungen ohne Reload.
 alter table events add column if not exists roster jsonb;
+
+-- ============================================================
+-- 10) GEOGUESSR-RUNDENZAHL (pro Abend einstellbar)
+-- ============================================================
+-- disciplines.rounds: Anzahl GeoGuessr-Runden im Challenge-Link (Standard 5).
+-- Rein informativ — wird live im Regeltext angezeigt; die Wertung bleibt nach Platzierung.
+alter table disciplines add column if not exists rounds int;

@@ -1103,18 +1103,6 @@
         </div>`;
     }).join('');
 
-    // Endplatzierung per Klick-Reihenfolge (zählt für die Wertung)
-    const plOf = p => currentResults[d.id]?.[p.id]?.placement || null;
-    const ranked = playing.filter(p => plOf(p)).sort((a,b) => plOf(a) - plOf(b));
-    const unranked = playing.filter(p => !plOf(p));
-    const rankedHtml = ranked.length ? ranked.map(p => {
-      const pl = plOf(p); const pts = soloPoints(pl);
-      return `<div class="rank-row"><span class="rank-pos">${pl}.</span><span class="rank-name">${p.name}</span><span class="rank-pts">+${pts}</span><button class="rank-x" onclick="unrankSolo('${d.id}','${p.id}')" title="Entfernen">×</button></div>`;
-    }).join('') : '<div class="rank-empty">Noch keine Endplatzierung — nach dem 1v1-Finale die Spieler in Zielreihenfolge antippen.</div>';
-    const poolHtml = unranked.length
-      ? `<div class="rank-pool-title">Noch offen — anklicken = nächster Platz</div><div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankSolo('${d.id}','${p.id}')">${p.name}</button>`).join('')}</div>`
-      : '<div class="rank-done">✓ Alle platziert.</div>';
-
     return `
       <div style="padding-top:1rem">
         ${phaseStrip}
@@ -1124,11 +1112,36 @@
         ${teamRows}
         ${renderHaxballMatches(d, playing)}
         ${renderPhaseAdvance(d, playing)}
-        <div class="haxball-step-title">Endplatzierung (zählt für die Wertung)</div>
-        <p class="section-desc">Tippe die Spieler in <b>Zielreihenfolge</b> an — 1. Klick = Platz 1.${ranked.length ? ` · <a onclick="resetSolo('${d.id}')" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : ''}</p>
-        <div class="rank-list">${rankedHtml}</div>
-        ${poolHtml}
+        ${renderHaxStandings(d, playing)}
       </div>`;
+  }
+
+  // Read-only Auto-Endplatzierung (ergibt sich aus dem Trichter / Ausscheiden)
+  function renderHaxStandings(d, playing) {
+    const curPhase = d.phase || 'Teams';
+    const curIdx = HAXBALL_PHASES.indexOf(curPhase);
+    const lastIdx = HAXBALL_PHASES.length - 1;
+    const rows = playing.map(p => {
+      const r = currentResults[d.id]?.[p.id] || {};
+      const hax = (r.modes && r.modes.hax) || null;
+      return { p, placement: r.placement || null, pts: r.points || 0, depth: hax ? hax.elim : curIdx, elim: !!hax };
+    });
+    rows.sort((a,b) => {
+      if (a.placement && b.placement) return a.placement - b.placement;
+      if (a.placement) return -1; if (b.placement) return 1;
+      return (b.depth - a.depth);
+    });
+    const body = rows.map(r => {
+      const status = r.elim
+        ? `${HAXBALL_PHASES[r.depth]} raus`
+        : (r.depth === lastIdx ? (r.placement ? 'Finale' : 'im Finale — läuft') : 'noch dabei');
+      const place = r.placement ? `${r.placement}.` : '–';
+      const pts = r.placement ? `+${r.pts}` : '';
+      return `<div class="rank-row"><span class="rank-pos">${place}</span><span class="rank-name">${r.p.name}</span><span class="rank-pts">${pts}</span><span style="color:var(--muted);font-size:0.82em;margin-left:0.5rem">${status}</span></div>`;
+    }).join('');
+    return `<div class="haxball-step-title">Endplatzierung (automatisch nach Ausscheiden)</div>
+      <p class="section-desc">Ergibt sich aus dem Trichter: Finale oben, dann 2v2-, dann Teams-Ausgeschiedene; innerhalb einer Phase nach Siegen. Aktualisiert sich automatisch — die Finalisten bekommen ihre Punkte, sobald das Finale entschieden ist.</p>
+      <div class="rank-list">${body}</div>`;
   }
 
   // --- Haxball-Partien: Jeder gegen jeden (Round-Robin), rein informativ ---
@@ -1213,7 +1226,9 @@
     arr[gameIdx] = (arr[gameIdx] === team) ? 0 : team;
     pg[key] = arr; br.games[phase] = pg;
     await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
-    d.bracket = br; renderDisciplineBodyFor(discId);
+    d.bracket = br;
+    await recomputeHaxball(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
     if (typeof toast === 'function') toast('Sieg eingetragen', 'ok');
   };
   // Golden Goal: hängt einen Extra-Sieg an die Paarung an (bricht den Gleichstand)
@@ -1224,7 +1239,9 @@
     const pg = Object.assign({}, br.games[phase] || {});
     const arr = (pg[key] || []).slice(); arr.push(team); pg[key] = arr; br.games[phase] = pg;
     await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
-    d.bracket = br; renderDisciplineBodyFor(discId);
+    d.bracket = br;
+    await recomputeHaxball(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
     if (typeof toast === 'function') toast('🥇 Golden Goal eingetragen', 'ok');
   };
 
@@ -1264,6 +1281,25 @@
     const advancers = [...(haxAdvanceSel[discId] || new Set())];
     if (advancers.length < 2) { toast('Mindestens 2 Aufsteiger wählen', 'error'); return; }
     if (!confirm(`${advancers.length} Spieler ziehen weiter in „${next}". Nicht-Aufsteiger scheiden aus, neue Teams werden ausgelost.`)) return;
+
+    // Ausscheiden festhalten: Nicht-Aufsteiger scheiden in der AKTUELLEN Phase aus.
+    // Siege in dieser Phase (aus den aktuellen Teams) merken → spätere Auto-Platzierung.
+    const curPhase = d.phase || 'Teams';
+    const curIdx = HAXBALL_PHASES.indexOf(curPhase);
+    const brNow = normBracket(d); const gamesNow = brNow.games[curPhase] || {};
+    const winsNow = {}; Object.values(gamesNow).forEach(a => a.forEach(w => { if (w) winsNow[w] = (winsNow[w]||0)+1; }));
+    const playingNow = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    for (const p of playingNow) {
+      const cur = currentResults[discId]?.[p.id] || {};
+      const modes = Object.assign({}, cur.modes || {});
+      if (advancers.includes(p.id)) {
+        if (modes.hax) delete modes.hax; // Sicherheit beim erneuten Weiterziehen
+      } else {
+        modes.hax = { elim: curIdx, wins: winsNow[cur.team] || 0 };
+      }
+      await upsertResultDirect(discId, p.id, { modes });
+    }
+
     const arr = advancers.slice();
     for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
     // 1v1-Finale: jeder ein eigenes Team. 2v2: 2er-Teams bilden → ceil(N/2) Teams
@@ -1278,9 +1314,42 @@
     await sb.from('disciplines').update({ phase: next, teams_drawn_at: ts }).eq('id', discId);
     d.phase = next; d.teams_drawn_at = ts;
     delete haxAdvanceSel[discId];
+    await recomputeHaxball(discId);
     renderDisciplineBodyFor(discId); renderOverview();
     toast(`Weiter zu ${next} — Teams ausgelost 🎲`, 'ok');
   };
+
+  // Auto-Platzierung Haxball nach Trichter-Tiefe: wer später ausscheidet, steht höher.
+  // Finalisten oben (sobald Finale entschieden), dann 2v2-, dann Teams-Ausgeschiedene;
+  // innerhalb einer Phase nach Siegen. Ausgeschiedene werden sofort fest gewertet,
+  // noch Spielende bekommen erst Punkte, wenn ihr Schicksal feststeht.
+  async function recomputeHaxball(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d || d.kind !== 'haxball') return;
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const curPhase = d.phase || 'Teams';
+    const curIdx = HAXBALL_PHASES.indexOf(curPhase);
+    const lastIdx = HAXBALL_PHASES.length - 1;
+    const br = normBracket(d); const curGames = br.games[curPhase] || {};
+    const curWins = {}; Object.values(curGames).forEach(a => a.forEach(w => { if (w) curWins[w] = (curWins[w]||0)+1; }));
+    const finaleDecided = (curIdx === lastIdx) && Object.values(curWins).some(w => w > 0);
+    const entries = playing.map(p => {
+      const r = currentResults[discId]?.[p.id] || {};
+      const hax = (r.modes && r.modes.hax) || null;
+      return hax
+        ? { p, depth: hax.elim, wins: hax.wins || 0, elim: true }
+        : { p, depth: curIdx, wins: curWins[r.team] || 0, elim: false };
+    });
+    // später ausgeschieden (höhere depth) zuerst, dann mehr Siege
+    entries.sort((a,b) => (b.depth - a.depth) || (b.wins - a.wins));
+    for (let i = 0; i < entries.length; i++) {
+      const e = entries[i];
+      const sealed = e.elim || finaleDecided; // Platz steht fest?
+      const place = i + 1;
+      await upsertResultDirect(discId, e.p.id, sealed
+        ? { placement: place, points: soloPoints(place) }
+        : { placement: null, points: 0 });
+    }
+  }
 
   // --- Solo: Klick-Reihenfolge ---
   function renderSoloBody(d, participants) {
@@ -1302,14 +1371,29 @@
 
     const vetoHtml = '';
 
+    // GeoGuessr: einstellbare Rundenzahl (rein informativ, wird live angezeigt)
+    const roundsHtml = (d.kind === 'geoguessr')
+      ? `<div class="join-field" style="margin-bottom:0.8rem"><label class="join-field-label">🗺️ Runden im Challenge (wird live angezeigt)</label><input type="number" min="1" max="20" class="join-field-input" style="max-width:120px" value="${d.rounds || 5}" onchange="setGeoRounds('${d.id}',this.value)"></div>`
+      : '';
+
     return `
       <div style="padding-top:1rem">
+        ${roundsHtml}
         <p class="section-desc">Tippe die Spieler in <b>Zielreihenfolge</b> an — 1. Klick = Platz 1.${ranked.length ? ` · <a onclick="resetSolo('${d.id}')" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : ''}</p>
         <div class="rank-list">${rankedHtml}</div>
         ${poolHtml}
         ${vetoHtml}
       </div>`;
   }
+
+  window.setGeoRounds = async function(discId, value) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    let r = parseInt(value); if (isNaN(r)) r = 5; r = Math.max(1, Math.min(20, r));
+    const { error } = await sb.from('disciplines').update({ rounds: r }).eq('id', discId);
+    if (error) { console.error(error); toast('Runden speichern fehlgeschlagen — Spalte disciplines.rounds fehlt? (SQL Abschnitt 10)', 'error'); return; }
+    d.rounds = r;
+    toast(`GeoGuessr: ${r} Runden`, 'ok');
+  };
 
   // --- Fall Guys: Squads + Team-Platz ---
   function renderTeamBody(d, participants) {
@@ -1412,17 +1496,23 @@
       </div>`;
   }
 
-  // --- Brawlhalla: Heats + Punkte (max. 4er-Lobbies pro Runde, Lobby-Platz 4/3/2/1, über Runden summiert) ---
+  // --- Brawlhalla: feste Lobbies + Self-Tracking pro Spiel ---
+  // Eine „Runde" = feste Lobby-Phase (eigener Voice-Channel + Raum-Code). Pro Lobby werden
+  // beliebig viele Spiele gespielt; nach jedem Spiel die Reihenfolge (1.–4.) eintippen → 4/3/2/1.
+  // Zwischen den Runden werden die Lobbies neu ausgelost (= Lobbywechsel). Summe über alle Spiele.
+  const fgGamesOf = (discId, pid, n) => { const a = fgModeOf(discId, pid, n).games; return Array.isArray(a) ? a : []; };
+  const brawlPts = games => games.reduce((s, pl) => s + (pl ? (BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0) : 0), 0);
+
   function renderBrawlhallaBody(d, participants) {
     const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
     const rounds = (Array.isArray(d.modes) ? d.modes : []).filter(m => m.type === 'brawl');
-    const addBar = `<div class="draw-control"><span class="draw-label">+ Runde:</span><button class="draw-btn" onclick="addMode('${d.id}','brawl')">+ Runde</button></div>`;
+    const addBar = `<div class="draw-control"><span class="draw-label">+ Lobby-Phase:</span><button class="draw-btn" onclick="addMode('${d.id}','brawl')">+ Phase</button></div>`;
     const roundsHtml = rounds.length
       ? rounds.map((m, idx) => renderBrawlRound(d, m, idx, playing)).join('')
-      : '<div class="rank-empty">Noch keine Runde — füge 2–3 Runden hinzu. Pro Runde werden Lobbies à max. 4 Spieler ausgelost.</div>';
+      : '<div class="rank-empty">Noch keine Phase — füge 2 Lobby-Phasen hinzu (= ein Lobbywechsel dazwischen). Pro Phase werden Lobbies à max. 4 ausgelost; jede Lobby trägt ihre Spiele selbst ein.</div>';
     return `
       <div style="padding-top:1rem">
-        <p class="section-desc">Heats + Punkte: Pro Runde werden Lobbies à max. 4 Spieler ausgelost. In jeder Lobby Platz 1–4 antippen (4/3/2/1 Punkte). Summe über alle Runden → Brawlhalla-Gesamtwertung.</p>
+        <p class="section-desc">Feste Lobbies (eigener Voice-Channel + Raum-Code). Jede Lobby spielt mehrere Spiele und tippt nach jedem Spiel die Reihenfolge ein (4/3/2/1). Empfehlung: <b>2 Phasen à ~3 Spiele</b> mit einem Lobbywechsel dazwischen ≈ 30 min. Die Spieler tragen live selbst ein — hier kannst du korrigieren.</p>
         ${addBar}
         ${roundsHtml}
         ${renderBrawlStandings(d, playing)}
@@ -1432,12 +1522,11 @@
   function renderBrawlRound(d, m, idx, playing) {
     const n = m.n;
     const lobOf = p => fgModeOf(d.id, p.id, n).lobby || 0;
-    const plOf  = p => fgModeOf(d.id, p.id, n).placement || null;
     const assigned = playing.some(p => lobOf(p));
     const head = `
       <div class="mode-head">
-        <span class="mode-title">Runde ${idx + 1}</span>
-        <button class="mode-del" onclick="removeBrawlRound('${d.id}',${n})" title="Runde löschen">×</button>
+        <span class="mode-title">Phase ${idx + 1}</span>
+        <button class="mode-del" onclick="removeBrawlRound('${d.id}',${n})" title="Phase löschen">×</button>
       </div>`;
     const lobbyCount = Math.max(0, ...playing.map(lobOf));
     const draw = `<div class="draw-control"><span class="draw-label">🎲 Lobbies:</span><button class="draw-btn" onclick="drawBrawlLobbies('${d.id}',${n})">${assigned ? 'neu auslosen' : 'auslosen'}</button>${assigned ? ` · <a onclick="resetBrawlRound('${d.id}',${n})" style="color:var(--alert);cursor:pointer">leeren</a>` : ''}</div>`;
@@ -1447,17 +1536,13 @@
       for (let l = 1; l <= lobbyCount; l++) {
         const members = playing.filter(p => lobOf(p) === l);
         if (!members.length) continue;
-        const ranked = members.filter(plOf).sort((a,b) => plOf(a) - plOf(b));
-        const unranked = members.filter(p => !plOf(p));
-        const rankedHtml = ranked.length ? ranked.map(p => {
-          const pl = plOf(p); const pts = BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0;
-          return `<div class="rank-row"><span class="rank-pos">${pl}.</span><span class="rank-name">${p.name}</span><span class="rank-pts">+${pts}</span><button class="rank-x" onclick="unrankBrawl('${d.id}',${n},'${p.id}')">×</button></div>`;
-        }).join('') : '<div class="rank-empty">1. Klick = Platz 1.</div>';
-        const poolHtml = unranked.length
-          ? `<div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankBrawl('${d.id}',${n},'${p.id}')">${p.name}</button>`).join('')}</div>`
-          : '<div class="rank-done">✓ Lobby fertig.</div>';
+        const gamesCount = Math.max(0, ...members.map(p => fgGamesOf(d.id, p.id, n).length));
+        const tally = members.map(p => ({ p, games: fgGamesOf(d.id, p.id, n), pts: brawlPts(fgGamesOf(d.id, p.id, n)) }))
+          .sort((a,b) => b.pts - a.pts)
+          .map(r => `<div class="rank-row"><span class="rank-name">${r.p.name}</span><span style="color:var(--muted);font-size:.82em">${r.games.length ? r.games.map(g=>g+'.').join(' ') : '—'}</span><span class="rank-pts">${r.pts} Pkt</span></div>`).join('');
+        const undo = gamesCount ? `<a onclick="undoBrawlGame('${d.id}',${n},${l})" style="color:var(--alert);cursor:pointer;font-size:.85rem">↩ letztes Spiel rückgängig</a>` : '';
         const codeInput = `<div class="join-field" style="margin:0.3rem 0 0.5rem"><label class="join-field-label">🔑 Raum-Code Lobby ${l} — wird live angezeigt</label><input type="text" class="join-field-input" value="${codeOf(l).replace(/"/g,'&quot;')}" placeholder="z.B. 482913" onchange="setBrawlLobbyCode('${d.id}',${n},${l},this.value)"></div>`;
-        lobbiesHtml += `<div class="haxball-step"><div class="haxball-step-title">Lobby ${l} · ${members.length} Spieler</div>${codeInput}<div class="rank-list">${rankedHtml}</div>${poolHtml}</div>`;
+        lobbiesHtml += `<div class="haxball-step"><div class="haxball-step-title">Lobby ${l} · ${members.length} Spieler · ${gamesCount} Spiele</div>${codeInput}<div class="rank-list">${tally}</div>${undo}</div>`;
       }
     }
     return `<div class="mode-block">${head}${draw}${lobbiesHtml}</div>`;
@@ -1482,17 +1567,14 @@
     const rounds = (Array.isArray(d.modes) ? d.modes : []).filter(m => m.type === 'brawl');
     if (!rounds.length) return '';
     const rows = playing.map(p => {
-      const per = rounds.map(m => {
-        const pl = fgModeOf(d.id, p.id, m.n).placement;
-        return pl ? (BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0) : 0;
-      });
+      const per = rounds.map(m => brawlPts(fgGamesOf(d.id, p.id, m.n)));
       const total = per.reduce((a,b) => a + b, 0);
       return { p, per, total };
     });
     rows.sort((a,b) => b.total - a.total);
     let rank = 0, last = -1;
     rows.forEach((r,i) => { if (r.total !== last) rank = i + 1; r.rank = r.total > 0 ? rank : '–'; last = r.total; });
-    const head = `<th style="text-align:left">Spieler</th>${rounds.map((m,i) => `<th>R${i+1}</th>`).join('')}<th>Σ</th><th>Platz</th>`;
+    const head = `<th style="text-align:left">Spieler</th>${rounds.map((m,i) => `<th>Ph${i+1}</th>`).join('')}<th>Σ</th><th>Platz</th>`;
     const body = rows.map(r => `<tr><td style="text-align:left">${r.p.name}</td>${r.per.map(pt => `<td>${pt||'–'}</td>`).join('')}<td><b>${r.total}</b></td><td>${r.rank}</td></tr>`).join('');
     return `<div class="haxball-step-title">Gesamtwertung (fließt in den Abend)</div><table class="fg-standings"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
   }
@@ -1702,7 +1784,7 @@
     const arr = playing.slice();
     for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
     const nLob = Math.ceil(arr.length / 4); // max 4 pro Lobby, gleichmäßig verteilt (Round-Robin)
-    for (let i = 0; i < arr.length; i++) await setModeData(discId, arr[i].id, n, { lobby: (i % nLob) + 1, placement: null });
+    for (let i = 0; i < arr.length; i++) await setModeData(discId, arr[i].id, n, { lobby: (i % nLob) + 1, games: [] });
     const ts = new Date().toISOString();
     await sb.from('disciplines').update({ teams_drawn_at: ts }).eq('id', discId);
     d.teams_drawn_at = ts;
@@ -1711,34 +1793,24 @@
     toast(`${nLob} Lobbie${nLob > 1 ? 's' : ''} ausgelost`, 'ok');
   };
 
-  window.rankBrawl = async function(discId, n, pid) {
+  // Letztes Spiel einer Lobby zurücknehmen (entfernt den letzten Eintrag bei jedem Mitglied)
+  window.undoBrawlGame = async function(discId, n, lobby) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
-    const myLobby = fgModeOf(discId, pid, n).lobby;
     const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
-    const maxPl = Math.max(0, ...playing.filter(p => fgModeOf(discId, p.id, n).lobby === myLobby).map(p => fgModeOf(discId, p.id, n).placement || 0));
-    await setModeData(discId, pid, n, { placement: maxPl + 1 });
-    await recomputeBrawl(discId);
-    renderDisciplineBodyFor(discId); renderOverview();
-  };
-
-  window.unrankBrawl = async function(discId, n, pid) {
-    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
-    const lobby = fgModeOf(discId, pid, n).lobby;
-    await setModeData(discId, pid, n, { placement: null });
-    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
-    const ranked = playing.filter(p => fgModeOf(discId, p.id, n).lobby === lobby && fgModeOf(discId, p.id, n).placement)
-      .sort((a,b) => fgModeOf(discId, a.id, n).placement - fgModeOf(discId, b.id, n).placement);
-    for (let i = 0; i < ranked.length; i++) {
-      if (fgModeOf(discId, ranked[i].id, n).placement !== i + 1) await setModeData(discId, ranked[i].id, n, { placement: i + 1 });
+    const members = playing.filter(p => fgModeOf(discId, p.id, n).lobby === lobby);
+    for (const p of members) {
+      const g = fgGamesOf(discId, p.id, n).slice();
+      if (g.length) { g.pop(); await setModeData(discId, p.id, n, { games: g }); }
     }
     await recomputeBrawl(discId);
     renderDisciplineBodyFor(discId); renderOverview();
+    toast('Letztes Spiel zurückgenommen', 'ok');
   };
 
   window.resetBrawlRound = async function(discId, n) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
     const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
-    for (const p of playing) { const md = fgModeOf(discId, p.id, n); if (md.lobby || md.placement) await setModeData(discId, p.id, n, { lobby: null, placement: null }); }
+    for (const p of playing) { const md = fgModeOf(discId, p.id, n); if (md.lobby || (md.games && md.games.length)) await setModeData(discId, p.id, n, { lobby: null, games: [] }); }
     await recomputeBrawl(discId);
     renderDisciplineBodyFor(discId); renderOverview();
   };
@@ -1764,7 +1836,7 @@
     const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
     const totals = playing.map(p => {
       let pts = 0;
-      rounds.forEach(m => { const pl = fgModeOf(discId, p.id, m.n).placement; if (pl) pts += BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0; });
+      rounds.forEach(m => { pts += brawlPts(fgGamesOf(discId, p.id, m.n)); });
       return { p, pts };
     });
     totals.sort((a,b) => b.pts - a.pts);

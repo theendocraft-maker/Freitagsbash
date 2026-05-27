@@ -461,6 +461,21 @@
   .lob-code b { color: var(--cool); letter-spacing: 0.06em; }
   .lob-code.lob-code-wait { color: var(--muted); font-size: 0.85rem; }
   .lob-mem { font-size: 0.9rem; color: var(--text); line-height: 1.4; }
+  .nd-sub { font-size: 0.85rem; color: var(--muted); margin: 0.2rem 0 0.4rem; }
+  .lob-tally { margin: 0.2rem 0 0.5rem; }
+  .lob-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: center; padding: 0.2rem 0; font-size: 0.9rem; }
+  .lob-rname { color: var(--text); }
+  .lob-rg { color: var(--muted); font-family: var(--font-mono); font-size: 0.8rem; }
+  .lob-rp { color: var(--primary); font-weight: 700; font-family: var(--font-mono); min-width: 1.4rem; text-align: right; }
+  .brawl-entry { border-top: 1px dashed var(--border); padding-top: 0.5rem; margin-top: 0.3rem; }
+  .brawl-hint { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .brawl-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
+  .brawl-chip { font-size: 0.85rem; padding: 0.4rem 0.7rem; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--bg-2); color: var(--text); cursor: pointer; }
+  .brawl-chip.on { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+  .brawl-acts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .brawl-go { font-size: 0.85rem; font-weight: 700; padding: 0.45rem 0.9rem; border-radius: var(--radius-sm); border: none; background: var(--primary); color: #0b0d10; cursor: pointer; }
+  .brawl-go:disabled { opacity: 0.4; cursor: not-allowed; }
+  .brawl-undo { font-size: 0.82rem; padding: 0.45rem 0.7rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
   /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
   .live-status { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; color: var(--text); line-height: 1.35; }
   .live-status.now { border-left-color: var(--alert); }
@@ -1044,6 +1059,68 @@
     refreshEvents();
   };
 
+  // === Brawlhalla Self-Tracking: Lobby tippt nach jedem Spiel die Reihenfolge ein ===
+  window.tapBrawl = function(discId, n, l, pid) {
+    const k = bkey(discId, n, l); const buf = brawlBuf[k] = brawlBuf[k] || [];
+    const i = buf.indexOf(pid);
+    if (i >= 0) buf.splice(i, 1); else buf.push(pid); // an/aus
+    rerenderNow();
+  };
+  window.brawlClearBuf = function(discId, n, l) { brawlBuf[bkey(discId, n, l)] = []; rerenderNow(); };
+
+  window.brawlCommitGame = async function(discId, n, l) {
+    const k = bkey(discId, n, l); const buf = (brawlBuf[k] || []).slice();
+    if (buf.length < 2) return;
+    try {
+      for (let i = 0; i < buf.length; i++) {
+        const pid = buf[i];
+        const { data: ex } = await sb.from('results').select('*').eq('discipline_id', discId).eq('player_id', pid).maybeSingle();
+        const modes = Object.assign({}, (ex && ex.modes) || {});
+        const cur = Object.assign({}, modes[n] || {});
+        const games = Array.isArray(cur.games) ? cur.games.slice() : [];
+        games.push(i + 1); cur.games = games; modes[n] = cur;
+        if (ex) await sb.from('results').update({ modes }).eq('id', ex.id);
+        else await sb.from('results').insert({ discipline_id: discId, player_id: pid, modes });
+      }
+      brawlBuf[k] = [];
+      await recomputeBrawlLive(discId);
+    } catch (e) { console.error(e); }
+    refreshEvents();
+  };
+
+  window.brawlUndoGame = async function(discId, n, l) {
+    try {
+      const { data: rows } = await sb.from('results').select('*').eq('discipline_id', discId);
+      for (const r of (rows || [])) {
+        const md = r.modes && r.modes[n];
+        if (md && md.lobby === l && Array.isArray(md.games) && md.games.length) {
+          const modes = Object.assign({}, r.modes);
+          const cur = Object.assign({}, md); const g = cur.games.slice(); g.pop(); cur.games = g; modes[n] = cur;
+          await sb.from('results').update({ modes }).eq('id', r.id);
+        }
+      }
+      await recomputeBrawlLive(discId);
+    } catch (e) { console.error(e); }
+    refreshEvents();
+  };
+
+  async function recomputeBrawlLive(discId) {
+    const { data: disc } = await sb.from('disciplines').select('*').eq('id', discId).maybeSingle();
+    const rounds = (disc && Array.isArray(disc.modes) ? disc.modes : []).filter(m => m.type === 'brawl');
+    const { data: rows } = await sb.from('results').select('*').eq('discipline_id', discId);
+    const totals = (rows || []).map(r => {
+      let pts = 0; rounds.forEach(m => { pts += brawlPts(brawlGamesOf(r, m.n)); });
+      return { r, pts };
+    });
+    const ranked = totals.filter(t => t.pts > 0).sort((a,b) => b.pts - a.pts);
+    let rank = 0, last = null;
+    ranked.forEach((t,i) => { if (t.pts !== last) rank = i + 1; t.rank = rank; last = t.pts; });
+    for (const t of totals) {
+      const placement = t.pts > 0 ? ranked.find(x => x.r.id === t.r.id).rank : null;
+      await sb.from('results').update({ placement, points: placement ? SOLO_PTS[Math.min(placement, SOLO_PTS.length) - 1] : 0 }).eq('id', t.r.id);
+    }
+  }
+
   const COLORS = [
     ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
     ['#ffd34a','#ff7a4a'], ['#6cf2a0','#d4ff3a'], ['#ff7ce0','#7df0ff'],
@@ -1177,11 +1254,11 @@
     // Brawlhalla Demo (nur wenn Brawlhalla gerade dran ist = Step 2)
     const brawlDisc = disciplines.find(d => d.kind === 'brawlhalla');
     if (step === 2) {
-      brawlDisc.modes = [{ n:1, type:'brawl', label:'Runde 1', codes:{ 1:'482913', 2:'557104' } }, { n:2, type:'brawl', label:'Runde 2', codes:{ 1:'330815', 2:'904277' } }];
+      brawlDisc.modes = [{ n:1, type:'brawl', label:'Phase 1', codes:{ 1:'482913', 2:'557104' } }, { n:2, type:'brawl', label:'Phase 2', codes:{ 1:'330815', 2:'904277' } }];
       brawlDisc.teams_drawn_at = '2026-05-29T19:15:00Z';
-      // 6 Spieler → 2 Lobbies à 3; pro Lobby Platz 1–3 (Punkte 4/3/2). Runde 2 neu gemischt.
-      const r1 = { p1:{lobby:1,placement:1}, p3:{lobby:1,placement:2}, p5:{lobby:1,placement:3}, p2:{lobby:2,placement:1}, p4:{lobby:2,placement:2}, p6:{lobby:2,placement:3} };
-      const r2 = { p2:{lobby:1,placement:1}, p1:{lobby:1,placement:2}, p6:{lobby:1,placement:3}, p3:{lobby:2,placement:1}, p4:{lobby:2,placement:2}, p5:{lobby:2,placement:3} };
+      // 6 Spieler → 2 feste Lobbies à 3; je 2 self-getrackte Spiele (games = Platzierungen je Spiel).
+      const r1 = { p1:{lobby:1,games:[1,2]}, p3:{lobby:1,games:[2,1]}, p5:{lobby:1,games:[3,3]}, p2:{lobby:2,games:[1,1]}, p4:{lobby:2,games:[2,3]}, p6:{lobby:2,games:[3,2]} };
+      const r2 = { p2:{lobby:1,games:[1]}, p1:{lobby:1,games:[2]}, p6:{lobby:1,games:[3]}, p3:{lobby:2,games:[1]}, p4:{lobby:2,games:[2]}, p5:{lobby:2,games:[3]} };
       players.forEach(p => results.push({ id:`r-bra-${p.id}`, discipline_id:brawlDisc.id, player_id:p.id, placement:null, points:null, modes:{ 1:r1[p.id], 2:r2[p.id] } }));
     }
     const vetoes = [{ event_id:'e1', player_id:'p4', discipline_kind:'fallguys' }];
@@ -1218,6 +1295,15 @@
   // Trackt Zustandsübergänge zwischen zwei Renders, um die richtigen Toasts auszulösen
   let lastCurrentDiscId = null;       // für „Spiel startet"
   const lastDrawnByDisc = {};         // discId -> teams_drawn_at (für „Teams/Lobbies ausgelost")
+
+  // === Brawlhalla Self-Tracking (feste Lobbies, Spiele selbst eintippen) ===
+  const BRAWL_PTS = [4, 3, 2, 1];
+  const brawlPts = g => (Array.isArray(g) ? g : []).reduce((s, pl) => s + (pl ? (BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0) : 0), 0);
+  const brawlGamesOf = (r, n) => { const a = r && r.modes && r.modes[n] && r.modes[n].games; return Array.isArray(a) ? a : []; };
+  let lastNowDisc = null, lastNowResults = null;   // für lokales Re-Render bei Tap
+  const brawlBuf = {};                              // `${discId}|${n}|${lobby}` -> [pid,...] (laufendes Spiel)
+  const bkey = (discId, n, l) => `${discId}|${n}|${l}`;
+  function rerenderNow() { if (lastNowDisc) buildNowDetail(lastNowDisc, lastNowResults); }
 
   async function refreshEvents() {
     if (isDemo) {
@@ -1728,12 +1814,15 @@
     const box = document.getElementById('liveNowDetail');
     if (!box) return;
     if (!currentDisc) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    lastNowDisc = currentDisc; lastNowResults = results;   // für lokales Re-Render (Brawlhalla-Self-Entry)
 
     const kind = currentDisc.kind;
     const nameOf = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
 
     // --- Regeln / Modus ---
-    const rules = discRules(kind);
+    let rules = discRules(kind);
+    // GeoGuessr: eingestellte Rundenzahl in den Regeltext einsetzen (Standard 5)
+    if (kind === 'geoguessr' && currentDisc.rounds) rules = rules.replace(/\d+\s*Runden/, `${currentDisc.rounds} Runden`);
     // Original-Logo des Spiels (Datei in logos/<kind>.png); fällt auf das Kürzel zurück, falls keins da ist
     const head = `
       <div class="nd-head">
@@ -1964,6 +2053,12 @@
       // Status je Modus: fertig (Platzierung gesetzt) / läuft (Teams stehen) / kommt
       const modeStatus = m => {
         const rs = myRows.map(r => r.modes && r.modes[m.n]).filter(Boolean);
+        if (m.type === 'brawl') {
+          const hasLobby = rs.some(x => x.lobby);
+          if (!hasLobby) return 'next';
+          const laterAssigned = mdefs.some(mm => mm.type === 'brawl' && mm.n > m.n && myRows.some(r => r.modes && r.modes[mm.n] && r.modes[mm.n].lobby));
+          return laterAssigned ? 'done' : 'live';
+        }
         if (rs.some(x => x.placement)) return 'done';
         if (rs.some(x => x.team || x.lobby)) return 'live';
         return 'next';
@@ -1979,40 +2074,58 @@
         return `<span class="nd-mode-chip ${cls}"><b>${i+1}</b> ${lblOf(m,i)}${badge} <span class="mc-st">${word}</span></span>`;
       }).join('')}</div></div>`;
 
-      // --- Brawlhalla: Lobbies der aktiven Runde mit eigenem Raum-Code + Besetzung ---
+      // --- Brawlhalla: feste Lobbies der aktiven Phase — Code, Stand, Self-Tracking pro Spiel ---
       if (kind === 'brawlhalla') {
         let active = mdefs.find(m => modeStatus(m) === 'live');
         if (!active && firstNext >= 0) active = mdefs[firstNext];
         if (active) {
           const n = active.n;
           const lobbies = {};
-          myRows.forEach(r => {
-            const md = r.modes && r.modes[n];
-            if (md && md.lobby) (lobbies[md.lobby] = lobbies[md.lobby] || []).push({ pid: r.player_id, pl: md.placement });
-          });
+          myRows.forEach(r => { const md = r.modes && r.modes[n]; if (md && md.lobby) (lobbies[md.lobby] = lobbies[md.lobby] || []).push(r); });
           const lobNums = Object.keys(lobbies).map(Number).sort((a,b) => a-b);
           if (lobNums.length) {
             const codes = active.codes || {};
             const cards = lobNums.map(l => {
-              const mem = lobbies[l].slice().sort((a,b) => (a.pl||99)-(b.pl||99)).map(x => nameOf(x.pid)).join(', ');
+              const memRows = lobbies[l];
+              const gamesCount = Math.max(0, ...memRows.map(r => brawlGamesOf(r, n).length));
               const code = codes[l];
-              const codeHtml = code
-                ? `<div class="lob-code">🔑 Code: <b>${code}</b></div>`
-                : `<div class="lob-code lob-code-wait">🔑 Code folgt …</div>`;
-              return `<div class="lob-card"><div class="lob-head">Lobby ${l}</div>${codeHtml}<div class="lob-mem">${mem}</div></div>`;
+              const codeHtml = code ? `<div class="lob-code">🔑 Code: <b>${code}</b></div>` : `<div class="lob-code lob-code-wait">🔑 Code folgt …</div>`;
+              const tally = memRows.map(r => ({ pid: r.player_id, g: brawlGamesOf(r, n), pts: brawlPts(brawlGamesOf(r, n)) }))
+                .sort((a,b) => b.pts - a.pts)
+                .map(x => `<div class="lob-row"><span class="lob-rname">${nameOf(x.pid)}</span><span class="lob-rg">${x.g.length ? x.g.map(v=>v+'.').join(' ') : '—'}</span><span class="lob-rp">${x.pts}</span></div>`).join('');
+              let entry = '';
+              if (!isDemo) {
+                const buf = brawlBuf[bkey(currentDisc.id, n, l)] || [];
+                const chips = memRows.map(r => {
+                  const pos = buf.indexOf(r.player_id); const on = pos >= 0;
+                  return `<button class="brawl-chip ${on?'on':''}" onclick="tapBrawl('${currentDisc.id}',${n},${l},'${r.player_id}')">${on?`<b>${pos+1}.</b> `:''}${nameOf(r.player_id)}</button>`;
+                }).join('');
+                const canCommit = buf.length === memRows.length && memRows.length >= 2;
+                entry = `<div class="brawl-entry">
+                  <div class="brawl-hint">Spiel fertig? Tippe in <b>Zielreihenfolge</b> (1. = Sieger).</div>
+                  <div class="brawl-chips">${chips}</div>
+                  <div class="brawl-acts">
+                    <button class="brawl-go" ${canCommit?'':'disabled'} onclick="brawlCommitGame('${currentDisc.id}',${n},${l})">✓ Spiel werten</button>
+                    ${buf.length?`<button class="brawl-undo" onclick="brawlClearBuf('${currentDisc.id}',${n},${l})">leeren</button>`:''}
+                    ${gamesCount?`<button class="brawl-undo" onclick="brawlUndoGame('${currentDisc.id}',${n},${l})">↩ letztes Spiel</button>`:''}
+                  </div>
+                </div>`;
+              } else {
+                entry = `<div class="brawl-hint">Die Spieler tippen hier live nach jedem Spiel ihre Reihenfolge ein.</div>`;
+              }
+              return `<div class="lob-card"><div class="lob-head">Lobby ${l} · ${gamesCount} Spiele</div>${codeHtml}<div class="lob-tally">${tally}</div>${entry}</div>`;
             }).join('');
-            modesListHtml += `<div class="nd-block"><div class="nd-label">Lobbies · ${lblOf(active, mdefs.indexOf(active))}</div><div class="lob-grid">${cards}</div></div>`;
+            modesListHtml += `<div class="nd-block"><div class="nd-label">Lobbies · ${lblOf(active, mdefs.indexOf(active))}</div><p class="nd-sub">Feste Lobbies (eigener Voice-Channel). Jede Lobby spielt mehrere Spiele und trägt nach jedem Spiel die Reihenfolge selbst ein. Richtwert ~3 Spiele pro Phase.</p><div class="lob-grid">${cards}</div></div>`;
           }
         }
       }
 
       const SP = [10,8,6,4,3,2,1], sp = r => (r && r >= 1) ? SP[Math.min(r, SP.length)-1] : 0;
       const TP = [10,8,6,4], tp = r => (r && r >= 1) ? TP[Math.min(r, TP.length)-1] : 0;
-      const BP = [4,3,2,1], bp = r => (r && r >= 1) ? BP[Math.min(r, BP.length)-1] : 0;
       const rws = myRows.filter(r => r.modes).map(r => {
         const per = mdefs.map(m => {
           const md = r.modes[m.n] || {};
-          if (m.type === 'brawl') return bp(md.placement);
+          if (m.type === 'brawl') return brawlPts(brawlGamesOf(r, m.n));
           return (m.type === 'team') ? tp(md.placement) : sp(md.placement);
         });
         return { pid: r.player_id, per, tot: per.reduce((a,b) => a+b, 0) };
