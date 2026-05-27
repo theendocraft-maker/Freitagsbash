@@ -623,6 +623,17 @@
       </div>
     </div>
 
+    <!-- Vorstellung & Joker (nur im Live-Modus) -->
+    <div class="section" id="introSection" style="display:none">
+      <div class="section-title">🎬 Vorstellung & Joker</div>
+      <p class="section-desc">Vor den Spielen: schalte manuell durch, was auf der Spielabend-Seite gezeigt wird. Sobald du eine Disziplin auf „läuft" stellst, startet das Spiel und die Vorstellung endet.</p>
+      <div class="draw-control" id="introControl"></div>
+      <div class="draw-control" style="margin-top:0.6rem">
+        <span class="draw-label">🃏 Joker-Minispiel:</span>
+        <button class="draw-btn" id="copterToggleBtn">aktivieren</button>
+      </div>
+    </div>
+
     <!-- Finalize -->
     <div class="finalize-bar win-bar">
       <div class="finalize-info">
@@ -863,6 +874,22 @@
     if (pauseBtn) {
       pauseBtn.textContent = currentEvent.pause_msg ? '▶ Pause beenden' : '☕ Pause starten';
       pauseBtn.disabled = currentEvent.status !== 'live';
+    }
+    const introSec = $('introSection');
+    if (introSec) {
+      if (currentEvent.status === 'live') {
+        introSec.style.display = 'block';
+        const step = currentEvent.intro_step;
+        const btns = [`<span class="draw-label">Zeigen:</span>`,
+          `<button class="phase-btn ${step === 0 ? 'active' : ''}" onclick="setIntroStep(0)">👥 Teilnehmer</button>`]
+          .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+1 ? 'active' : ''}" onclick="setIntroStep(${i+1})">${i+1} ${d.name}</button>`));
+        $('introControl').innerHTML = btns.join('');
+        const cb = $('copterToggleBtn');
+        cb.textContent = currentEvent.copter_active ? '✓ aktiv — deaktivieren' : 'aktivieren';
+        cb.classList.toggle('active', !!currentEvent.copter_active);
+      } else {
+        introSec.style.display = 'none';
+      }
     }
 
     $('setupDate').value = currentEvent.event_date;
@@ -1830,6 +1857,24 @@
     if (error) { console.error(error); toast('Pause-Update fehlgeschlagen', 'error'); return; }
     currentEvent.pause_msg = msg;
     toast(msg ? '☕ Pause läuft' : '▶ Pause beendet', 'ok');
+    renderDetail();
+  });
+
+  // Vorstellung durchschalten (Teilnehmer / Disziplinen) + Joker aktivieren
+  window.setIntroStep = async function(step) {
+    if (!currentEvent) return;
+    const { error } = await sb.from('events').update({ intro_step: step }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Update fehlgeschlagen', 'error'); return; }
+    currentEvent.intro_step = step;
+    renderDetail();
+  };
+  $('copterToggleBtn').addEventListener('click', async () => {
+    if (!currentEvent) return;
+    const v = !currentEvent.copter_active;
+    const { error } = await sb.from('events').update({ copter_active: v }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Update fehlgeschlagen', 'error'); return; }
+    currentEvent.copter_active = v;
+    toast(v ? '🃏 Joker aktiviert' : 'Joker deaktiviert', 'ok');
     renderDetail();
   });
 

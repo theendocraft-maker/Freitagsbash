@@ -78,3 +78,11 @@ alter table disciplines add column if not exists bracket jsonb;
 -- ============================================================
 -- events.pause_msg: null = keine Pause; Text = Pausen-Banner (z.B. "weiter um 21:10").
 alter table events add column if not exists pause_msg text;
+
+-- ============================================================
+-- 8) VORSTELLUNG (admin-gesteuert) + JOKER-AKTIVIERUNG
+-- ============================================================
+-- intro_step: null/aus = keine Vorstellung; 0 = Teilnehmer des Tages; 1..N = Disziplin N vorstellen.
+-- copter_active: Joker-Minispiel (Fly the Copter) wird erst angezeigt, wenn true.
+alter table events add column if not exists intro_step int;
+alter table events add column if not exists copter_active boolean;

@@ -303,6 +303,11 @@
   }
   .intro-btn:hover { border-color: var(--primary); }
   .intro-btn.wide { min-width: 92px; }
+  .intro-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6rem; margin: 0.8rem 0 1rem; animation: introIn 0.45s ease; }
+  .ir-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.7rem 0.5rem; text-align: center; }
+  .ir-av { width: 46px; height: 46px; border-radius: 50%; margin: 0 auto 0.4rem; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--bg); font-size: 0.95rem; }
+  .ir-name { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text); }
+  .ir-cry { font-size: 0.7rem; color: var(--muted); font-style: italic; margin-top: 0.15rem; }
   .nd-glyph {
     font-family: var(--font-display); font-weight: 900;
     font-size: 1rem; letter-spacing: 0.04em;
@@ -1120,7 +1125,7 @@
     return { players, event, disciplines, results, vetoes };
   }
 
-  let evPlayers = [], liveEvent = null, upcomingEvent = null, evVetoes = [];
+  let evPlayers = [], liveEvent = null, upcomingEvent = null, evVetoes = [], evParticipants = [];
   let lastSnapshot = {}; // pid -> { rank, total }
   let demoFirstRender = true;
 
@@ -1128,6 +1133,7 @@
     if (isDemo) {
       const d = demoData(demoStep);
       evPlayers = d.players;
+      evParticipants = d.players;
       liveEvent = d.event;
       upcomingEvent = null;
       document.getElementById('demoBanner').style.display = 'block';
@@ -1157,6 +1163,8 @@
     let results = [];
     if (dIds.length) { const { data } = await sb.from('results').select('*').in('discipline_id', dIds); results = data || []; }
     const { data: vts } = await sb.from('vetoes').select('*').eq('event_id', liveEvent.id);
+    const { data: parts } = await sb.from('event_participation').select('player_id').eq('event_id', liveEvent.id);
+    evParticipants = (parts || []).map(pp => evPlayers.find(p => p.id === pp.player_id)).filter(Boolean);
     await renderLiveFromData(dList, results, vts || []);
   }
 
@@ -1266,7 +1274,13 @@
       || orderedDiscs.some(d => d.status === 'live' || d.status === 'done')
       || (results && results.length > 0);
     if (!started && currentDisc) {
-      buildIntroSlideshow(orderedDiscs);
+      const roster = (evParticipants && evParticipants.length) ? evParticipants : evPlayers;
+      if (isDemo) {
+        buildIntroSlideshow(orderedDiscs, roster, { controls: true });
+      } else {
+        const step = (liveEvent.intro_step != null) ? liveEvent.intro_step : 0;
+        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step });
+      }
     } else {
       clearInterval(introTimer); introTimer = null;
       buildNowDetail(currentDisc, results);
@@ -1373,7 +1387,8 @@
     // Joker-Minispiel „Fly the Copter": Link + aktueller Stand der Veto-Spieler (parallel, klein)
     const copterEl = document.getElementById('liveCopter');
     if (copterEl) {
-      if (vetoes && vetoes.length) {
+      const copterOn = isDemo || (liveEvent && liveEvent.copter_active);
+      if (vetoes && vetoes.length && copterOn) {
         const pName = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
         const kindId = {}; orderedDiscs.forEach(d => kindId[d.kind] = d.id);
         copterVetoes = vetoes; copterKindId = kindId;
@@ -1494,42 +1509,60 @@
   }
 
   // Vorstellungs-Slideshow vor dem Start: alle Disziplinen, steuerbar (◀ ⏸/▶ ▶) zum Besprechen
-  let introTimer = null, introIdx = 0, introPaused = false, introDiscs = [];
+  // Vorstellung: Slide 0 = Teilnehmer des Tages, Slide 1..N = Disziplinen.
+  // Real: admin-gesteuert (events.intro_step), keine lokalen Buttons. Demo: lokal steuerbar (◀ ⏸ ▶).
+  let introTimer = null, introIdx = 0, introPaused = false, introDiscs = [], introRoster = [], introCtl = false;
+  function introCtrlHtml() {
+    return `<div class="intro-ctrl">
+      <button class="intro-btn" onclick="introNav(-1)" aria-label="Zurück">◀</button>
+      <button class="intro-btn wide" onclick="introToggle()">${introPaused ? '▶ Weiter' : '⏸ Pause'}</button>
+      <button class="intro-btn" onclick="introNav(1)" aria-label="Weiter">▶</button>
+    </div>`;
+  }
+  function introDotsHtml(step, n) {
+    return `<div class="intro-dots">${Array.from({length:n}).map((_,i) => `<span class="intro-dot ${i === step ? 'on' : ''}"></span>`).join('')}</div>`;
+  }
   function renderIntro() {
     const box = document.getElementById('liveNowDetail');
-    if (!box || !introDiscs.length) return;
-    const n = introDiscs.length;
-    const d = introDiscs[((introIdx % n) + n) % n];
-    const k = d.kind;
-    box.innerHTML = `
-      <div class="intro">
-        <div class="nd-label">Heute Abend · ${n} Spiele</div>
-        <div class="intro-slide" key="${k}-${introIdx}">
-          <img class="intro-logo" src="logos/${k}.svg" alt="${discName(k)}" onerror="this.style.display='none'">
-          <div class="intro-name">${discName(k)}</div>
-          <div class="intro-mode">${discMode(k)}</div>
-          <div class="intro-rules">${discRules(k)}</div>
-        </div>
-        <div class="intro-ctrl">
-          <button class="intro-btn" onclick="introNav(-1)" aria-label="Zurück">◀</button>
-          <button class="intro-btn wide" onclick="introToggle()">${introPaused ? '▶ Weiter' : '⏸ Pause'}</button>
-          <button class="intro-btn" onclick="introNav(1)" aria-label="Weiter">▶</button>
-        </div>
-        <div class="intro-dots">${introDiscs.map((dd,i) => `<span class="intro-dot ${i === ((introIdx % n) + n) % n ? 'on' : ''}"></span>`).join('')}</div>
-      </div>`;
+    if (!box) return;
+    const n = introDiscs.length + 1;
+    const step = ((introIdx % n) + n) % n;
+    if (step === 0) {
+      const ps = (introRoster && introRoster.length) ? introRoster : evPlayers;
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label">Heute am Start · ${ps.length} Spieler</div>
+          <div class="intro-roster">${ps.map((p,i) => `<div class="ir-card"><div class="ir-av" style="${p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${grad(i)}`}">${p.avatar_url ? '' : ini(p.name || '?')}</div><div class="ir-name">${p.name || '—'}</div>${p.cry ? `<div class="ir-cry">„${p.cry}"</div>` : ''}</div>`).join('')}</div>
+          ${introCtl ? introCtrlHtml() : ''}
+          ${introDotsHtml(0, n)}
+        </div>`;
+    } else {
+      const d = introDiscs[step - 1]; const k = d.kind;
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label">Vorstellung · Spiel ${step}/${introDiscs.length}</div>
+          <div class="intro-slide" key="${k}-${introIdx}">
+            <img class="intro-logo" src="logos/${k}.svg" alt="${discName(k)}" onerror="this.style.display='none'">
+            <div class="intro-name">${discName(k)}</div>
+            <div class="intro-mode">${discMode(k)}</div>
+            <div class="intro-rules">${discRules(k)}</div>
+          </div>
+          ${introCtl ? introCtrlHtml() : ''}
+          ${introDotsHtml(step, n)}
+        </div>`;
+    }
+    box.style.display = 'block';
   }
-  function restartIntroTimer() {
-    clearInterval(introTimer); introTimer = null;
-    if (!introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500);
-  }
-  function buildIntroSlideshow(discs) {
-    introDiscs = discs;
-    document.getElementById('liveNowDetail').style.display = 'block';
+  function buildIntroSlideshow(discs, roster, opts) {
+    introDiscs = discs; introRoster = roster || [];
+    introCtl = !!(opts && opts.controls);
+    if (opts && typeof opts.step === 'number') introIdx = opts.step;
     renderIntro();
-    restartIntroTimer();
+    clearInterval(introTimer); introTimer = null;
+    if (introCtl && !introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500);
   }
-  window.introNav = dir => { introIdx += dir; introPaused = true; renderIntro(); restartIntroTimer(); };
-  window.introToggle = () => { introPaused = !introPaused; renderIntro(); restartIntroTimer(); };
+  window.introNav = dir => { introIdx += dir; introPaused = true; clearInterval(introTimer); introTimer = null; renderIntro(); };
+  window.introToggle = () => { introPaused = !introPaused; renderIntro(); clearInterval(introTimer); introTimer = null; if (!introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500); };
 
   // "Wie im Fernsehen": zeigt für die aktuelle Disziplin Regeln/Modus,
   // den Phasen-Fortschritt (z.B. Haxball Teams → 2v2 → 1v1) und die aktuellen Teams.
