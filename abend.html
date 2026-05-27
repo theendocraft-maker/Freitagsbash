@@ -167,65 +167,56 @@
   .lh-next.done b { color: var(--primary); }
 
   /* Discipline progress strip — more compact */
+  /* Schlanke Disziplinen-Leiste (Esports-Ticker): nur das aktuelle Spiel zeigt den vollen Namen */
   .disc-strip {
     position: relative; z-index: 1;
-    display: grid; grid-template-columns: repeat(5, 1fr);
-    gap: 0.5rem;
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
+    display: flex; align-items: stretch; gap: 0.35rem;
+    margin-top: 1.25rem; padding-top: 1.1rem;
     border-top: 1px solid var(--border);
   }
   .disc-pill {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 0.55rem 0.8rem;
-    display: flex; align-items: center; gap: 0.5rem;
-    transition: border-color 0.2s, background 0.2s;
-    min-width: 0;
-  }
-  .disc-pill .glyph {
-    font-family: var(--font-display); font-weight: 900;
-    font-size: 0.7rem; letter-spacing: 0.04em;
-    padding: 3px 6px;
-    border-radius: 4px;
-    background: var(--surface-2);
-    color: var(--muted);
-    flex-shrink: 0;
-  }
-  .disc-pill .nm {
-    font-family: var(--font-mono);
-    font-size: 0.7rem; letter-spacing: 0.05em;
-    color: var(--muted);
-    flex: 1; min-width: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 999px; padding: 0.3rem 0.6rem;
+    display: flex; align-items: center; gap: 0.4rem; min-width: 0;
+    flex: 0 1 auto; transition: all 0.25s;
   }
   .disc-pill .dp-no {
-    font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
-    color: var(--muted); background: var(--surface-2);
-    border-radius: 4px; padding: 2px 5px; flex-shrink: 0;
+    font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700;
+    color: var(--muted); width: 16px; height: 16px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface-2); flex-shrink: 0;
   }
-  .disc-pill .dp-status {
-    font-family: var(--font-mono); font-size: 0.56rem; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); flex-shrink: 0; margin-left: auto;
+  .disc-pill .nm {
+    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.06em;
+    color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .disc-pill.done { border-color: var(--primary-line); background: var(--primary-soft); }
-  .disc-pill.done .glyph { background: var(--primary); color: var(--bg); }
-  .disc-pill.done .nm { color: var(--text); }
-  .disc-pill.done .dp-no { color: var(--primary); }
-  .disc-pill.done .dp-status { color: var(--primary); }
-  .disc-pill.now { border-color: var(--alert-line); background: var(--alert-soft); }
-  .disc-pill.now .glyph { background: var(--alert); color: white; }
-  .disc-pill.now .nm { color: var(--text); }
-  .disc-pill.now .dp-status { color: var(--alert); animation: dppulse 1.4s ease-in-out infinite; }
-  .disc-pill.next { opacity: 0.5; border-style: dashed; }
-  @keyframes dppulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-  @media (max-width: 720px) {
-    .disc-pill { padding: 0.45rem 0.45rem; flex-direction: column; gap: 0.25rem; text-align: center; }
-    .disc-pill .nm { font-size: 0.58rem; }
-    .disc-pill .dp-status { margin-left: 0; }
+  .disc-pill.done { border-color: var(--primary-line); opacity: 0.75; }
+  .disc-pill.done .dp-no { background: var(--primary); color: var(--bg); }
+  .disc-pill.now {
+    flex: 1 1 auto; border-color: var(--alert-line); background: var(--alert-soft);
   }
+  .disc-pill.now .dp-no { background: var(--alert); color: #fff; animation: dppulse 1.4s ease-in-out infinite; }
+  .disc-pill.now .nm { color: var(--text); font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+  .disc-pill.next { opacity: 0.5; }
+  @keyframes dppulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @media (max-width: 560px) {
+    .disc-strip { flex-wrap: wrap; }
+    .disc-pill .nm { font-size: 0.6rem; }
+  }
+  .copter-box {
+    margin-top: 1.25rem; padding: 0.9rem 1.1rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3, var(--cool)); border-radius: var(--radius-sm);
+  }
+  .copter-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+  .copter-title { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cool); }
+  .copter-link { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--bg); background: var(--cool); text-decoration: none; padding: 0.3rem 0.7rem; border-radius: 999px; }
+  .copter-sub { font-size: 0.8rem; color: var(--muted); margin: 0.4rem 0 0.6rem; }
+  .copter-rows { display: flex; flex-direction: column; gap: 0.25rem; }
+  .copter-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+  .copter-row .cr-pos { font-family: var(--font-mono); color: var(--muted); width: 20px; }
+  .copter-row .cr-name { flex: 1; color: var(--text); }
+  .copter-row .cr-pts { font-family: var(--font-display); color: var(--cool); }
   .pause-banner {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
     background: var(--cool-soft); border: 1px solid var(--cool);
@@ -342,6 +333,22 @@
   .br-hist.live b { color: var(--alert); }
   .bh-tag { font-family: var(--font-mono); font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
   .bh-tag.live { color: var(--alert); }
+  .br-next {
+    margin-top: 0.9rem; padding: 0.7rem 0.95rem; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center; gap: 0.7rem; flex-wrap: wrap;
+    background: var(--cool-soft); border: 1px solid var(--cool);
+    font-family: var(--font-mono); font-size: 0.86rem; color: var(--text);
+  }
+  .br-next .br-next-lbl { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cool); }
+  .br-next b { color: var(--muted); font-size: 0.78rem; }
+  .br-next.live { background: var(--alert-soft); border-color: var(--alert-line); }
+  .br-next.live .br-next-lbl { color: var(--alert); }
+  .br-details { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+  .br-details summary { cursor: pointer; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); list-style: none; }
+  .br-details summary::-webkit-details-marker { display: none; }
+  .br-details summary::before { content: '▸ '; }
+  .br-details[open] summary::before { content: '▾ '; }
+  .br-details[open] summary { margin-bottom: 0.5rem; }
   .nd-gpts { display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-gpt { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem 0.6rem; background: var(--bg-2); border-radius: var(--radius-sm); }
   .nd-gpt-pos { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); width: 24px; }
@@ -825,6 +832,8 @@
     <div class="scoreboard">
       <div id="liveBody"></div>
     </div>
+
+    <div class="copter-box" id="liveCopter" style="display:none;"></div>
   </section>
 
   <!-- VETO (hidden when live) -->
@@ -877,6 +886,8 @@
   const SUPABASE_URL      = 'https://bvaxeqkfozegeejdimdp.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Joker-Minispiel „Fly the Copter" — Link bei Bedarf hier anpassen
+  const COPTER_URL = 'https://www.crazygames.com/game/fly-the-copter';
 
   const COLORS = [
     ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
@@ -932,6 +943,7 @@
   const isDemo = params.get('demo') === '1';
   let demoStep = parseInt(params.get('step')) || 3; // default: 3 disciplines done
   let demoHaxPhase = params.get('hax') || 'Teams';
+  let demoHaxActive = false; // true = Haxball-Phasen-Vorschau (sonst zeigt Step 0 die Intro-Slideshow)
   const HAX_PHASE_DATA = {
     'Teams':      { gpp:1, teams:{ 1:['p1','p3'], 2:['p2','p5'], 3:['p4','p6'] }, games:{ '1-2':[1] } },         // 1-2 fertig, Rest kommt
     '2v2':        { gpp:3, teams:{ 1:['p1','p3'], 2:['p2','p5'] },                games:{ '1-2':[1,2] } },        // läuft (Best of 3, 1:1)
@@ -990,22 +1002,31 @@
         results.push({ id:`r-${kind}-${pid}`, discipline_id:disc.id, player_id:pid, placement:place, points:soloPts(place), team:null });
       });
     });
-    // Solange Haxball läuft (noch keine Platzierungen), zeigen wir die Teams
+    // Haxball-Teams nur in der Phasen-Vorschau (Step 0 ohne Vorschau = Intro-Slideshow)
     const haxDisc = disciplines.find(d => d.kind === 'haxball');
-    if (!results.some(r => r.discipline_id === haxDisc.id)) {
-      const haxTeams = hp.teams;
-      Object.entries(haxTeams).forEach(([tn, pids]) => pids.forEach(pid => {
+    if (demoHaxActive && !results.some(r => r.discipline_id === haxDisc.id)) {
+      Object.entries(hp.teams).forEach(([tn, pids]) => pids.forEach(pid => {
         results.push({ id:`r-hax-team-${pid}`, discipline_id:haxDisc.id, player_id:pid, placement:null, points:null, team:Number(tn) });
       }));
     }
-    // Fall Guys Demo: ein Team-Modus mit ausgelosten Teams (für die Live-Team-Anzeige)
+    // Fall Guys Demo (nur wenn Fall Guys gerade dran ist = Step 4)
     const fgDisc = disciplines.find(d => d.kind === 'fallguys');
-    fgDisc.modes = [{ n:1, type:'team', label:'Volleyfall' }, { n:2, type:'solo', label:'Hex-a-gone' }];
-    fgDisc.teams_drawn_at = new Date().toISOString();
-    const fgTeams = { 1:['p1','p3'], 2:['p2','p5'], 3:['p6'] };
-    Object.entries(fgTeams).forEach(([t, pids]) => pids.forEach(pid => {
-      results.push({ id:`r-fg-${pid}`, discipline_id:fgDisc.id, player_id:pid, placement:null, points:null, team:null, modes:{ 1:{ team:Number(t) } } });
-    }));
+    if (step === 4) {
+      fgDisc.modes = [{ n:1, type:'team', label:'Volleyfall' }, { n:2, type:'solo', label:'Hex-a-gone' }];
+      fgDisc.teams_drawn_at = new Date().toISOString();
+      const fgTeams = { 1:['p1','p3'], 2:['p2','p5'], 3:['p6'] };
+      Object.entries(fgTeams).forEach(([t, pids]) => pids.forEach(pid => {
+        results.push({ id:`r-fg-${pid}`, discipline_id:fgDisc.id, player_id:pid, placement:null, points:null, team:null, modes:{ 1:{ team:Number(t) } } });
+      }));
+    }
+    // Brawlhalla Demo (nur wenn Brawlhalla gerade dran ist = Step 2)
+    const brawlDisc = disciplines.find(d => d.kind === 'brawlhalla');
+    if (step === 2) {
+      brawlDisc.modes = [{ n:1, type:'solo', label:'Runde 1' }, { n:2, type:'solo', label:'Runde 2' }];
+      const r1 = { p1:2, p2:1, p3:4, p4:3, p5:5, p6:6 };
+      const r2 = { p1:1, p2:3, p3:2, p4:5, p5:4, p6:6 };
+      players.forEach(p => results.push({ id:`r-bra-${p.id}`, discipline_id:brawlDisc.id, player_id:p.id, placement:null, points:null, modes:{ 1:{ placement:r1[p.id] }, 2:{ placement:r2[p.id] } } }));
+    }
     const vetoes = [{ event_id:'e1', player_id:'p4', discipline_kind:'fallguys' }];
     return { players, event, disciplines, results, vetoes };
   }
@@ -1146,7 +1167,9 @@
       const isCurrent = currentDisc && d.id === currentDisc.id;
       const cls = done ? 'done' : (isCurrent ? 'now' : 'next');
       const status = done ? '✓ fertig' : (isCurrent ? '● läuft' : 'kommt');
-      return `<div class="disc-pill ${cls}"><span class="dp-no">${i+1}</span><span class="glyph">${discShort(d.kind)}</span><span class="nm">${d.name}</span><span class="dp-status">${status}</span></div>`;
+      const mark = done ? '✓' : (i + 1);
+      const label = isCurrent ? d.name : discShort(d.kind);
+      return `<div class="disc-pill ${cls}"><span class="dp-no">${mark}</span><span class="nm">${label}</span></div>`;
     }).join('');
 
     // === "Wie im Fernsehen": vor dem Start eine Vorstellungs-Slideshow, sonst die aktuelle Disziplin ===
@@ -1256,6 +1279,27 @@
     rows.forEach(r => { newSnapshot[r.player.id] = { rank: r.rank, total: r.total }; });
     lastSnapshot = newSnapshot;
     demoFirstRender = false;
+
+    // Joker-Minispiel „Fly the Copter": Link + aktueller Stand der Veto-Spieler (parallel, klein)
+    const copterEl = document.getElementById('liveCopter');
+    if (copterEl) {
+      if (vetoes && vetoes.length) {
+        const pName = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
+        const kindId = {}; orderedDiscs.forEach(d => kindId[d.kind] = d.id);
+        const cRows = vetoes.map(v => {
+          const did = kindId[v.discipline_kind];
+          const rr = results.find(x => x.discipline_id === did && x.player_id === v.player_id);
+          return { pid: v.player_id, pts: rr ? (parseFloat(rr.points) || 0) : 0 };
+        }).sort((a,b) => b.pts - a.pts);
+        copterEl.innerHTML = `
+          <div class="copter-head"><span class="copter-title">🃏 Joker-Minispiel · Fly the Copter</span><a class="copter-link" href="${COPTER_URL}" target="_blank" rel="noopener">Spielen →</a></div>
+          <div class="copter-sub">Veto-Spieler können den ganzen Abend zocken — wer den Höchststand hält, gewinnt.</div>
+          <div class="copter-rows">${cRows.map((r,i) => `<div class="copter-row"><span class="cr-pos">${i+1}.</span><span class="cr-name">${pName(r.pid)}</span><span class="cr-pts">${r.pts}</span></div>`).join('')}</div>`;
+        copterEl.style.display = 'block';
+      } else {
+        copterEl.style.display = 'none';
+      }
+    }
 
     // Ranking-Reveal-Animation, wenn gerade ein Spiel fertig eingetragen wurde
     if (newlyDoneDisc) showGameEndscore(newlyDoneDisc, results, rows);
@@ -1460,24 +1504,38 @@
         // Spielplan: alle Paarungen mit Status (gespielt / läuft / kommt)
         const gpp = br.gpp || 1;
         const bo = gpp === 1 ? '1 Spiel je Paarung' : 'Best of ' + gpp;
-        let scheduleHtml = '';
-        const srows = [];
+        const allM = [];
         for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
           const a=teamNums[i], b=teamNums[j], played = (games[`${a}-${b}`] || []).filter(Boolean);
           const wa = played.filter(x=>x===a).length, wb = played.filter(x=>x===b).length;
           const full = played.length >= gpp;
-          const state = full ? 'done' : (played.length > 0 ? 'live' : 'next');
-          const center = (played.length > 0) ? `${wa}:${wb}` : 'vs';
-          const tag = full ? '' : (played.length > 0 ? '<span class="bh-tag live">läuft</span>' : '<span class="bh-tag">kommt</span>');
-          srows.push(`<div class="br-hist ${state}"><span class="bh-t ${full&&wa>wb?'w':''}">${memOf(a)||('Team '+a)}</span><b>${center}</b><span class="bh-t ${full&&wb>wa?'w':''}">${memOf(b)||('Team '+b)}</span>${tag}</div>`);
+          allM.push({ a, b, wa, wb, full, anyPlayed: played.length > 0, state: full ? 'done' : (played.length > 0 ? 'live' : 'next') });
         }
-        if (srows.length) scheduleHtml = `<div class="br-history"><div class="br-stage-label">Partien · wer gegen wen</div>${srows.join('')}</div>`;
+        const rowHtml = m => `<div class="br-hist ${m.state}"><span class="bh-t ${m.full&&m.wa>m.wb?'w':''}">${memOf(m.a)||('Team '+m.a)}</span><b>${m.anyPlayed?`${m.wa}:${m.wb}`:'vs'}</b><span class="bh-t ${m.full&&m.wb>m.wa?'w':''}">${memOf(m.b)||('Team '+m.b)}</span>${m.full?'':(m.anyPlayed?'<span class="bh-tag live">läuft</span>':'<span class="bh-tag">kommt</span>')}</div>`;
+        const doneM = allM.filter(m => m.state === 'done');
+        const pendM = allM.filter(m => m.state !== 'done');
+        // Nächstes/aktuelles Match prominent (damit man vorbereitet ist)
+        const nextM = pendM.find(m => m.state === 'live') || pendM[0];
+        let nextHtml = '';
+        if (nextM) {
+          const lbl = nextM.state === 'live' ? 'Jetzt' : 'Als Nächstes';
+          nextHtml = `<div class="br-next ${nextM.state}"><span class="br-next-lbl">${lbl}</span><span class="bn-t">${memOf(nextM.a)||('Team '+nextM.a)}</span><b>vs</b><span class="bn-t">${memOf(nextM.b)||('Team '+nextM.b)}</span></div>`;
+        }
+        const restPend = pendM.filter(m => m !== nextM);
+        const pendHtml = restPend.length ? `<div class="br-history"><div class="br-stage-label">Kommt noch</div>${restPend.map(rowHtml).join('')}</div>` : '';
+        let histHtml = '';
+        if (doneM.length) {
+          const inner = doneM.map(rowHtml).join('');
+          histHtml = doneM.length >= 3
+            ? `<details class="br-details"><summary>Match-Historie (${doneM.length})</summary>${inner}</details>`
+            : `<div class="br-history"><div class="br-stage-label">Match-Historie</div>${inner}</div>`;
+        }
 
         teamsHtml = `
           <div class="nd-block">
             <div class="nd-label">Turnierbaum · ${bo}${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
             <div class="bracket">${stages}</div>
-            ${scheduleHtml}
+            ${nextHtml}${pendHtml}${histHtml}
           </div>`;
       } else {
         teamsHtml = `
@@ -1670,6 +1728,7 @@
       const btn = document.getElementById(`demoStep${step}`);
       if (btn) btn.addEventListener('click', () => {
         demoStep = step;
+        demoHaxActive = false; // „Vor dem Start" zeigt die Intro-Slideshow
         // DON'T reset demoFirstRender so we get flashes / deltas on subsequent steps
         refreshEvents();
       });
@@ -1678,7 +1737,7 @@
     const haxBtns = { demoHaxTeams:'Teams', demoHax2v2:'2v2', demoHaxFinale:'1v1-Finale' };
     Object.entries(haxBtns).forEach(([id, phase]) => {
       const b = document.getElementById(id);
-      if (b) b.addEventListener('click', () => { demoHaxPhase = phase; demoStep = 0; refreshEvents(); });
+      if (b) b.addEventListener('click', () => { demoHaxPhase = phase; demoStep = 0; demoHaxActive = true; refreshEvents(); });
     });
   }
 
