@@ -250,6 +250,27 @@
   @keyframes sbBump { 0%,100% { transform: none; } 30% { transform: translateY(-5px); } 55% { transform: translateY(0); } 72% { transform: translateY(-2px); } }
   .bracket.just-scored { animation: brFlash 0.7s ease; }
   @keyframes brFlash { 0% { box-shadow: 0 0 0 0 var(--primary-line); } 40% { box-shadow: 0 0 0 4px var(--primary-soft); } 100% { box-shadow: 0 0 0 0 transparent; } }
+  /* Score-Bug: TV-Fußball-Stil, zeigt den aktuellen Stand präsent oben */
+  .scorebug {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--alert);
+    border-radius: var(--radius-sm); padding: 0.7rem 1.1rem; margin-bottom: 1.25rem;
+    box-shadow: var(--shadow); position: sticky; top: 8px; z-index: 5;
+  }
+  .sbug-left { display: flex; align-items: center; gap: 0.7rem; }
+  .sbug-live { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; color: var(--alert); }
+  .sbug-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--alert); animation: dppulse 1.4s ease-in-out infinite; }
+  .sbug-game { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-display); font-weight: 900; font-size: 1rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text); }
+  .sbug-ico { font-family: var(--font-display); font-size: 0.68rem; background: var(--bg-2); border-radius: 4px; padding: 2px 6px; color: var(--muted); }
+  .sbug-rows { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; margin-left: auto; }
+  .sbug-p { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
+  .sbug-pos { font-weight: 700; color: var(--muted); }
+  .sbug-av { width: 24px; height: 24px; border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: var(--bg); }
+  .sbug-name { color: var(--text); }
+  .sbug-pts { font-family: var(--font-display); font-size: 1.3rem; color: var(--primary); margin-left: 0.15rem; }
+  .sbug-p.lead .sbug-pts { color: var(--primary); }
+  @media (max-width: 560px) { .scorebug { gap: 0.6rem; } .sbug-rows { margin-left: 0; gap: 0.7rem; } .sbug-game { font-size: 0.85rem; } .sbug-pts { font-size: 1.1rem; } }
+
   .pause-banner {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
     background: var(--cool-soft); border: 1px solid var(--cool);
@@ -856,6 +877,8 @@
       </div>
     </div>
 
+    <div class="scorebug" id="liveScoreBug" style="display:none;"></div>
+
     <div class="pause-banner" id="livePause" style="display:none;">
       <span class="pause-ico">☕</span>
       <span class="pause-txt">Kurze Pause</span>
@@ -1424,6 +1447,22 @@
       } else {
         copterEl.style.display = 'none';
       }
+    }
+
+    // Score-Bug oben: aktueller Stand präsent wie bei einer Fußball-Übertragung
+    const sbEl = document.getElementById('liveScoreBug');
+    if (sbEl) {
+      if (rows.length) {
+        const top = rows.slice(0, 3);
+        const gameLbl = currentDisc ? discName(currentDisc.kind) : 'Abend durch';
+        sbEl.innerHTML = `
+          <div class="sbug-left"><span class="sbug-live"><span class="sbug-dot"></span>LIVE</span>${currentDisc ? `<span class="sbug-game"><span class="sbug-ico">${discShort(currentDisc.kind)}</span>${gameLbl}</span>` : `<span class="sbug-game">${gameLbl}</span>`}</div>
+          <div class="sbug-rows">${top.map((r,i) => {
+            const av = r.player.avatar_url ? `background-image:url(${r.player.avatar_url});` : `background:${grad(i)}`;
+            return `<span class="sbug-p${i===0?' lead':''}"><span class="sbug-pos">${r.rank}</span><span class="sbug-av" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</span><span class="sbug-name">${r.player.name}</span><b class="sbug-pts">${r.total}</b></span>`;
+          }).join('')}</div>`;
+        sbEl.style.display = 'flex';
+      } else { sbEl.style.display = 'none'; }
     }
 
     // „Letzte Chance"-Banner: nach Disziplin 4, bevor das letzte Spiel (Fall Guys) startet
