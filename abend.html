@@ -217,6 +217,11 @@
   .copter-row .cr-pos { font-family: var(--font-mono); color: var(--muted); width: 20px; }
   .copter-row .cr-name { flex: 1; color: var(--text); }
   .copter-row .cr-pts { font-family: var(--font-display); color: var(--cool); }
+  .copter-entry { display: flex; gap: 0.4rem; margin-top: 0.7rem; flex-wrap: wrap; }
+  .copter-entry select, .copter-entry input { background: var(--bg-2); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 0.45rem 0.6rem; font-family: var(--font-mono); font-size: 0.82rem; }
+  .copter-entry select { flex: 1; min-width: 100px; }
+  .copter-entry input { width: 100px; }
+  .copter-entry button { background: var(--cool); color: var(--bg); border: none; border-radius: var(--radius-sm); padding: 0.45rem 0.9rem; font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; cursor: pointer; }
   .pause-banner {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
     background: var(--cool-soft); border: 1px solid var(--cool);
@@ -260,6 +265,16 @@
   .intro-dots { display: flex; justify-content: center; gap: 0.4rem; }
   .intro-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); transition: background 0.25s; }
   .intro-dot.on { background: var(--primary); }
+  .intro-slide { animation: introIn 0.45s ease; }
+  @keyframes introIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .intro-ctrl { display: flex; justify-content: center; gap: 0.5rem; margin: 0.3rem 0 0.8rem; }
+  .intro-btn {
+    background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--radius-sm); padding: 0.4rem 0.8rem; cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.8rem; transition: border-color 0.2s, background 0.2s;
+  }
+  .intro-btn:hover { border-color: var(--primary); }
+  .intro-btn.wide { min-width: 92px; }
   .nd-glyph {
     font-family: var(--font-display); font-weight: 900;
     font-size: 1rem; letter-spacing: 0.04em;
@@ -887,7 +902,42 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   // Joker-Minispiel „Fly the Copter" — Link bei Bedarf hier anpassen
-  const COPTER_URL = 'https://www.crazygames.com/game/fly-the-copter';
+  const COPTER_URL = 'https://www.spiele123.com/spiel/fly-the-copter';
+  let copterVetoes = [], copterKindId = {};
+  const SOLO_PTS = [10,8,6,4,3,2,1];
+  // Spieler tragen ihren Fly-the-Copter-Score selbst ein (vertrauensbasiert, wie der Veto-Picker)
+  window.saveCopter = async function() {
+    const sel = document.getElementById('copterPlayer'), inp = document.getElementById('copterScore');
+    if (!sel || !inp || !sel.value || inp.value === '') return;
+    const pid = sel.value, score = parseInt(inp.value) || 0;
+    const v = copterVetoes.find(x => x.player_id === pid); if (!v) return;
+    const did = copterKindId[v.discipline_kind]; if (!did) return;
+    const btn = document.querySelector('.copter-entry button'); if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const { data: ex } = await sb.from('results').select('*').eq('discipline_id', did).eq('player_id', pid).maybeSingle();
+      const modes = Object.assign({}, (ex && ex.modes) || {}, { copter: score });
+      if (ex) await sb.from('results').update({ modes }).eq('id', ex.id);
+      else await sb.from('results').insert({ discipline_id: did, player_id: pid, modes });
+      // Ranking + Punkte aller Veto-Spieler neu berechnen (nach Score)
+      const rowsBy = [];
+      for (const vv of copterVetoes) {
+        const d2 = copterKindId[vv.discipline_kind]; if (!d2) continue;
+        const { data: r2 } = await sb.from('results').select('*').eq('discipline_id', d2).eq('player_id', vv.player_id).maybeSingle();
+        rowsBy.push({ pid: vv.player_id, id: r2 && r2.id, score: (r2 && r2.modes && r2.modes.copter != null) ? r2.modes.copter : null });
+      }
+      const have = rowsBy.filter(x => x.score != null).sort((a,b) => b.score - a.score);
+      let rank = 0, last = null;
+      have.forEach((x,i) => { if (x.score !== last) rank = i + 1; x.rank = rank; last = x.score; });
+      for (const x of rowsBy) {
+        if (!x.id) continue;
+        const placement = (x.score != null) ? have.find(h => h.pid === x.pid).rank : null;
+        await sb.from('results').update({ placement, points: placement ? SOLO_PTS[Math.min(placement, SOLO_PTS.length) - 1] : 0 }).eq('id', x.id);
+      }
+      inp.value = '';
+    } catch (e) { console.error(e); }
+    if (btn) { btn.disabled = false; btn.textContent = 'Eintragen'; }
+    refreshEvents();
+  };
 
   const COLORS = [
     ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
@@ -1286,15 +1336,24 @@
       if (vetoes && vetoes.length) {
         const pName = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
         const kindId = {}; orderedDiscs.forEach(d => kindId[d.kind] = d.id);
+        copterVetoes = vetoes; copterKindId = kindId;
         const cRows = vetoes.map(v => {
           const did = kindId[v.discipline_kind];
           const rr = results.find(x => x.discipline_id === did && x.player_id === v.player_id);
-          return { pid: v.player_id, pts: rr ? (parseFloat(rr.points) || 0) : 0 };
-        }).sort((a,b) => b.pts - a.pts);
+          const score = rr && rr.modes ? (parseFloat(rr.modes.copter) || 0) : 0;
+          return { pid: v.player_id, score };
+        }).sort((a,b) => b.score - a.score);
+        const entry = isDemo ? '' : `
+          <div class="copter-entry">
+            <select id="copterPlayer"><option value="">Dein Name…</option>${vetoes.map(v => `<option value="${v.player_id}">${pName(v.player_id)}</option>`).join('')}</select>
+            <input type="number" id="copterScore" min="0" placeholder="Dein Score">
+            <button onclick="saveCopter()">Eintragen</button>
+          </div>`;
         copterEl.innerHTML = `
           <div class="copter-head"><span class="copter-title">🃏 Joker-Minispiel · Fly the Copter</span><a class="copter-link" href="${COPTER_URL}" target="_blank" rel="noopener">Spielen →</a></div>
-          <div class="copter-sub">Veto-Spieler können den ganzen Abend zocken — wer den Höchststand hält, gewinnt.</div>
-          <div class="copter-rows">${cRows.map((r,i) => `<div class="copter-row"><span class="cr-pos">${i+1}.</span><span class="cr-name">${pName(r.pid)}</span><span class="cr-pts">${r.pts}</span></div>`).join('')}</div>`;
+          <div class="copter-sub">Veto-Spieler zocken nebenbei am Handy — wer den höchsten Score hält, gewinnt. Score selbst eintragen, per Screen-Share oder Foto beweisen.</div>
+          <div class="copter-rows">${cRows.map((r,i) => `<div class="copter-row"><span class="cr-pos">${i+1}.</span><span class="cr-name">${pName(r.pid)}</span><span class="cr-pts">${r.score || '–'}</span></div>`).join('')}</div>
+          ${entry}`;
         copterEl.style.display = 'block';
       } else {
         copterEl.style.display = 'none';
@@ -1349,31 +1408,43 @@
     showGameEndscore._t = setTimeout(() => { box.style.display = 'none'; }, rrRows.length * 220 + 6000);
   }
 
-  // Vorstellungs-Slideshow vor dem Start: alle Disziplinen des Abends mit Logo + Regeln, auto-rotierend
-  let introTimer = null, introIdx = 0;
-  function buildIntroSlideshow(discs) {
+  // Vorstellungs-Slideshow vor dem Start: alle Disziplinen, steuerbar (◀ ⏸/▶ ▶) zum Besprechen
+  let introTimer = null, introIdx = 0, introPaused = false, introDiscs = [];
+  function renderIntro() {
     const box = document.getElementById('liveNowDetail');
-    if (!box) return;
-    const render = () => {
-      const d = discs[introIdx % discs.length];
-      const k = d.kind;
-      box.innerHTML = `
-        <div class="intro">
-          <div class="nd-label">Heute Abend · ${discs.length} Spiele</div>
-          <div class="intro-slide">
-            <img class="intro-logo" src="logos/${k}.svg" alt="${discName(k)}" onerror="this.style.display='none'">
-            <div class="intro-name">${discName(k)}</div>
-            <div class="intro-mode">${discMode(k)}</div>
-            <div class="intro-rules">${discRules(k)}</div>
-          </div>
-          <div class="intro-dots">${discs.map((dd,i) => `<span class="intro-dot ${i === introIdx % discs.length ? 'on' : ''}"></span>`).join('')}</div>
-        </div>`;
-    };
-    render();
-    box.style.display = 'block';
-    clearInterval(introTimer);
-    introTimer = setInterval(() => { introIdx++; render(); }, 4200);
+    if (!box || !introDiscs.length) return;
+    const n = introDiscs.length;
+    const d = introDiscs[((introIdx % n) + n) % n];
+    const k = d.kind;
+    box.innerHTML = `
+      <div class="intro">
+        <div class="nd-label">Heute Abend · ${n} Spiele</div>
+        <div class="intro-slide" key="${k}-${introIdx}">
+          <img class="intro-logo" src="logos/${k}.svg" alt="${discName(k)}" onerror="this.style.display='none'">
+          <div class="intro-name">${discName(k)}</div>
+          <div class="intro-mode">${discMode(k)}</div>
+          <div class="intro-rules">${discRules(k)}</div>
+        </div>
+        <div class="intro-ctrl">
+          <button class="intro-btn" onclick="introNav(-1)" aria-label="Zurück">◀</button>
+          <button class="intro-btn wide" onclick="introToggle()">${introPaused ? '▶ Weiter' : '⏸ Pause'}</button>
+          <button class="intro-btn" onclick="introNav(1)" aria-label="Weiter">▶</button>
+        </div>
+        <div class="intro-dots">${introDiscs.map((dd,i) => `<span class="intro-dot ${i === ((introIdx % n) + n) % n ? 'on' : ''}"></span>`).join('')}</div>
+      </div>`;
   }
+  function restartIntroTimer() {
+    clearInterval(introTimer); introTimer = null;
+    if (!introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500);
+  }
+  function buildIntroSlideshow(discs) {
+    introDiscs = discs;
+    document.getElementById('liveNowDetail').style.display = 'block';
+    renderIntro();
+    restartIntroTimer();
+  }
+  window.introNav = dir => { introIdx += dir; introPaused = true; renderIntro(); restartIntroTimer(); };
+  window.introToggle = () => { introPaused = !introPaused; renderIntro(); restartIntroTimer(); };
 
   // "Wie im Fernsehen": zeigt für die aktuelle Disziplin Regeln/Modus,
   // den Phasen-Fortschritt (z.B. Haxball Teams → 2v2 → 1v1) und die aktuellen Teams.

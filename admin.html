@@ -354,6 +354,8 @@
   }
   .join-field-input:focus { outline: none; border-color: var(--cool); }
   .dur-hint { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.9rem; }
+  .copter-score-input { width: 90px; background: var(--bg); border: 1px solid var(--border-strong); color: var(--text); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem; font-family: var(--font-mono); font-size: 0.85rem; text-align: right; }
+  .copter-score-input:focus { outline: none; border-color: var(--cool); }
 
   .mode-block {
     border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -494,7 +496,8 @@
     transition: opacity 0.2s, transform 0.2s;
     box-shadow: var(--shadow);
   }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); animation: toastpop 0.32s ease; }
+  @keyframes toastpop { 0% { transform: translateX(-50%) translateY(8px) scale(0.92); } 60% { transform: translateX(-50%) translateY(-7px) scale(1.03); } 100% { transform: translateX(-50%) translateY(-4px) scale(1); } }
   .toast.error { border-color: var(--alert-line); color: var(--alert); }
   .toast.ok    { border-color: var(--primary-line); color: var(--primary); }
 </style>
@@ -1587,58 +1590,47 @@
   function renderSubBody() {
     const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
     if (vp.length === 0) return '<p class="section-desc" style="padding-top:1rem">Keine Vetos gesetzt.</p>';
-    const subRank = p => { const did = vetoDiscIdFor(p.id); return did ? (currentResults[did]?.[p.id]?.placement || null) : null; };
-    const ranked = vp.filter(p => subRank(p)).sort((a,b) => subRank(a) - subRank(b));
-    const unranked = vp.filter(p => !subRank(p));
-
-    const rankedHtml = ranked.length ? ranked.map(p => {
-      const pl = subRank(p); const pts = soloPoints(pl);
-      return `<div class="rank-row"><span class="rank-pos">${pl}.</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:0.72rem">(statt ${discLabel(currentVetoes[p.id])})</span></span><span class="rank-pts">+${pts}</span><button class="rank-x" onclick="unrankSub('${p.id}')" title="Entfernen">×</button></div>`;
-    }).join('') : '<div class="rank-empty">Noch keine Platzierung — tippe die Veto-Spieler in Zielreihenfolge an.</div>';
-
-    const poolHtml = unranked.length
-      ? `<div class="rank-pool-title">Noch offen — anklicken = nächster Platz</div><div class="rank-pool">${unranked.map(p => `<button class="rank-chip" onclick="rankSub('${p.id}')">${p.name}</button>`).join('')}</div>`
-      : '<div class="rank-done">✓ Alle platziert.</div>';
-
+    const scoreOf = p => { const did = vetoDiscIdFor(p.id); const m = did ? currentResults[did]?.[p.id]?.modes : null; return (m && m.copter != null) ? m.copter : ''; };
+    const rankOf = p => { const did = vetoDiscIdFor(p.id); return did ? (currentResults[did]?.[p.id]?.placement || null) : null; };
+    const rows = vp.map(p => {
+      const pl = rankOf(p); const pts = pl ? soloPoints(pl) : 0;
+      return `<div class="result-row" style="grid-template-columns:1fr auto auto auto; gap:0.6rem; align-items:center">
+        <div class="result-name">${p.name} <span style="color:var(--muted);font-size:0.72rem">(statt ${discLabel(currentVetoes[p.id])})</span></div>
+        <input type="number" min="0" class="copter-score-input" value="${scoreOf(p)}" placeholder="Score" onchange="setCopterScore('${p.id}', this.value)">
+        <span class="result-points" style="min-width:30px;text-align:right;color:var(--muted)">${pl ? pl + '.' : '–'}</span>
+        <span class="result-points" style="min-width:40px;text-align:right">${pts ? '+' + pts : '—'}</span>
+      </div>`;
+    }).join('');
     return `
       <div style="padding-top:1rem">
-        <p class="section-desc">Eigenes Spiel für alle, die ein Veto gesetzt haben. Tippe sie in <b>Zielreihenfolge</b> an — die Punkte (10·8·6·…) zählen für ihre vetote Disziplin.${ranked.length ? ` · <a onclick="resetSub()" style="color:var(--alert);cursor:pointer">zurücksetzen</a>` : ''}</p>
-        <div class="rank-list">${rankedHtml}</div>
-        ${poolHtml}
+        <p class="section-desc">Joker-Minispiel „Fly the Copter": trag den <b>Highscore</b> jedes Veto-Spielers ein. Höchster Score = Platz 1; die Punkte (10·8·6·…) zählen für die vetote Disziplin. Wird nebenbei am Handy gespielt — Score per Screen-Share oder Foto beweisen.</p>
+        ${rows}
       </div>`;
   }
 
   function renderSubBodyFor() { const body = $('dbody-veto'); if (body) body.innerHTML = renderSubBody(); }
 
-  window.rankSub = async function(playerId) {
+  window.setCopterScore = async function(playerId, value) {
     const did = vetoDiscIdFor(playerId); if (!did) return;
-    const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
-    const maxR = Math.max(0, ...vp.map(p => { const d2 = vetoDiscIdFor(p.id); return d2 ? (currentResults[d2]?.[p.id]?.placement || 0) : 0; }));
-    const rank = maxR + 1;
-    await upsertResultDirect(did, playerId, { placement: rank, team: null, points: soloPoints(rank) });
+    const score = value === '' ? null : (parseInt(value) || 0);
+    const cur = currentResults[did]?.[playerId] || {};
+    const modes = Object.assign({}, cur.modes || {});
+    if (score == null) delete modes.copter; else modes.copter = score;
+    await upsertResultDirect(did, playerId, { modes });
+    await recomputeSub();
     renderSubBodyFor(); renderOverview();
   };
 
-  window.unrankSub = async function(playerId) {
-    const did = vetoDiscIdFor(playerId); if (!did) return;
-    await upsertResultDirect(did, playerId, { placement: null, team: null, points: 0 });
-    await resequenceSub();
-    renderSubBodyFor(); renderOverview();
-  };
-
-  window.resetSub = async function() {
+  async function recomputeSub() {
     const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
-    for (const p of vp) { const did = vetoDiscIdFor(p.id); if (did && currentResults[did]?.[p.id]?.placement) await upsertResultDirect(did, p.id, { placement: null, team: null, points: 0 }); }
-    renderSubBodyFor(); renderOverview();
-  };
-
-  async function resequenceSub() {
-    const vp = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id]);
-    const ranked = vp.filter(p => { const d = vetoDiscIdFor(p.id); return d && currentResults[d]?.[p.id]?.placement; })
-      .sort((a,b) => { const da = vetoDiscIdFor(a.id), db = vetoDiscIdFor(b.id); return currentResults[da][a.id].placement - currentResults[db][b.id].placement; });
-    for (let i = 0; i < ranked.length; i++) {
-      const did = vetoDiscIdFor(ranked[i].id); const want = i + 1;
-      if (currentResults[did][ranked[i].id].placement !== want) await upsertResultDirect(did, ranked[i].id, { placement: want, team: null, points: soloPoints(want) });
+    const list = vp.map(p => { const did = vetoDiscIdFor(p.id); const m = did ? currentResults[did]?.[p.id]?.modes : null; return { p, did, score: (m && m.copter != null) ? m.copter : null }; });
+    const have = list.filter(s => s.score != null).sort((a,b) => b.score - a.score);
+    let rank = 0, last = null;
+    have.forEach((s,i) => { if (s.score !== last) rank = i + 1; s.rank = rank; last = s.score; });
+    for (const s of list) {
+      if (!s.did) continue;
+      const placement = (s.score != null) ? have.find(h => h.p.id === s.p.id).rank : null;
+      await upsertResultDirect(s.did, s.p.id, { placement, points: placement ? soloPoints(placement) : 0 });
     }
   }
 
