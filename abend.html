@@ -606,6 +606,17 @@
   }
 
   /* ============================
+     LIVE-LAYOUT: Hauptbereich links, Tabelle rechts (Bundesliga-Stil)
+     ============================ */
+  .live-layout { display: grid; grid-template-columns: 1fr; gap: 1.3rem; }
+  @media (min-width: 940px) {
+    .live-layout { grid-template-columns: minmax(0,1fr) 320px; align-items: start; }
+    .live-aside { position: sticky; top: 76px; }
+  }
+  .live-main { min-width: 0; }
+  .sb-aside-head { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.02em; color: var(--text); margin-bottom: 0.5rem; }
+
+  /* ============================
      SCOREBOARD — broadcast-sized
      ============================ */
   .scoreboard {
@@ -615,6 +626,20 @@
     overflow-x: auto;
     box-shadow: var(--shadow);
   }
+  /* Kompakte Tabelle für die Seitenleiste */
+  .sb-table.sb-mini { min-width: 0; }
+  .sb-mini th { padding: 0.6rem 0.5rem; font-size: 0.62rem; letter-spacing: 0.1em; }
+  .sb-mini td { padding: 0.5rem 0.5rem; }
+  .sb-mini th.rank-col, .sb-mini td.rank-col { width: 46px; padding-left: 0.6rem; }
+  .sb-mini th.player-col, .sb-mini td.player-col { padding-left: 0.3rem; }
+  .sb-mini th.total-col, .sb-mini td.total-col { padding-right: 0.8rem; width: 48px; }
+  .sb-mini .sb-avatar { width: 30px; height: 30px; font-size: 0.62rem; }
+  .sb-mini .sb-name { font-size: 0.9rem; }
+  .sb-pwrap { min-width: 0; }
+  .sb-sub { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
+  .sb-sub .sb-cur { color: var(--cool); }
+  .sb-mini tr.tier-1 td.total-col { font-size: 1.25rem; }
+  .sb-mini tr.tier-2 td.total-col, .sb-mini tr.tier-3 td.total-col { font-size: 1.1rem; }
   .sb-table {
     width: 100%;
     border-collapse: collapse;
@@ -932,52 +957,58 @@
       <span class="pause-txt">Kurze Pause</span>
     </div>
 
-    <div class="live-hero">
-      <div class="lh-top">
-        <span class="live-badge-big"><span class="dot"></span> Live</span>
-        <div class="lh-event-meta"><b id="liveEventName">—</b> · <span id="liveEventDate">—</span></div>
-      </div>
-
-      <div class="lh-now">
-        <div class="lh-now-title-wrap">
-          <div class="lh-now-label">Jetzt im Spiel</div>
-          <div class="lh-now-title" id="liveCurrent">—</div>
-          <div class="lh-now-mode" id="liveCurrentMode" style="display:none;"><span class="glyph">—</span> <span id="liveCurrentModeText"></span></div>
-        </div>
-        <div class="lh-progress-wrap">
-          <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
-            <circle class="track" cx="18" cy="18" r="15.9"></circle>
-            <circle id="progressBar" class="bar" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
-          </svg>
-          <div class="progress-ring-text">
-            <b><span id="liveDoneCount">0</span><span class="of">/<span id="liveTotalCount">5</span></span></b>
-            <small>Disziplinen</small>
-          </div>
-        </div>
-      </div>
-
-      <div class="lh-next" id="liveNext">—</div>
-
-      <div class="disc-strip" id="liveDiscStrip"></div>
-    </div>
-
-    <div class="live-status" id="liveStatusLine" style="display:none;"></div>
-
     <div class="live-toasts" id="liveToasts" aria-live="polite"></div>
-
     <div class="cry-flash" id="cryFlash" style="display:none;"></div>
 
-    <div class="now-detail" id="liveNowDetail"></div>
+    <div class="live-layout">
+      <div class="live-main">
+        <div class="live-hero">
+          <div class="lh-top">
+            <span class="live-badge-big"><span class="dot"></span> Live</span>
+            <div class="lh-event-meta"><b id="liveEventName">—</b> · <span id="liveEventDate">—</span></div>
+          </div>
 
-    <div class="ranking-reveal" id="rankingReveal" style="display:none;"></div>
+          <div class="lh-now">
+            <div class="lh-now-title-wrap">
+              <div class="lh-now-label">Jetzt im Spiel</div>
+              <div class="lh-now-title" id="liveCurrent">—</div>
+              <div class="lh-now-mode" id="liveCurrentMode" style="display:none;"><span class="glyph">—</span> <span id="liveCurrentModeText"></span></div>
+            </div>
+            <div class="lh-progress-wrap">
+              <svg class="progress-ring" viewBox="0 0 36 36" aria-hidden="true">
+                <circle class="track" cx="18" cy="18" r="15.9"></circle>
+                <circle id="progressBar" class="bar" cx="18" cy="18" r="15.9" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
+              </svg>
+              <div class="progress-ring-text">
+                <b><span id="liveDoneCount">0</span><span class="of">/<span id="liveTotalCount">5</span></span></b>
+                <small>Disziplinen</small>
+              </div>
+            </div>
+          </div>
 
-    <div class="last-chance" id="lastChance" style="display:none;"></div>
+          <div class="lh-next" id="liveNext">—</div>
 
-    <div class="scoreboard">
-      <div id="liveBody"></div>
+          <div class="disc-strip" id="liveDiscStrip"></div>
+        </div>
+
+        <div class="live-status" id="liveStatusLine" style="display:none;"></div>
+
+        <div class="now-detail" id="liveNowDetail"></div>
+
+        <div class="ranking-reveal" id="rankingReveal" style="display:none;"></div>
+
+        <div class="last-chance" id="lastChance" style="display:none;"></div>
+
+        <div class="copter-box" id="liveCopter" style="display:none;"></div>
+      </div>
+
+      <aside class="live-aside">
+        <div class="sb-aside-head">Tabelle</div>
+        <div class="scoreboard">
+          <div id="liveBody"></div>
+        </div>
+      </aside>
     </div>
-
-    <div class="copter-box" id="liveCopter" style="display:none;"></div>
   </section>
 
   <!-- VETO (hidden when live) -->
@@ -1528,23 +1559,8 @@
     if (rows.length === 0) {
       body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
     } else {
-      const headCells = [
-        '<th class="rank-col">#</th>',
-        '<th class="player-col">Spieler</th>',
-        ...orderedDiscs.map(d => {
-          const done = discDone[d.id];
-          const isCurrent = currentDisc && d.id === currentDisc.id;
-          const isLastDone = d.id === lastDoneId;
-          const cls = ['disc'];
-          if (done) cls.push('done');
-          if (isCurrent) cls.push('now');
-          if (isLastDone) cls.push('last-done');
-          return `<th class="${cls.join(' ')}">${discShort(d.kind)}</th>`;
-        }),
-        '<th class="total-col">Total</th>',
-        '<th class="wins-col">×1</th>',
-      ].join('');
-
+      // Kompakte Tabelle (Bundesliga-Stil) für die Seitenleiste: Rang · Spieler · Punkte
+      const curShort = currentDisc ? discShort(currentDisc.kind) : '';
       const rowsHtml = rows.map((r,i) => {
         const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
         const flash = r.pointsDelta > 0 && !demoFirstRender ? ' flash' : '';
@@ -1552,42 +1568,30 @@
         const av = r.player.avatar_url
           ? `background-image:url(${r.player.avatar_url});`
           : `background:${grad(i)}`;
-        const cells = orderedDiscs.map(d => {
-          const p = r.points[d.id];
-          const pl = r.placements[d.id];
-          const done = discDone[d.id];
-          const isCurrent = currentDisc && d.id === currentDisc.id;
-          const isLastDone = d.id === lastDoneId;
-          const cls = ['disc'];
-          if (p != null) cls.push('scored');
-          if (pl === 1) cls.push('win');
-          if (isCurrent) cls.push('now');
-          if (isLastDone) cls.push('last-done');
-          return `<td class="${cls.join(' ')}">${p != null ? p : '—'}</td>`;
-        }).join('');
         let deltaBadge = '';
         if (r.delta.kind === 'up')   deltaBadge = `<span class="rank-delta up">▲${r.delta.value}</span>`;
         if (r.delta.kind === 'down') deltaBadge = `<span class="rank-delta down">▼${r.delta.value}</span>`;
         if (r.delta.kind === 'new')  deltaBadge = `<span class="rank-delta new">NEU</span>`;
+        const curPts = currentDisc ? r.points[currentDisc.id] : null;
         const pointsFlash = r.pointsDelta > 0 && !demoFirstRender ? `<span class="pts-flash">+${r.pointsDelta}</span>` : '';
+        const sub = (curPts != null) ? `<span class="sb-cur">${curShort} ${curPts}</span>` : (r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : '');
         return `
           <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}">
             <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span>${deltaBadge}</td>
             <td class="player-col">
               <div class="sb-player">
                 <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
-                <div>
-                  <div class="sb-name">${r.player.name}${r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : ''}${pointsFlash}</div>
+                <div class="sb-pwrap">
+                  <div class="sb-name">${r.player.name}${pointsFlash}</div>
+                  ${sub ? `<div class="sb-sub">${sub}</div>` : ''}
                 </div>
               </div>
             </td>
-            ${cells}
             <td class="total-col">${r.total}</td>
-            <td class="wins-col">${r.wins ? '×' + r.wins : '—'}</td>
           </tr>`;
       }).join('');
 
-      body.innerHTML = `<table class="sb-table"><thead><tr>${headCells}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
+      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
     }
 
     // Update snapshot AFTER rendering so deltas next time are vs this state
