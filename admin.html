@@ -861,6 +861,38 @@
     window.scrollTo(0, 0);
   };
 
+  // Live-Update: wenn Spieler auf der Spielabend-Seite etwas eintragen (results)
+  // oder sich Disziplinen ändern, lädt das Admin-Dashboard die Daten nach und
+  // aktualisiert die Punkte-Vorschau + offene Disziplin-Karten (Open-Zustand bleibt).
+  let _adminRefreshT = null;
+  function adminLiveRefresh() {
+    if (!currentEvent) return;
+    clearTimeout(_adminRefreshT);
+    _adminRefreshT = setTimeout(async () => {
+      if (!currentEvent) return;
+      const id = currentEvent.id;
+      const { data: dData } = await sb.from('disciplines').select('*').eq('event_id', id).order('position');
+      currentDisciplines = dData || [];
+      const dIds = currentDisciplines.map(d => d.id);
+      const newRes = {}; currentDisciplines.forEach(d => newRes[d.id] = {});
+      if (dIds.length) {
+        const { data: rData } = await sb.from('results').select('*').in('discipline_id', dIds);
+        (rData || []).forEach(r => { newRes[r.discipline_id][r.player_id] = r; });
+      }
+      currentResults = newRes;
+      if ($('eventDetailView').style.display !== 'none') {
+        renderOverview();
+        document.querySelectorAll('.discipline-card.open').forEach(card => {
+          const did = card.getAttribute('data-disc'); if (did) renderDisciplineBodyFor(did);
+        });
+      }
+    }, 250);
+  }
+  sb.channel('admin-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'results' }, adminLiveRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'disciplines' }, adminLiveRefresh)
+    .subscribe();
+
   $('backLink').addEventListener('click', () => {
     $('eventDetailView').style.display = 'none';
     $('eventListView').style.display = 'block';
@@ -1539,7 +1571,7 @@
         const gamesCount = Math.max(0, ...members.map(p => fgGamesOf(d.id, p.id, n).length));
         const tally = members.map(p => ({ p, games: fgGamesOf(d.id, p.id, n), pts: brawlPts(fgGamesOf(d.id, p.id, n)) }))
           .sort((a,b) => b.pts - a.pts)
-          .map(r => `<div class="rank-row"><span class="rank-name">${r.p.name}</span><span style="color:var(--muted);font-size:.82em">${r.games.length ? r.games.map(g=>g+'.').join(' ') : '—'}</span><span class="rank-pts">${r.pts} Pkt</span></div>`).join('');
+          .map((r, i) => `<div class="rank-row"><span class="rank-pos">${i+1}.</span><span class="rank-name">${r.p.name}</span><span style="color:var(--muted);font-size:.8em">${r.games.length ? 'Spiele ' + r.games.join('·') : '—'}</span><span class="rank-pts">${r.pts} Pkt</span></div>`).join('');
         const undo = gamesCount ? `<a onclick="undoBrawlGame('${d.id}',${n},${l})" style="color:var(--alert);cursor:pointer;font-size:.85rem">↩ letztes Spiel rückgängig</a>` : '';
         const codeInput = `<div class="join-field" style="margin:0.3rem 0 0.5rem"><label class="join-field-label">🔑 Raum-Code Lobby ${l} — wird live angezeigt</label><input type="text" class="join-field-input" value="${codeOf(l).replace(/"/g,'&quot;')}" placeholder="z.B. 482913" onchange="setBrawlLobbyCode('${d.id}',${n},${l},this.value)"></div>`;
         lobbiesHtml += `<div class="haxball-step"><div class="haxball-step-title">Lobby ${l} · ${members.length} Spieler · ${gamesCount} Spiele</div>${codeInput}<div class="rank-list">${tally}</div>${undo}</div>`;

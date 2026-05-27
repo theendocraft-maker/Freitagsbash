@@ -462,11 +462,18 @@
   .lob-code.lob-code-wait { color: var(--muted); font-size: 0.85rem; }
   .lob-mem { font-size: 0.9rem; color: var(--text); line-height: 1.4; }
   .nd-sub { font-size: 0.85rem; color: var(--muted); margin: 0.2rem 0 0.4rem; }
-  .lob-tally { margin: 0.2rem 0 0.5rem; }
-  .lob-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: center; padding: 0.2rem 0; font-size: 0.9rem; }
-  .lob-rname { color: var(--text); }
-  .lob-rg { color: var(--muted); font-family: var(--font-mono); font-size: 0.8rem; }
-  .lob-rp { color: var(--primary); font-weight: 700; font-family: var(--font-mono); min-width: 1.4rem; text-align: right; }
+  .lob-tally { margin: 0.3rem 0 0.6rem; display: flex; flex-direction: column; gap: 0.15rem; }
+  .lob-row { display: grid; grid-template-columns: 1.3rem 1fr auto; gap: 0.55rem; align-items: center; padding: 0.3rem 0; border-top: 1px solid var(--border); }
+  .lob-row:first-child { border-top: none; }
+  .lob-rk { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); text-align: center; }
+  .lob-rmid { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+  .lob-rname { color: var(--text); font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lob-rgames { color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; margin-top: 1px; }
+  .lob-rp { color: var(--primary); font-weight: 800; font-family: var(--font-mono); font-size: 1.05rem; min-width: 1.6rem; text-align: right; }
+  .lob-code-edit { color: var(--muted); font-size: 0.78rem; margin-left: 0.4rem; cursor: pointer; text-decoration: underline; }
+  .lob-codeform { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
+  .lob-codeinput { flex: 1; min-width: 0; padding: 0.45rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg-2); color: var(--text); font-family: var(--font-mono); }
+  .lob-codeok { padding: 0.45rem 0.85rem; border-radius: var(--radius-sm); border: none; background: var(--cool); color: #0b0d10; font-weight: 700; cursor: pointer; }
   .brawl-entry { border-top: 1px dashed var(--border); padding-top: 0.5rem; margin-top: 0.3rem; }
   .brawl-hint { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; }
   .brawl-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
@@ -1068,6 +1075,25 @@
   };
   window.brawlClearBuf = function(discId, n, l) { brawlBuf[bkey(discId, n, l)] = []; rerenderNow(); };
 
+  // Lobby-Raum-Code live eintragen (jede:r darf, vertrauensbasiert)
+  window.brawlEditCode = function(discId, n, l) { brawlCodeEditing.add(bkey(discId, n, l)); rerenderNow(); };
+  window.saveBrawlCodeLive = async function(discId, n, l) {
+    const inp = document.getElementById(`bc-${discId}-${n}-${l}`); if (!inp) return;
+    const v = inp.value.trim() || null;
+    try {
+      const { data: disc } = await sb.from('disciplines').select('*').eq('id', discId).maybeSingle();
+      const modes = (disc && Array.isArray(disc.modes) ? disc.modes : []).map(m => {
+        if (m.n !== n) return m;
+        const cs = Object.assign({}, m.codes || {});
+        if (v) cs[l] = v; else delete cs[l];
+        return Object.assign({}, m, { codes: cs });
+      });
+      await sb.from('disciplines').update({ modes }).eq('id', discId);
+      brawlCodeEditing.delete(bkey(discId, n, l));
+    } catch (e) { console.error(e); }
+    refreshEvents();
+  };
+
   window.brawlCommitGame = async function(discId, n, l) {
     const k = bkey(discId, n, l); const buf = (brawlBuf[k] || []).slice();
     if (buf.length < 2) return;
@@ -1302,6 +1328,7 @@
   const brawlGamesOf = (r, n) => { const a = r && r.modes && r.modes[n] && r.modes[n].games; return Array.isArray(a) ? a : []; };
   let lastNowDisc = null, lastNowResults = null;   // für lokales Re-Render bei Tap
   const brawlBuf = {};                              // `${discId}|${n}|${lobby}` -> [pid,...] (laufendes Spiel)
+  const brawlCodeEditing = new Set();               // Lobbys, deren Code gerade bearbeitet wird
   const bkey = (discId, n, l) => `${discId}|${n}|${l}`;
   function rerenderNow() { if (lastNowDisc) buildNowDetail(lastNowDisc, lastNowResults); }
 
@@ -2089,10 +2116,16 @@
               const memRows = lobbies[l];
               const gamesCount = Math.max(0, ...memRows.map(r => brawlGamesOf(r, n).length));
               const code = codes[l];
-              const codeHtml = code ? `<div class="lob-code">🔑 Code: <b>${code}</b></div>` : `<div class="lob-code lob-code-wait">🔑 Code folgt …</div>`;
+              const codeId = `bc-${currentDisc.id}-${n}-${l}`;
+              const editing = brawlCodeEditing.has(bkey(currentDisc.id, n, l));
+              const codeHtml = (code && !editing && !isDemo)
+                ? `<div class="lob-code">🔑 <b>${code}</b> <a class="lob-code-edit" onclick="brawlEditCode('${currentDisc.id}',${n},${l})">ändern</a></div>`
+                : (isDemo
+                  ? `<div class="lob-code">🔑 <b>${code || '—'}</b></div>`
+                  : `<div class="lob-codeform"><input id="${codeId}" class="lob-codeinput" placeholder="🔑 Raum-Code eintragen" value="${(code||'').replace(/"/g,'&quot;')}"><button class="lob-codeok" onclick="saveBrawlCodeLive('${currentDisc.id}',${n},${l})">OK</button></div>`);
               const tally = memRows.map(r => ({ pid: r.player_id, g: brawlGamesOf(r, n), pts: brawlPts(brawlGamesOf(r, n)) }))
                 .sort((a,b) => b.pts - a.pts)
-                .map(x => `<div class="lob-row"><span class="lob-rname">${nameOf(x.pid)}</span><span class="lob-rg">${x.g.length ? x.g.map(v=>v+'.').join(' ') : '—'}</span><span class="lob-rp">${x.pts}</span></div>`).join('');
+                .map((x, i) => `<div class="lob-row"><span class="lob-rk">${i+1}</span><div class="lob-rmid"><span class="lob-rname">${nameOf(x.pid)}</span>${x.g.length ? `<span class="lob-rgames">Spiele ${x.g.join('·')}</span>` : ''}</div><span class="lob-rp">${x.pts}</span></div>`).join('');
               let entry = '';
               if (!isDemo) {
                 const buf = brawlBuf[bkey(currentDisc.id, n, l)] || [];
