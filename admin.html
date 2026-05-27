@@ -1181,19 +1181,20 @@
     const next = nextPhaseOf(phase);
     if (!next || playing.length < 2) return '';
     const target = ADV_TARGET[next] || 2;
+    const br = normBracket(d); const games = br.games[phase] || {};
+    const wins = {}; Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w] = (wins[w]||0)+1; }));
+    const teamWins = p => wins[currentResults[d.id]?.[p.id]?.team] || 0;
     if (!haxAdvanceSel[d.id]) {
       // Vorauswahl: Mitglieder der siegreichsten Teams bis zur Zielzahl
-      const br = normBracket(d); const games = br.games[phase] || {};
-      const wins = {}; Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w] = (wins[w]||0)+1; }));
       const teamsByWins = haxTeamsPresent(d, playing).sort((a,b) => (wins[b]||0) - (wins[a]||0));
       const sel = new Set();
       for (const t of teamsByWins) for (const p of playing.filter(pp => currentResults[d.id]?.[pp.id]?.team === t)) { if (sel.size < target) sel.add(p.id); }
       haxAdvanceSel[d.id] = sel;
     }
     const sel = haxAdvanceSel[d.id];
-    const chips = playing.map(p => `<button class="adv-chip ${sel.has(p.id) ? 'on' : ''}" onclick="toggleHaxAdvance('${d.id}','${p.id}')">${p.name}</button>`).join('');
+    const chips = playing.slice().sort((a,b) => teamWins(b) - teamWins(a)).map(p => `<button class="adv-chip ${sel.has(p.id) ? 'on' : ''}" onclick="toggleHaxAdvance('${d.id}','${p.id}')">${p.name} <small>${teamWins(p)} S</small></button>`).join('');
     return `<div class="haxball-step-title">Phase weiter → ${next}</div>
-      <p class="section-desc">Aufsteiger wählen (empfohlen <b>${target}</b>). Beim Weiterklicken werden daraus automatisch die neuen Teams <b>ausgelost</b> — die Spieler sehen live die Auslos-Animation. Nicht-Aufsteiger scheiden aus.</p>
+      <p class="section-desc">Aufsteiger wählen — vorausgewählt sind die Spieler der <b>siegreichsten Teams</b> (empfohlen <b>${target}</b>). Beim Weiterklicken werden daraus automatisch die neuen Teams <b>ausgelost</b>; die Spieler sehen live die Auslos-Animation. Nicht-Aufsteiger scheiden aus.</p>
       <div class="adv-chips">${chips}</div>
       <div class="draw-control" style="margin-top:0.6rem"><button class="draw-btn" onclick="applyHaxAdvance('${d.id}','${next}')">→ Weiter zu ${next} (${sel.size} gewählt)</button></div>`;
   }
