@@ -364,6 +364,12 @@
   .br-details summary::before { content: '▸ '; }
   .br-details[open] summary::before { content: '▾ '; }
   .br-details[open] summary { margin-bottom: 0.5rem; }
+  .br-histrow { display: flex; align-items: center; gap: 0.7rem; padding: 0.32rem 0; font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .br-histrow:last-child { border-bottom: none; }
+  .br-histrow .bh-ph { font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; min-width: 70px; text-align: center; flex-shrink: 0; }
+  .br-histrow .bh-mt { flex: 1; }
+  .br-histrow .bh-mt b { color: var(--text); }
+  .br-histrow .bh-w { color: var(--primary); }
   .nd-gpts { display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-gpt { display: flex; align-items: center; gap: 0.7rem; padding: 0.4rem 0.6rem; background: var(--bg-2); border-radius: var(--radius-sm); }
   .nd-gpt-pos { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); width: 24px; }
@@ -1023,7 +1029,7 @@
       phase: d.kind === 'haxball' ? demoHaxPhase : null,
       join_link: DEMO_JOIN[d.kind] || null,
       teams_drawn_at: d.kind === 'haxball' ? new Date().toISOString() : null,
-      bracket: d.kind === 'haxball' ? { gpp: hp.gpp, games: hp.games } : null
+      bracket: d.kind === 'haxball' ? { gpp: { 'Teams':1, '2v2':3, '1v1-Finale':1 }, games: { 'Teams': { '1-2':[1] }, '2v2': { '1-2':[1,2] }, '1v1-Finale': { '1-2':[1] } } } : null
     }));
     const placements = [
       // Nach Haxball (Spiel 1)
@@ -1552,10 +1558,15 @@
         const ai = Math.max(0, phs.indexOf(currentDisc.phase || phs[0]));
         const sc = idx => idx < ai ? 'done' : (idx === ai ? 'now' : '');
         const br = currentDisc.bracket || {};
-        const games = br.games || {};
+        const curPhase = currentDisc.phase || phs[0];
+        const gamesOf = ph => (br.games && br.games[ph]) || {};
+        const gppOf = ph => (br.gpp && br.gpp[ph]) || (ph === 'Teams' ? 1 : 3);
+        const games = gamesOf(curPhase);
+        const gpp = gppOf(curPhase);
+        const bo = gpp === 1 ? '1 Spiel je Paarung' : 'Best of ' + gpp;
         const teamNums = teamKeys.map(k => parseInt(String(k).replace(/\D/g,''))).filter(n => !isNaN(n)).sort((a,b)=>a-b);
         const memOf = t => (teams['Team ' + t] || []).map(nameOf).join(' & ');
-        // Aktueller Punktestand je Team (Siege aus den Partien)
+        // Punktestand je Team (aktuelle Phase)
         const winsByTeam = {};
         Object.values(games).forEach(arr => arr.forEach(w => { if (w) winsByTeam[w] = (winsByTeam[w] || 0) + 1; }));
         const haxTeamBoxes = teamKeys.map((tk,ti) => {
@@ -1572,9 +1583,7 @@
           `<div class="br-stage ${sc(idx)}"><div class="br-stage-label">${idx === phs.length-1 ? '🏆 ' : ''}${ph}</div>${stageInner(idx)}</div>`
         ).join('<div class="br-sep">›</div>');
 
-        // Spielplan: alle Paarungen mit Status (gespielt / läuft / kommt)
-        const gpp = br.gpp || 1;
-        const bo = gpp === 1 ? '1 Spiel je Paarung' : 'Best of ' + gpp;
+        // Spielplan der AKTUELLEN Phase (für „Nächstes"/„Kommt noch")
         const allM = [];
         for (let i=0;i<teamNums.length;i++) for (let j=i+1;j<teamNums.length;j++) {
           const a=teamNums[i], b=teamNums[j], played = (games[`${a}-${b}`] || []).filter(Boolean);
@@ -1582,23 +1591,32 @@
           const full = played.length >= gpp;
           allM.push({ a, b, wa, wb, full, anyPlayed: played.length > 0, state: full ? 'done' : (played.length > 0 ? 'live' : 'next') });
         }
-        const rowHtml = m => `<div class="br-hist ${m.state}"><span class="bh-t ${m.full&&m.wa>m.wb?'w':''}">${memOf(m.a)||('Team '+m.a)}</span><b>${m.anyPlayed?`${m.wa}:${m.wb}`:'vs'}</b><span class="bh-t ${m.full&&m.wb>m.wa?'w':''}">${memOf(m.b)||('Team '+m.b)}</span>${m.full?'':(m.anyPlayed?'<span class="bh-tag live">läuft</span>':'<span class="bh-tag">kommt</span>')}</div>`;
-        const doneM = allM.filter(m => m.state === 'done');
         const pendM = allM.filter(m => m.state !== 'done');
-        // Nächstes/aktuelles Match prominent (damit man vorbereitet ist)
         const nextM = pendM.find(m => m.state === 'live') || pendM[0];
         let nextHtml = '';
         if (nextM) {
           const lbl = nextM.state === 'live' ? 'Jetzt' : 'Als Nächstes';
-          nextHtml = `<div class="br-next ${nextM.state}"><span class="br-next-lbl">${lbl}</span><span class="bn-t">${memOf(nextM.a)||('Team '+nextM.a)}</span><b>vs</b><span class="bn-t">${memOf(nextM.b)||('Team '+nextM.b)}</span></div>`;
+          nextHtml = `<div class="br-next ${nextM.state}"><span class="br-next-lbl">${lbl}</span><span class="bn-t">${memOf(nextM.a)||('Team '+nextM.a)}</span><b>${nextM.anyPlayed?`${nextM.wa}:${nextM.wb}`:'vs'}</b><span class="bn-t">${memOf(nextM.b)||('Team '+nextM.b)}</span></div>`;
         }
         const restPend = pendM.filter(m => m !== nextM);
-        const pendHtml = restPend.length ? `<div class="br-history"><div class="br-stage-label">Kommt noch</div>${restPend.map(rowHtml).join('')}</div>` : '';
+        const pendHtml = restPend.length ? `<div class="br-history"><div class="br-stage-label">Kommt noch</div>${restPend.map(m => `<div class="br-hist next"><span class="bh-t">${memOf(m.a)||('Team '+m.a)}</span><b>${m.anyPlayed?`${m.wa}:${m.wb}`:'vs'}</b><span class="bh-t">${memOf(m.b)||('Team '+m.b)}</span><span class="bh-tag">${m.anyPlayed?'läuft':'kommt'}</span></div>`).join('')}</div>` : '';
+        // GESAMTE Match-Historie über ALLE Phasen
+        const histRows = [];
+        phs.forEach(ph => {
+          const g = gamesOf(ph);
+          Object.keys(g).forEach(key => {
+            const played = (g[key] || []).filter(Boolean); if (!played.length) return;
+            const pa = parseInt(key.split('-')[0]), pb = parseInt(key.split('-')[1]);
+            const wa = played.filter(x=>x===pa).length, wb = played.filter(x=>x===pb).length;
+            histRows.push({ ph, a:pa, b:pb, wa, wb, full: played.length >= gppOf(ph) });
+          });
+        });
+        const histRowHtml = m => `<div class="br-histrow"><span class="bh-ph">${m.ph}</span><span class="bh-mt"><span class="${m.full&&m.wa>m.wb?'bh-w':''}">Team ${m.a}</span> <b>${m.wa}:${m.wb}</b> <span class="${m.full&&m.wb>m.wa?'bh-w':''}">Team ${m.b}</span></span></div>`;
         let histHtml = '';
-        if (doneM.length) {
-          const inner = doneM.map(rowHtml).join('');
-          histHtml = doneM.length >= 3
-            ? `<details class="br-details"><summary>Match-Historie (${doneM.length})</summary>${inner}</details>`
+        if (histRows.length) {
+          const inner = histRows.map(histRowHtml).join('');
+          histHtml = histRows.length >= 3
+            ? `<details class="br-details"><summary>Match-Historie (${histRows.length})</summary>${inner}</details>`
             : `<div class="br-history"><div class="br-stage-label">Match-Historie</div>${inner}</div>`;
         }
 

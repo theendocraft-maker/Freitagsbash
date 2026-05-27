@@ -1066,19 +1066,30 @@
   function haxTeamMembers(d, playing, t) {
     return playing.filter(p => currentResults[d.id]?.[p.id]?.team === t).map(p => p.name).join(', ') || '(leer)';
   }
+  // Bracket-Daten pro Phase: { gpp:{phase:n}, games:{phase:{"a-b":[Sieger]}} }
+  function normBracket(d) {
+    const br = Object.assign({}, d.bracket || {});
+    if (!br.gpp || typeof br.gpp !== 'object') br.gpp = {};
+    if (!br.games || typeof br.games !== 'object') br.games = {};
+    // altes flaches Format („1-2":[...]) erkennen und verwerfen
+    if (Object.keys(br.games).some(k => /^\d+-\d+$/.test(k))) br.games = {};
+    return br;
+  }
+  const haxDefGpp = phase => phase === 'Teams' ? 1 : 3;
   function renderHaxballMatches(d, playing) {
     const teams = haxTeamsPresent(d, playing);
     if (teams.length < 2) return `<div class="haxball-step-title">Partien · Jeder gegen jeden</div><p class="section-desc">Erst Teams zuweisen/auslosen — dann erscheinen hier die Partien.</p>`;
-    const br = d.bracket || {};
-    const gpp = br.gpp || 1;
-    const games = br.games || {};
+    const phase = d.phase || 'Teams';
+    const br = normBracket(d);
+    const gpp = br.gpp[phase] || haxDefGpp(phase);
+    const games = br.games[phase] || {};
     const PHASE_REC = {
       'Teams': '1 Spiel pro Paarung · jedes Spiel: erster mit 3 Toren oder 3-Min-Cap',
       '2v2': 'Best of 3 → „Spiele je Paarung" = 3',
       '1v1-Finale': 'Best of 3 (oder Best of 5 fürs Drama)'
     };
-    const recHtml = `<p class="section-desc">💡 Empfohlen (${d.phase || 'Teams'}): ${PHASE_REC[d.phase || 'Teams']}</p>`;
-    const gppSel = `<div class="draw-control"><span class="draw-label">Spiele je Paarung:</span>${[1,2,3,5].map(n => `<button class="phase-btn ${gpp===n?'active':''}" onclick="setHaxGpp('${d.id}',${n})">${n}</button>`).join('')}</div>`;
+    const recHtml = `<p class="section-desc">💡 Empfohlen (${phase}): ${PHASE_REC[phase] || ''}</p>`;
+    const gppSel = `<div class="draw-control"><span class="draw-label">Spiele je Paarung:</span>${[1,2,3,5].map(n => `<button class="phase-btn ${gpp===n?'active':''}" onclick="setHaxGpp('${d.id}','${phase}',${n})">${n}</button>`).join('')}</div>`;
     const pairs = [];
     for (let i = 0; i < teams.length; i++) for (let j = i+1; j < teams.length; j++) {
       const a = teams[i], b = teams[j], key = `${a}-${b}`;
@@ -1088,8 +1099,8 @@
       for (let g = 0; g < gpp; g++) {
         const w = arr[g] || 0;
         gameBtns += `<div class="match-game"><span class="mg-label">Spiel ${g+1}</span>
-          <button class="mg-btn ${w===a?'win':''}" onclick="setMatchWinner('${d.id}','${key}',${g},${a})">Team ${a}</button>
-          <button class="mg-btn ${w===b?'win':''}" onclick="setMatchWinner('${d.id}','${key}',${g},${b})">Team ${b}</button></div>`;
+          <button class="mg-btn ${w===a?'win':''}" onclick="setMatchWinner('${d.id}','${phase}','${key}',${g},${a})">Team ${a}</button>
+          <button class="mg-btn ${w===b?'win':''}" onclick="setMatchWinner('${d.id}','${phase}','${key}',${g},${b})">Team ${b}</button></div>`;
       }
       pairs.push(`<div class="match-row"><div class="match-head"><span class="mt">Team ${a}<small>${haxTeamMembers(d, playing, a)}</small></span><b>${wa}:${wb}</b><span class="mt">Team ${b}<small>${haxTeamMembers(d, playing, b)}</small></span></div>${gameBtns}</div>`);
     }
@@ -1101,23 +1112,25 @@
     const allPlayed = Object.values(games).reduce((a,arr) => a + arr.filter(Boolean).length, 0) >= teams.length * (teams.length - 1) / 2 * gpp;
     const hasTie = allPlayed && new Set(winVals).size < winVals.length && winVals.some(v => v > 0);
     const tieHint = hasTie ? `<div class="fg-suggest" style="background:var(--alert-soft);border-color:var(--alert-line)"><div class="fg-suggest-head" style="color:var(--alert)">⚠ Gleichstand — Sudden Death</div><div class="fg-suggest-body">Erst zählt das <b>direkte Duell</b>. Bleibt's gleich (Dreier-Zyklus): <b>Golden Goal</b> — die punktgleichen Teams spielen je ein Spiel, <b>das erste Tor gewinnt</b>. Bei 3 Teams jeder gegen jeden im Golden Goal, wer die meisten holt steht oben. Immer noch gleich → <b>W20-Wurf</b> (höchste Augenzahl, wie im Kleingedruckten). Erhöhe für das Stechen „Spiele je Paarung" oder spielt es separat; die finale Reihenfolge trägst du unten als Endplatzierung ein.</div></div>` : '';
-    return `<div class="haxball-step-title">Partien · Jeder gegen jeden</div>${recHtml}${gppSel}${pairs.join('')}${winsTable}${tieHint}`;
+    return `<div class="haxball-step-title">Partien · Phase „${phase}"</div>${recHtml}${gppSel}${pairs.join('')}${winsTable}${tieHint}`;
   }
-  window.setHaxGpp = async function(discId, n) {
+  window.setHaxGpp = async function(discId, phase, n) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
-    const br = Object.assign({ games:{} }, d.bracket || {}); br.gpp = n;
+    const br = normBracket(d); br.gpp = Object.assign({}, br.gpp); br.gpp[phase] = n;
     await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
     d.bracket = br; renderDisciplineBodyFor(discId);
   };
-  window.setMatchWinner = async function(discId, key, gameIdx, team) {
+  window.setMatchWinner = async function(discId, phase, key, gameIdx, team) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
-    const br = Object.assign({ gpp:1, games:{} }, d.bracket || {});
+    const br = normBracket(d);
     br.games = Object.assign({}, br.games);
-    const arr = (br.games[key] || []).slice();
+    const pg = Object.assign({}, br.games[phase] || {});
+    const arr = (pg[key] || []).slice();
     arr[gameIdx] = (arr[gameIdx] === team) ? 0 : team;
-    br.games[key] = arr;
+    pg[key] = arr; br.games[phase] = pg;
     await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
     d.bracket = br; renderDisciplineBodyFor(discId);
+    if (typeof toast === 'function') toast('Sieg eingetragen', 'ok');
   };
 
   // --- Solo: Klick-Reihenfolge ---
