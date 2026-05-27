@@ -834,14 +834,14 @@
       });
     }
 
-    // Teilnehmer laden
-    const { data: pData } = await sb.from('event_participation')
-      .select('*').eq('event_id', id);
-    currentParticipantIds = new Set((pData || []).filter(p => p.attended).map(p => p.player_id));
-
-    // Wenn noch keine Teilnehmer eingetragen sind, alle vorauswählen (Default)
-    if ((pData || []).length === 0) {
-      currentParticipantIds = new Set(players.map(p => p.id));
+    // Teilnehmer laden — Quelle der Wahrheit für „Heute am Start" ist events.roster.
+    if (currentEvent && Array.isArray(currentEvent.roster) && currentEvent.roster.length) {
+      currentParticipantIds = new Set(currentEvent.roster);
+    } else {
+      // Fallback: aus event_participation (ältere Abende) bzw. Default = alle vorauswählen.
+      const { data: pData } = await sb.from('event_participation').select('*').eq('event_id', id);
+      const attended = (pData || []).filter(p => p.attended).map(p => p.player_id);
+      currentParticipantIds = attended.length ? new Set(attended) : new Set(players.map(p => p.id));
     }
 
     // Vetos laden (von Spielern auf der Hauptseite gesetzt)
@@ -955,20 +955,17 @@
     await persistParticipants();
   };
 
-  // Teilnehmer-Auswahl sofort in event_participation schreiben, damit „Heute am Start"
-  // auf der Spielabend-Seite live mit dem Admin übereinstimmt (nicht erst beim Finalisieren).
+  // Teilnehmer-Auswahl sofort auf dem Event speichern (events.roster jsonb), damit
+  // „Heute am Start" auf der Spielabend-Seite live mit dem Admin übereinstimmt.
+  // Bewusst auf der events-Zeile (nicht event_participation): events-Updates + Realtime
+  // funktionieren zuverlässig; event_participation wird erst beim Finalisieren für die
+  // Saison-Statistik geschrieben.
   async function persistParticipants() {
     if (!currentEvent || currentEvent.status === 'finalized') return;
-    await sb.from('event_participation').delete().eq('event_id', currentEvent.id);
-    const rows = [...currentParticipantIds].map(pid => ({
-      event_id: currentEvent.id, player_id: pid, attended: true,
-      evening_points: 0, evening_rank: null, season_points: 0,
-      was_leader_at_start: false, was_host: false, penalty_factor: 1.0
-    }));
-    if (rows.length) {
-      const { error } = await sb.from('event_participation').insert(rows);
-      if (error) { console.error(error); toast('Teilnehmer speichern fehlgeschlagen', 'error'); }
-    }
+    const roster = [...currentParticipantIds];
+    const { error } = await sb.from('events').update({ roster }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Teilnehmer speichern fehlgeschlagen', 'error'); return; }
+    currentEvent.roster = roster;
   }
 
   // ===== Disziplinen rendern =====
@@ -1249,7 +1246,9 @@
     if (!confirm(`${advancers.length} Spieler ziehen weiter in „${next}". Nicht-Aufsteiger scheiden aus, neue Teams werden ausgelost.`)) return;
     const arr = advancers.slice();
     for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
-    const nTeams = (next === '1v1-Finale') ? arr.length : 2; // 1v1: jeder eigenes Team, sonst 2 Teams
+    // 1v1-Finale: jeder ein eigenes Team. 2v2: 2er-Teams bilden → ceil(N/2) Teams
+    // (z.B. 6 Aufsteiger = 3 Teams à 2, nicht 2 Teams à 3). Bei ungerader Zahl ein 1er-Team.
+    const nTeams = (next === '1v1-Finale') ? arr.length : Math.ceil(arr.length / 2);
     const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
     for (const p of playing) {
       const idx = arr.indexOf(p.id);

@@ -1199,8 +1199,14 @@
     let results = [];
     if (dIds.length) { const { data } = await sb.from('results').select('*').in('discipline_id', dIds); results = data || []; }
     const { data: vts } = await sb.from('vetoes').select('*').eq('event_id', liveEvent.id);
-    const { data: parts } = await sb.from('event_participation').select('player_id, attended').eq('event_id', liveEvent.id).eq('attended', true);
-    evParticipants = (parts || []).map(pp => evPlayers.find(p => p.id === pp.player_id)).filter(Boolean);
+    // „Heute am Start": Quelle der Wahrheit ist events.roster (vom Admin gesetzt).
+    if (Array.isArray(liveEvent.roster) && liveEvent.roster.length) {
+      evParticipants = liveEvent.roster.map(pid => evPlayers.find(p => p.id === pid)).filter(Boolean);
+    } else {
+      // Fallback für ältere Abende ohne roster: attended-Zeilen, sonst alle.
+      const { data: parts } = await sb.from('event_participation').select('player_id, attended').eq('event_id', liveEvent.id).eq('attended', true);
+      evParticipants = (parts || []).map(pp => evPlayers.find(p => p.id === pp.player_id)).filter(Boolean);
+    }
     await renderLiveFromData(dList, results, vts || []);
   }
 
