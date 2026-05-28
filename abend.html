@@ -387,6 +387,24 @@
   .nt-score { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700; background: rgba(10,10,15,0.35); color: var(--bg); border-radius: 999px; padding: 0.1rem 0.45rem; }
   .nd-team-players { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-tp { font-size: 0.88rem; color: var(--text); }
+  /* Sieger-Team: lime Akzent + WINNER-Badge oben rechts */
+  .nd-team.winner { position: relative; border: 2px solid var(--primary); box-shadow: 0 0 22px -6px var(--primary); transform: translateZ(0); }
+  .nd-team.winner::after {
+    content: "✓ SIEGER";
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    background: var(--primary);
+    color: #0b0d10;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    padding: 3px 9px;
+    border-radius: 4px;
+    z-index: 2;
+  }
+  .nd-team.winner .nd-tp { color: var(--primary); font-weight: 700; }
   .nd-tp.shuffling { color: var(--muted); opacity: 0.85; }
   .bracket { display: flex; align-items: stretch; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem; }
   .br-stage {
@@ -1725,10 +1743,12 @@
     });
 
     // Während Haxball läuft: Spieler-Tabelle der laufenden Phase (kumulative Siege) rechts anzeigen
+    // ABER nur in der Teams-Phase — in 2v2/1v1-Finale macht der Trichter links alles, Tabelle wäre Lärm
     let haxLiveRows = null;
-    if (currentDisc && currentDisc.kind === 'haxball') {
+    const haxCurrentPhase = currentDisc && currentDisc.kind === 'haxball' ? (currentDisc.phase || 'Teams') : null;
+    if (currentDisc && currentDisc.kind === 'haxball' && haxCurrentPhase === 'Teams') {
       const br = currentDisc.bracket || {};
-      const phase = currentDisc.phase || 'Teams';
+      const phase = haxCurrentPhase;
       const curGames = (br.games && br.games[phase]) || {};
       const winsByTeam = {};
       Object.values(curGames).forEach(arr => arr.forEach(w => { if (w) winsByTeam[w] = (winsByTeam[w]||0)+1; }));
@@ -2349,10 +2369,16 @@
         // Punktestand je Team (aktuelle Phase)
         const winsByTeam = {};
         Object.values(games).forEach(arr => arr.forEach(w => { if (w) winsByTeam[w] = (winsByTeam[w] || 0) + 1; }));
+        // Sieger-Markierung: in 2v2/Finale ist das Team mit den meisten Siegen nach dem Spiel der Sieger.
+        // In der Teams-Phase wird das Team mit den meisten Siegen markiert (Tabellenführer der aktuellen Auslosung).
+        const maxWins = Math.max(0, ...Object.values(winsByTeam));
+        const anyGamePlayed = maxWins > 0;
+        const winnerTeams = anyGamePlayed ? Object.keys(winsByTeam).filter(t => winsByTeam[t] === maxWins).map(Number) : [];
         const haxTeamBoxes = teamKeys.map((tk,ti) => {
           const tn = parseInt(String(tk).replace(/\D/g,''));
           const w = winsByTeam[tn] || 0;
-          return `<div class="nd-team"><div class="nd-team-name" style="background:${grad(ti)}">${tk}<span class="nt-score">${w} S</span></div><div class="nd-team-players">${(teams[tk]||[]).map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}</div></div>`;
+          const isWinner = winnerTeams.length === 1 && winnerTeams[0] === tn;
+          return `<div class="nd-team${isWinner ? ' winner' : ''}"><div class="nd-team-name" style="background:${grad(ti)}">${tk}<span class="nt-score">${w} S</span></div><div class="nd-team-players">${(teams[tk]||[]).map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}</div></div>`;
         }).join('');
         const stageInner = idx => {
           if (idx === ai) return `<div class="nd-teams br-teams">${haxTeamBoxes}</div>`;
