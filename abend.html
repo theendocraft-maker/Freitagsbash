@@ -676,27 +676,37 @@
   .scoreboard.sb-haxmode tr.tier-1 td.total-col, .scoreboard.sb-haxmode tr.tier-1 .sb-name { color: var(--cool) !important; }
   .scoreboard.sb-haxmode td.total-col { color: var(--cool); }
   .scoreboard.sb-haxmode .sb-sub .sb-cur { color: var(--cool); }
-  /* Aufstiegslinie: trennt Aufsteiger von Ausgeschiedenen — gut sichtbar und beschriftet */
-  .scoreboard.sb-haxmode tr.cutoff td { position: relative; padding-bottom: 1.4rem; }
-  .scoreboard.sb-haxmode tr.cutoff td::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0.5rem; height: 3px; background: var(--cool); pointer-events: none; }
-  .scoreboard.sb-haxmode tr.cutoff td.player-col::before {
-    content: "↑ Aufstieg · ↓ Stich";
-    position: absolute;
-    left: 50%;
-    bottom: -0.55rem;
-    transform: translateX(-50%);
+  /* Aufstiegslinie als eigene Tabellenzeile — sauber zwischen Aufsteigern und Ausgeschiedenen */
+  .scoreboard.sb-haxmode tr.cutoff-divider td { padding: 0.4rem 0.5rem; background: transparent; border: none; }
+  .scoreboard.sb-haxmode .cd-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     font-family: var(--font-mono);
-    font-size: 0.62rem;
+    font-size: 0.66rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     color: #0b0d10;
     background: var(--cool);
-    padding: 3px 10px;
+    padding: 0.35rem 0.9rem;
     border-radius: 999px;
-    z-index: 2;
-    white-space: nowrap;
+    text-transform: uppercase;
+    position: relative;
   }
-  .scoreboard.sb-haxmode tr.cutoff + tr td { padding-top: 1.4rem; }
+  .scoreboard.sb-haxmode .cd-pill::before,
+  .scoreboard.sb-haxmode .cd-pill::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 18%;
+    height: 2px;
+    background: var(--cool);
+    pointer-events: none;
+  }
+  .scoreboard.sb-haxmode .cd-pill::before { left: -18%; }
+  .scoreboard.sb-haxmode .cd-pill::after { right: -18%; }
+  .scoreboard.sb-haxmode .cd-pill .cd-sep { opacity: 0.4; }
   .live-aside .scoreboard { overflow-x: hidden; }
   .sb-mini .sb-name { overflow-wrap: anywhere; }
 
@@ -1756,18 +1766,18 @@
       const haxPhase = currentDisc.phase || 'Teams';
       const advCount = haxPhase === 'Teams' ? 4 : (haxPhase === '2v2' ? 2 : 0);
       let rk = 0, lastW = -1, activeIdx = 0;
-      const rowsHtml = haxLiveRows.map((r,i) => {
+      const rowParts = [];
+      haxLiveRows.forEach((r,i) => {
         if (!r.hax) activeIdx++;
         if (!r.hax && r.wins !== lastW) { rk = i + 1; lastW = r.wins; }
         const tier = (!r.hax && rk <= 3 && r.wins > 0) ? `tier-${rk}` : '';
-        const isCutoff = !r.hax && advCount > 0 && activeIdx === advCount;
         const col = pColor(r.player.id);
         const av = r.player.avatar_url
           ? `background-image:url(${r.player.avatar_url});border-color:${col}`
           : `background:${col};border-color:${col};color:#0b0d10`;
         const place = r.hax ? '—' : pad2(rk);
         const sub = r.hax ? `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>` : `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}</span>`;
-        return `<tr class="${tier} ${isCutoff ? 'cutoff' : ''}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
+        rowParts.push(`<tr class="${tier}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
             <td class="rank-col"><span class="rank-pill">${place}</span></td>
             <td class="player-col">
               <div class="sb-player">
@@ -1779,8 +1789,13 @@
               </div>
             </td>
             <td class="total-col">${r.wins}</td>
-          </tr>`;
-      }).join('');
+          </tr>`);
+        // Nach der letzten Aufsteiger-Zeile eine eigene Trenner-Zeile einfügen
+        if (!r.hax && advCount > 0 && activeIdx === advCount) {
+          rowParts.push(`<tr class="cutoff-divider"><td colspan="3"><div class="cd-pill"><span>↑ Aufstieg</span><span class="cd-sep">·</span><span>↓ Stich</span></div></td></tr>`);
+        }
+      });
+      const rowsHtml = rowParts.join('');
       body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Siege</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
     } else if (rows.length === 0) {
       body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
