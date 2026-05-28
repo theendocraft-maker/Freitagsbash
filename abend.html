@@ -332,11 +332,13 @@
   }
   .intro-btn:hover { border-color: var(--primary); }
   .intro-btn.wide { min-width: 92px; }
-  .intro-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6rem; margin: 0.8rem 0 1rem; animation: introIn 0.45s ease; }
-  .ir-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.7rem 0.5rem; text-align: center; }
-  .ir-av { width: 46px; height: 46px; border-radius: 50%; margin: 0 auto 0.4rem; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--bg); font-size: 0.95rem; }
-  .ir-name { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text); }
-  .ir-cry { font-size: 0.7rem; color: var(--muted); font-style: italic; margin-top: 0.15rem; }
+  .intro-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.95rem; margin: 1.1rem auto 1.4rem; max-width: 980px; animation: introIn 0.45s ease; }
+  .ir-card { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 1.1rem 0.85rem 0.95rem; text-align: center; position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .ir-card:hover { transform: translateY(-2px); box-shadow: 0 14px 32px -18px var(--ir-c, var(--primary)); }
+  .ir-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--ir-c, var(--primary)); }
+  .ir-av { width: 76px; height: 76px; border-radius: 50%; margin: 0.45rem auto 0.65rem; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; color: #0b0d10; font-size: 1.45rem; letter-spacing: 0.04em; border: 3px solid var(--ir-c, var(--primary)); }
+  .ir-name { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.03em; color: var(--text); line-height: 1.05; }
+  .ir-cry { font-size: 0.8rem; color: var(--muted); font-style: italic; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); line-height: 1.35; }
   .nd-glyph {
     font-family: var(--font-display); font-weight: 900;
     font-size: 1rem; letter-spacing: 0.04em;
@@ -1614,8 +1616,8 @@
       if (isDemo) {
         buildIntroSlideshow(orderedDiscs, roster, { controls: true });
       } else {
-        // Dauerschleife: Teilnehmer → Spiel 1 → Spiel 2 → … wiederholt sich. Startet beim Admin-Schritt.
-        buildIntroSlideshow(orderedDiscs, roster, { controls: false, autoLoop: true, step: liveEvent.intro_step });
+        // Admin-gesteuert: zeigt genau den Slide, den der Admin gesetzt hat (intro_step). Kein Auto-Scroll.
+        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step });
       }
     } else {
       clearInterval(introTimer); introTimer = null;
@@ -1947,8 +1949,14 @@
       const ps = (introRoster && introRoster.length) ? introRoster : evPlayers;
       box.innerHTML = `
         <div class="intro">
-          <div class="nd-label">Heute am Start · ${ps.length} Spieler</div>
-          <div class="intro-roster">${ps.map((p,i) => `<div class="ir-card"><div class="ir-av" style="${p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${grad(i)}`}">${p.avatar_url ? '' : ini(p.name || '?')}</div><div class="ir-name">${p.name || '—'}</div>${p.cry ? `<div class="ir-cry">„${p.cry}"</div>` : ''}</div>`).join('')}</div>
+          <div class="nd-label">Vorstellung · Teilnehmer</div>
+          <div class="intro-name">Heute am Start</div>
+          <div class="intro-mode">${ps.length} Spieler · Saison 1 · Abend 1</div>
+          <div class="intro-roster">${ps.map((p,i) => {
+            const col = pColor(p.id);
+            const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
+            return `<div class="ir-card" style="--ir-c:${col}"><div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div><div class="ir-name">${p.name || '—'}</div>${p.cry ? `<div class="ir-cry">„${p.cry}"</div>` : ''}</div>`;
+          }).join('')}</div>
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(0, n)}
         </div>`;
