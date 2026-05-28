@@ -240,6 +240,7 @@
   /* „Letzte Chance"-Banner */
   .last-chance { margin-bottom: 1.25rem; background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; }
   .lc-title { font-family: var(--font-display); font-weight: 900; font-size: 1.1rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--alert); margin-bottom: 0.5rem; }
+  .lc-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem; }
   .lc-rows { display: flex; flex-direction: column; gap: 0.25rem; }
   .lc-row { font-size: 0.9rem; color: var(--text); }
   .lc-row b { color: var(--text); }
@@ -610,11 +611,17 @@
      ============================ */
   .live-layout { display: grid; grid-template-columns: 1fr; gap: 1.3rem; }
   @media (min-width: 940px) {
-    .live-layout { grid-template-columns: minmax(0,1fr) 320px; align-items: start; }
+    /* Spielabend-Seite breiter machen, Tabelle in den freien Raum rechts */
+    main.wrap { max-width: 1320px; }
+    .intro-section, #veto { max-width: 980px; margin-left: auto; margin-right: auto; }
+    .live-layout { grid-template-columns: minmax(0,1fr) 360px; align-items: start; gap: 1.8rem; }
+    .live-layout.no-aside { grid-template-columns: 1fr; }
     .live-aside { position: sticky; top: 76px; }
   }
   .live-main { min-width: 0; }
   .sb-aside-head { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.02em; color: var(--text); margin-bottom: 0.5rem; }
+  .live-aside .scoreboard { overflow-x: hidden; }
+  .sb-mini .sb-name { overflow-wrap: anywhere; }
 
   /* ============================
      SCOREBOARD — broadcast-sized
@@ -1555,6 +1562,13 @@
       }
     });
 
+    // Tabelle erst NACH dem ersten Spiel zeigen; vorher volle Breite für den Hauptbereich
+    const showTable = doneCount >= 1;
+    const liveAside = document.querySelector('.live-aside');
+    const liveLayout = document.querySelector('.live-layout');
+    if (liveAside) liveAside.style.display = showTable ? '' : 'none';
+    if (liveLayout) liveLayout.classList.toggle('no-aside', !showTable);
+
     const body = document.getElementById('liveBody');
     if (rows.length === 0) {
       body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
@@ -1696,14 +1710,15 @@
     if (lcEl) {
       const lastDisc = orderedDiscs[orderedDiscs.length - 1];
       const onlyLastLeft = doneCount === orderedDiscs.length - 1 && lastDisc && !discDone[lastDisc.id];
-      const items = onlyLastLeft ? rows.map((r,i) => {
-        if (i === 0) return null;
-        const above = rows[i - 1];
-        const need = (above.total - r.total) + 1;
-        return need <= 10 ? { name: r.player.name, need, above: above.player.name } : null;
+      // Nur Spieler zeigen, die im letzten Spiel (max. 10 Punkte) noch Platz 1 erreichen können
+      const leader = rows[0];
+      const items = (onlyLastLeft && leader) ? rows.map(r => {
+        if (r.rank === 1) return null;             // schon ganz vorne
+        const need = (leader.total - r.total) + 1; // Punkte, um den Führenden zu überholen
+        return need <= 10 ? { name: r.player.name, need } : null;
       }).filter(Boolean) : [];
       if (items.length) {
-        lcEl.innerHTML = `<div class="lc-title">⚠️ Letzte Chance — ${discName(lastDisc.kind)} entscheidet!</div><div class="lc-rows">${items.map(x => `<div class="lc-row"><b>${x.name}</b> braucht <span class="lc-need">${x.need}</span> auf ${x.above}</div>`).join('')}</div>`;
+        lcEl.innerHTML = `<div class="lc-title">⚠️ Letzte Chance — ${discName(lastDisc.kind)} entscheidet!</div><div class="lc-sub">Noch im Rennen um Platz 1 (${leader.player.name} · ${leader.total}):</div><div class="lc-rows">${items.map(x => `<div class="lc-row"><b>${x.name}</b> braucht <span class="lc-need">+${x.need}</span> für Platz 1</div>`).join('')}</div>`;
         lcEl.style.display = 'block';
       } else { lcEl.style.display = 'none'; }
     }
