@@ -752,6 +752,37 @@
     vertical-align: middle;
   }
   .scoreboard.sb-haxmode .sb-sd { color: var(--alert); font-weight: 700; }
+  /* Stechspiel-Kandidaten: am Cutoff gleichauf, müssen Sudden Death spielen */
+  .scoreboard.sb-haxmode tr.sd-candidate {
+    background: linear-gradient(90deg, rgba(255,61,110,0.18), rgba(255,61,110,0.04)) !important;
+    box-shadow: inset 3px 0 0 var(--alert);
+    animation: sdPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes sdPulse {
+    0%, 100% { box-shadow: inset 3px 0 0 var(--alert); }
+    50%      { box-shadow: inset 3px 0 0 var(--alert), 0 0 14px -2px rgba(255,61,110,0.55); }
+  }
+  .scoreboard.sb-haxmode .sd-tag {
+    display: inline-block;
+    background: transparent;
+    color: var(--alert);
+    border: 1px solid var(--alert);
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 5px;
+    vertical-align: middle;
+    text-transform: uppercase;
+    animation: sdTagBlink 1.4s ease-in-out infinite;
+  }
+  @keyframes sdTagBlink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.55; }
+  }
+  .scoreboard.sb-haxmode tr.sd-candidate .sb-sub .sb-cur { color: var(--alert); font-weight: 700; }
   /* Erklärung unter der Tabelle */
   .scoreboard.sb-haxmode .sd-explain {
     padding: 0.6rem 0.9rem;
@@ -1854,6 +1885,24 @@
       // Aufstiegslinie: Teams-Phase 4 weiter, 2v2 2 weiter, Finale keine
       const haxPhase = currentDisc.phase || 'Teams';
       const advCount = haxPhase === 'Teams' ? 4 : (haxPhase === '2v2' ? 2 : 0);
+
+      // Sudden-Death-Kandidaten ermitteln: aktive Spieler, die am Cutoff (Position ADV) gleichauf
+      // mit dem nächsten Spieler liegen → sie müssen ein Stech-Spiel spielen.
+      // Bedingung wie im Admin: Teams-Phase, mindestens ein Spiel gespielt (sub-Sicherheit greift via Admin-Banner).
+      const sdCandIds = new Set();
+      let sdCutoffWins = null;
+      if (haxPhase === 'Teams' && advCount > 0) {
+        const activeRows = haxLiveRows.filter(r => !r.hax);
+        if (activeRows.length > advCount) {
+          const cutW = activeRows[advCount - 1].wins;
+          const nextW = activeRows[advCount].wins;
+          if (cutW === nextW && cutW > 0) {
+            sdCutoffWins = cutW;
+            activeRows.filter(r => r.wins === cutW).forEach(r => sdCandIds.add(r.player.id));
+          }
+        }
+      }
+
       let rk = 0, lastW = -1, activeIdx = 0, pastCutoff = false;
       const rowParts = [];
       haxLiveRows.forEach((r,i) => {
@@ -1861,20 +1910,30 @@
         if (!r.hax && r.wins !== lastW) { rk = i + 1; lastW = r.wins; }
         const tier = (!r.hax && rk <= 3 && r.wins > 0) ? `tier-${rk}` : '';
         const belowCls = (pastCutoff && !r.hax) ? ' below-cutoff' : '';
+        const isSdCand = sdCandIds.has(r.player.id);
+        const sdCandCls = isSdCand ? ' sd-candidate' : '';
         const col = pColor(r.player.id);
         const av = r.player.avatar_url
           ? `background-image:url(${r.player.avatar_url});border-color:${col}`
           : `background:${col};border-color:${col};color:#0b0d10`;
         const place = r.hax ? '—' : pad2(rk);
         const sdMark = (r.sdWins > 0) ? ` <span class="sd-mark" title="${r.sdWins} Sudden-Death-Sieg${r.sdWins > 1 ? 'e' : ''}">SD</span>` : '';
-        const sub = r.hax ? `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>` : `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
-        rowParts.push(`<tr class="${tier}${belowCls}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
+        const sdTag  = (isSdCand && r.sdWins === 0) ? ` <span class="sd-tag" title="Muss Stech-Spiel spielen">Stech</span>` : '';
+        let sub;
+        if (r.hax) {
+          sub = `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>`;
+        } else if (isSdCand) {
+          sub = `<span class="sb-cur">${r.wins} Siege · <b>Stechspiel um Aufstieg</b>${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
+        } else {
+          sub = `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
+        }
+        rowParts.push(`<tr class="${tier}${belowCls}${sdCandCls}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
             <td class="rank-col"><span class="rank-pill">${place}</span></td>
             <td class="player-col">
               <div class="sb-player">
                 <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
                 <div class="sb-pwrap">
-                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}${sdMark}</div>
+                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}${sdTag}${sdMark}</div>
                   <div class="sb-sub">${sub}</div>
                 </div>
               </div>
@@ -1883,14 +1942,24 @@
           </tr>`);
         // Nach der letzten Aufsteiger-Zeile eine eigene Trenner-Zeile einfügen
         if (!r.hax && advCount > 0 && activeIdx === advCount) {
-          rowParts.push(`<tr class="cutoff-divider"><td colspan="3"><div class="cd-pill"><span>↑ Aufstieg</span><span class="cd-sep">·</span><span>↓ Stich</span></div></td></tr>`);
+          const cdLabel = sdCandIds.size
+            ? `<div class="cd-pill" style="background:var(--alert);color:#0b0d10"><span>⚠ Stechspiel</span><span class="cd-sep">·</span><span>${sdCandIds.size} Spieler · ${sdCutoffWins} Siege</span></div>`
+            : `<div class="cd-pill"><span>↑ Aufstieg</span><span class="cd-sep">·</span><span>↓ Stich</span></div>`;
+          rowParts.push(`<tr class="cutoff-divider"><td colspan="3">${cdLabel}</td></tr>`);
           pastCutoff = true;
         }
       });
       const rowsHtml = rowParts.join('');
-      // Sudden-Death-Erklärung: wer hat ein Stech-Spiel gewonnen?
+      // Notiz-Block: erst Stechspiel-Hinweis (wenn Kandidaten existieren), dann SD-Gewinner-Liste
+      const sdCandNames = [...sdCandIds].map(pid => (haxLiveRows.find(r => r.player.id === pid) || {}).player?.name).filter(Boolean);
       const sdPlayers = haxLiveRows.filter(r => r.sdWins > 0).map(r => r.player.name);
-      const sdNote = sdPlayers.length ? `<div class="sd-explain"><b>SD</b> = Sudden Death · ${sdPlayers.join(', ')} hat${sdPlayers.length === 1 ? '' : 'en'} ein Stech-Spiel gewonnen → Bonus-Sieg zählt zur Aufstiegsentscheidung.</div>` : '';
+      const sdCandNote = sdCandNames.length
+        ? `<div class="sd-explain"><b>Stechspiel</b> · ${sdCandNames.join(', ')} sind gleichauf am Aufstiegs-Cutoff. <b>1v1 Golden Goal</b> (erstes Tor gewinnt) entscheidet, wer ins 2v2 weiterkommt.</div>`
+        : '';
+      const sdWonNote = sdPlayers.length
+        ? `<div class="sd-explain"><b>SD</b> = Sudden Death · ${sdPlayers.join(', ')} hat${sdPlayers.length === 1 ? '' : 'en'} ein Stech-Spiel gewonnen → Bonus-Sieg zählt zur Aufstiegsentscheidung.</div>`
+        : '';
+      const sdNote = sdCandNote + sdWonNote;
       body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Siege</th></tr></thead><tbody>${rowsHtml}</tbody></table>${sdNote}`;
     } else if (brawlLiveRows && doneCount === 0) {
       // Brawlhalla läuft → Bundesliga-Stil mit kumulativen Lobby-Punkten
