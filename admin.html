@@ -651,6 +651,15 @@
       <button class="btn-primary" id="finalizeBtn">🏆 Abend abschließen</button>
     </div>
 
+    <!-- Punkte zurücksetzen (zum Üben/Wiederholen) -->
+    <div class="finalize-bar" style="border-color:var(--cool-soft);background:linear-gradient(135deg, rgba(125,240,255,0.08), var(--surface) 70%);margin-top:1rem">
+      <div class="finalize-info">
+        <strong>Punkte zurücksetzen?</strong><br>
+        Löscht alle Ergebnisse, Phasen und Auslosungen dieses Abends. Teilnehmer, Modi/Lobbys-Definitionen, Codes und Join-Links bleiben — du kannst direkt nochmal spielen.
+      </div>
+      <button id="resetScoresBtn" style="background:var(--cool);color:#0b0d10;font-weight:700;border:none;border-radius:var(--radius-sm);padding:0.7rem 1.1rem;cursor:pointer;font-family:var(--font-sans);font-size:0.95rem">🔄 Punkte zurücksetzen</button>
+    </div>
+
     <div style="margin-top:2rem; text-align:right">
       <button class="btn-danger" id="deleteEventBtn">🗑️ Diesen Abend löschen</button>
     </div>
@@ -2272,6 +2281,38 @@
     currentEvent.copter_active = v;
     toast(v ? '🃏 Joker aktiviert' : 'Joker deaktiviert', 'ok');
     renderDetail();
+  });
+
+  // ===== Punkte zurücksetzen (zum Üben/Wiederholen, ohne neuen Abend) =====
+  $('resetScoresBtn').addEventListener('click', async () => {
+    if (!currentEvent) return;
+    if (!confirm(`Alle Ergebnisse, Phasen und Auslosungen von „${currentEvent.name}" zurücksetzen?\n\nWird gelöscht: Punkte, Platzierungen, Haxball-Trichter, Brawlhalla-Lobbys/Spiele, GeoGuessr/Chess-Rankings.\nBleibt erhalten: Teilnehmer, Modi-Definitionen, Codes, Join-Links, Stech-Spiel.`)) return;
+    const btn = $('resetScoresBtn'); btn.disabled = true; btn.textContent = '… zurücksetzen';
+    try {
+      const dIds = currentDisciplines.map(d => d.id);
+      // Ergebnisse löschen
+      if (dIds.length) await sb.from('results').delete().in('discipline_id', dIds);
+      // Disziplinen-Fortschritt zurücksetzen (Modi/Codes/Join-Link/Rounds bleiben)
+      for (const d of currentDisciplines) {
+        const patch = { phase: null, teams_drawn_at: null, bracket: null, live_since: null, status: 'draft' };
+        await sb.from('disciplines').update(patch).eq('id', d.id);
+        Object.assign(d, patch);
+      }
+      // Event-Status zurück (Sendezeit, Intro, Pause, Joker)
+      const evPatch = { intro_step: null, pause_msg: null, live_since: null, copter_active: false };
+      await sb.from('events').update(evPatch).eq('id', currentEvent.id);
+      Object.assign(currentEvent, evPatch);
+      // Lokaler State leeren
+      currentResults = {};
+      currentDisciplines.forEach(d => currentResults[d.id] = {});
+      renderDetail();
+      toast('🔄 Punkte zurückgesetzt — bereit für die nächste Runde', 'ok');
+    } catch (e) {
+      console.error(e);
+      toast('Reset fehlgeschlagen', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = '🔄 Punkte zurücksetzen';
+    }
   });
 
   // ===== Finalize =====
