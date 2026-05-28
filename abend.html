@@ -384,7 +384,9 @@
     padding: 0.4rem 0.7rem;
     display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
   }
-  .nt-score { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700; background: rgba(10,10,15,0.35); color: var(--bg); border-radius: 999px; padding: 0.1rem 0.45rem; }
+  .nt-score { display: inline-flex; align-items: baseline; gap: 4px; background: rgba(10,10,15,0.65); color: #fff; border-radius: 6px; padding: 0.25rem 0.6rem; min-width: 2.6rem; justify-content: center; }
+  .nt-score b { font-family: var(--font-display); font-size: 1.35rem; font-weight: 900; line-height: 0.9; letter-spacing: 0.02em; color: #fff; }
+  .nt-score .ns-l { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; color: rgba(255,255,255,0.65); text-transform: uppercase; }
   .nd-team-players { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.3rem; }
   .nd-tp { font-size: 0.88rem; color: var(--text); }
   /* Sieger-Team: lime Akzent + WINNER-Badge oben rechts */
@@ -2433,7 +2435,7 @@
           const tn = parseInt(String(tk).replace(/\D/g,''));
           const w = winsByTeam[tn] || 0;
           const isWinner = winnerTeams.length === 1 && winnerTeams[0] === tn;
-          return `<div class="nd-team${isWinner ? ' winner' : ''}"><div class="nd-team-name" style="background:${grad(ti)}">${tk}<span class="nt-score">${w} S</span></div><div class="nd-team-players">${(teams[tk]||[]).map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}</div></div>`;
+          return `<div class="nd-team${isWinner ? ' winner' : ''}"><div class="nd-team-name" style="background:${grad(ti)}">${tk}<span class="nt-score"><b>${w}</b><span class="ns-l">${w === 1 ? 'Sieg' : 'Siege'}</span></span></div><div class="nd-team-players">${(teams[tk]||[]).map(pid => `<span class="nd-tp"${hideStyle}>${nameOf(pid)}</span>`).join('')}</div></div>`;
         }).join('');
         const stageInner = idx => {
           if (idx === ai) return `<div class="nd-teams br-teams">${haxTeamBoxes}</div>`;
