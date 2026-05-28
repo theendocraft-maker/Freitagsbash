@@ -1900,6 +1900,11 @@
     if (error) { console.error(error); toast('Status-Update fehlgeschlagen', 'error'); return; }
     d.status = ns;
     if (patch.live_since) d.live_since = patch.live_since;
+    // Intro beenden, sobald ein Spiel startet — die Spielabend-Seite wechselt zur Spiel-Ansicht
+    if (ns === 'live' && currentEvent && currentEvent.intro_step != null) {
+      await sb.from('events').update({ intro_step: null }).eq('id', currentEvent.id);
+      currentEvent.intro_step = null;
+    }
     const card = document.querySelector(`.discipline-card[data-disc="${discId}"]`);
     const pill = card && card.querySelector('.status-pill');
     if (pill) {
@@ -2208,10 +2213,12 @@
     const newStatus = goLive ? 'live' : 'draft';
     const patch = { status: newStatus };
     if (goLive && !currentEvent.live_since) patch.live_since = new Date().toISOString(); // Sendezeit-Uhr starten
+    if (goLive && currentEvent.intro_step == null) patch.intro_step = 0;                 // Live = Vorstellung „Teilnehmer"
     const { error } = await sb.from('events').update(patch).eq('id', currentEvent.id);
     if (error) { console.error(error); toast('Status-Update fehlgeschlagen', 'error'); return; }
     currentEvent.status = newStatus;
     if (patch.live_since) currentEvent.live_since = patch.live_since;
+    if (patch.intro_step != null) currentEvent.intro_step = patch.intro_step;
     if (goLive) await persistParticipants(); // genau die aktuelle Auswahl live sichtbar machen
     toast(goLive ? '🔴 Abend ist live' : 'Zurück auf Entwurf', 'ok');
     renderDetail();

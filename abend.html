@@ -1599,17 +1599,20 @@
       return `<div class="disc-pill ${cls}"><span class="dp-no">${mark}</span><span class="nm">${label}</span></div>`;
     }).join('');
 
-    // === "Wie im Fernsehen": vor dem Start eine Vorstellungs-Slideshow, sonst die aktuelle Disziplin ===
-    const started = doneCount > 0
-      || orderedDiscs.some(d => d.status === 'live' || d.status === 'done')
-      || (results && results.length > 0);
-    if (!started && currentDisc) {
+    // === "Wie im Fernsehen": Intro vom Admin gesteuert (events.intro_step). ===
+    // Demo: zeigt das Intro vor dem Start mit lokalen Controls. Real: zeigt das Intro
+    // genau dann, wenn der Admin intro_step gesetzt hat (0 = Teilnehmer, 1..N = Disziplinen).
+    // Sobald eine Disziplin auf „läuft" geht, setzt der Admin intro_step automatisch auf null
+    // und die Spielabend-Seite wechselt zur Spiel-Ansicht.
+    const showIntro = isDemo
+      ? (doneCount === 0 && !orderedDiscs.some(d => d.status === 'live' || d.status === 'done') && (!results || !results.length))
+      : (liveEvent.intro_step != null);
+    if (showIntro && currentDisc) {
       const roster = (evParticipants && evParticipants.length) ? evParticipants : evPlayers;
       if (isDemo) {
         buildIntroSlideshow(orderedDiscs, roster, { controls: true });
       } else {
-        const step = (liveEvent.intro_step != null) ? liveEvent.intro_step : 0;
-        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step });
+        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step });
       }
     } else {
       clearInterval(introTimer); introTimer = null;
