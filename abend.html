@@ -496,6 +496,17 @@
   .brawl-go { font-size: 0.85rem; font-weight: 700; padding: 0.45rem 0.9rem; border-radius: var(--radius-sm); border: none; background: var(--primary); color: #0b0d10; cursor: pointer; }
   .brawl-go:disabled { opacity: 0.4; cursor: not-allowed; }
   .brawl-undo { font-size: 0.82rem; padding: 0.45rem 0.7rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
+  /* „Abend durch" — Endstand-Panel mit Saisonpunkten */
+  .abend-durch { padding: 1rem 0 0.5rem; text-align: center; }
+  .ad-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+  .ad-champ { font-family: var(--font-display); font-size: 2.8rem; line-height: 1; letter-spacing: 0.03em; margin-bottom: 0.3rem; }
+  .ad-sub { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); margin-bottom: 1.1rem; }
+  .ad-table-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
+  .ad-tab th { text-align: center; padding: 0.7rem 0.4rem; }
+  .ad-tab td { padding: 0.55rem 0.4rem; }
+  .ad-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+  .ad-note small { display: block; margin-top: 0.2rem; font-size: 0.72rem; opacity: 0.75; }
+
   /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
   .live-status { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; color: var(--text); line-height: 1.35; }
   .live-status.now { border-left-color: var(--alert); }
@@ -1109,6 +1120,8 @@
   const COPTER_URL = 'https://www.spiele123.com/spiel/fly-the-copter';
   let copterVetoes = [], copterKindId = {};
   const SOLO_PTS = [10,8,6,4,3,2,1];
+  const SEASON_PTS_BY_RANK = [25, 18, 15, 12, 10, 8, 6, 4]; // Platz 1..8+
+  const seasonPointsByRank = r => SEASON_PTS_BY_RANK[Math.min(Math.max(1,r), SEASON_PTS_BY_RANK.length) - 1] || 0;
   // Spieler tragen ihren Fly-the-Copter-Score selbst ein (vertrauensbasiert, wie der Veto-Picker)
   window.saveCopter = async function() {
     const sel = document.getElementById('copterPlayer'), inp = document.getElementById('copterScore');
@@ -2075,7 +2088,53 @@
   function buildNowDetail(currentDisc, results) {
     const box = document.getElementById('liveNowDetail');
     if (!box) return;
-    if (!currentDisc) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    if (!currentDisc) {
+      // „Abend durch": Endstand + Saisonpunkte-Vergabe groß anzeigen
+      if (!results || !results.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+      const byPid = {};
+      evPlayers.forEach(p => { byPid[p.id] = { player: p, total: 0, wins: 0 }; });
+      (results || []).forEach(r => {
+        if (!byPid[r.player_id]) return;
+        byPid[r.player_id].total += parseFloat(r.points) || 0;
+        if (parseInt(r.placement) === 1) byPid[r.player_id].wins++;
+      });
+      const finalRows = Object.values(byPid).filter(r => r.total > 0);
+      finalRows.sort((a,b) => (b.total - a.total) || (b.wins - a.wins));
+      let rnk = 0, lp = -1, lw = -1;
+      finalRows.forEach((r,i) => {
+        if (r.total !== lp || r.wins !== lw) rnk = i + 1;
+        r.rank = rnk; lp = r.total; lw = r.wins;
+        r.seasonPts = seasonPointsByRank(r.rank);
+      });
+      const champ = finalRows[0];
+      const champCol = champ ? pColor(champ.player.id) : 'var(--primary)';
+      const rowsHtml = finalRows.map(r => {
+        const col = pColor(r.player.id);
+        const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
+        return `<tr class="${tier}" style="--pc:${col}">
+          <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span></td>
+          <td class="player-col"><div class="sb-player"><div class="sb-avatar" style="background:${col};border-color:${col};color:#0b0d10">${ini(r.player.name)}</div><div class="sb-pwrap"><div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}</div></div></div></td>
+          <td style="text-align:right;color:var(--muted);font-family:var(--font-mono)">${r.total}</td>
+          <td class="total-col" style="color:var(--cool);font-weight:800">+${r.seasonPts}</td>
+        </tr>`;
+      }).join('');
+      box.innerHTML = `
+        <div class="abend-durch">
+          <div class="ad-eyebrow">🏁 Abend durch · Endstand</div>
+          <div class="ad-champ" style="color:${champCol}">${champ ? '🏆 ' + champ.player.name : 'Abend beendet'}</div>
+          <div class="ad-sub">Tagessieger · ${champ ? champ.total + ' Disziplinpunkte' : ''}</div>
+          <div class="ad-table-wrap">
+            <table class="sb-table sb-mini ad-tab">
+              <thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th style="text-align:right">Pkt</th><th class="total-col">Saison</th></tr></thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+          <div class="ad-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) und Streicher werden dort berücksichtigt.</small></div>
+        </div>`;
+      box.style.display = 'block';
+      lastNowDisc = null; lastNowResults = results;
+      return;
+    }
     lastNowDisc = currentDisc; lastNowResults = results;   // für lokales Re-Render (Brawlhalla-Self-Entry)
 
     const kind = currentDisc.kind;

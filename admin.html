@@ -240,6 +240,7 @@
     border: 1px solid var(--border);
     color: var(--text-soft);
   }
+  .disc-pcount { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; margin-left: 0.4rem; white-space: nowrap; }
   .discipline-title {
     font-family: var(--font-body); font-weight: 700;
     font-size: 0.98rem;
@@ -1043,6 +1044,12 @@
             <div class="discipline-head-left">
               <span class="discipline-icon">${def.icon}</span>
               <span class="discipline-title">${d.name}</span>
+              ${(() => {
+                const participants = players.filter(p => currentParticipantIds.has(p.id));
+                const vetoCount = participants.filter(p => currentVetoes[p.id] === d.kind).length;
+                const playingCount = participants.length - vetoCount;
+                return `<span class="disc-pcount" title="Teilnehmer minus Vetos für ${d.name}">${playingCount} ${playingCount === 1 ? 'Spieler' : 'Spieler'}${vetoCount > 0 ? ` <small style="color:var(--alert);font-weight:600">(${vetoCount}× 🃏)</small>` : ''}</span>`;
+              })()}
             </div>
             <div style="display:flex;align-items:center;gap:0.7rem">
               <span class="status-pill ${d.status === 'done' ? 'finalized' : (d.status === 'live' ? 'live' : 'draft')}" onclick="event.stopPropagation(); cycleDiscStatus('${d.id}')" style="cursor:pointer" title="Klicken: offen → läuft → fertig">${d.status === 'done' ? '✓ fertig' : (d.status === 'live' ? 'läuft' : 'offen')}</span>
@@ -1389,6 +1396,7 @@
 
   // --- Phasenwechsel: Aufsteiger wählen → System bildet die neuen Teams (per Los) ---
   let haxAdvanceSel = {};
+  let haxAdvanceTouched = {}; // wurde die Auswahl manuell verändert?
   let haxTeamCount = {}; // gewählte Team-Anzahl für die nächste Phase, pro Disziplin
   const ADV_TARGET = { '2v2': 4, '1v1-Finale': 2 };
   const nextPhaseOf = p => p === 'Teams' ? '2v2' : (p === '2v2' ? '1v1-Finale' : null);
@@ -1401,11 +1409,18 @@
     const wins = {}; Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w] = (wins[w]||0)+1; }));
     // Für die Aufstiegsentscheidung zählt die SUMME aller Auslosungen (kumulativ)
     const teamWins = p => haxPlayerWinsCumulative(d, p);
-    if (!haxAdvanceSel[d.id]) {
-      // Vorauswahl: Mitglieder der siegreichsten Teams bis zur Zielzahl
-      const teamsByWins = haxTeamsPresent(d, playing).sort((a,b) => (wins[b]||0) - (wins[a]||0));
+    // Vorauswahl: bei jedem Render frisch ableiten — außer der Admin hat manuell gepickt
+    if (!haxAdvanceTouched[d.id]) {
+      // Spieler nach kumulierten Siegen sortieren, dazu Team-Siege als Sekundärkriterium (für Ties)
+      const sorted = playing.slice().sort((a,b) => {
+        const wa = teamWins(a), wb = teamWins(b);
+        if (wa !== wb) return wb - wa;
+        const ta = wins[currentResults[d.id]?.[a.id]?.team] || 0;
+        const tb = wins[currentResults[d.id]?.[b.id]?.team] || 0;
+        return tb - ta;
+      });
       const sel = new Set();
-      for (const t of teamsByWins) for (const p of playing.filter(pp => currentResults[d.id]?.[pp.id]?.team === t)) { if (sel.size < target) sel.add(p.id); }
+      for (const p of sorted) { if (sel.size < target) sel.add(p.id); }
       haxAdvanceSel[d.id] = sel;
     }
     const sel = haxAdvanceSel[d.id];
@@ -1446,7 +1461,8 @@
   window.toggleHaxAdvance = function(discId, pid) {
     const sel = haxAdvanceSel[discId] = haxAdvanceSel[discId] || new Set();
     if (sel.has(pid)) sel.delete(pid); else sel.add(pid);
-    haxTeamCount[discId] = null; // Team-Auswahl zurücksetzen, da N sich geändert hat
+    haxAdvanceTouched[discId] = true;   // manuell verändert: Vorauswahl nicht mehr überschreiben
+    haxTeamCount[discId] = null;        // Team-Auswahl zurücksetzen, da N sich geändert hat
     renderDisciplineBodyFor(discId);
   };
   window.setHaxTeamCount = function(discId, n) { haxTeamCount[discId] = n; renderDisciplineBodyFor(discId); };
@@ -1493,6 +1509,7 @@
     await sb.from('disciplines').update({ phase: next, teams_drawn_at: ts }).eq('id', discId);
     d.phase = next; d.teams_drawn_at = ts;
     delete haxAdvanceSel[discId];
+    delete haxAdvanceTouched[discId];
     delete haxTeamCount[discId];
     await recomputeHaxball(discId);
     renderDisciplineBodyFor(discId); renderOverview();
