@@ -1256,7 +1256,7 @@
         'Melde dich an oder erstelle einen kostenlosen GeoGuessr-Account.',
         'Spiel die 5 Runden — dein Ergebnis landet automatisch im Challenge-Ranking.'
       ] },
-    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter', rules:'Teams per Los → die Besten ziehen weiter ins 2v2 → 1v1-Finale. Je weiter ein Team kommt, desto mehr Punkte.', phases:['Teams','2v2','1v1-Finale'],
+    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter', rules:'Teams per Los → die Besten ziehen weiter ins 2v2 → 1v1-Finale. Teams-Phase: 3 Tore / 3 min · Halbfinale & Finale: 5 Tore / 5 min. Je weiter du kommst, desto mehr Punkte.', phases:['Teams','2v2','1v1-Finale'],
       join:[
         'Geh auf haxball.com und öffne den Raum-Link vom Host (im Spiel: Menü → Raum-URL kopieren).',
         'Gib einen Nickname ein — nur normale Tastatur-Zeichen, keine Emojis.',
@@ -2315,38 +2315,14 @@
             : `<div class="br-history"><div class="br-stage-label">Match-Historie</div>${inner}</div>`;
         }
 
-        // Wertung & Aufstieg: nachvollziehbar wer warum weiter/raus ist (Siege je Team)
-        let wertungHtml = '';
-        if (Object.keys(games).length) {
-          const advCount = curPhase === 'Teams' ? 2 : (curPhase === '2v2' ? 1 : 0); // wie viele Teams weiter
-          const rankedT = teamNums.slice().sort((a,b) => (winsByTeam[b]||0) - (winsByTeam[a]||0));
-          // Aufstiegsgrenze: Team an Platz advCount-1 (letzter Aufsteiger) vs. advCount (erster Out).
-          // Sind diese gleich, ist die Grenze umkämpft → ALLE Teams mit dieser Siegzahl müssen ins
-          // Stechen (Sudden Death), egal ob sie über oder unter der Linie stehen.
-          const everyoneAdvances = advCount > 0 && rankedT.length <= advCount;
-          const inW  = (advCount > 0 && !everyoneAdvances) ? (winsByTeam[rankedT[advCount-1]] || 0) : null;
-          const outW = (advCount > 0 && !everyoneAdvances) ? (winsByTeam[rankedT[advCount]]   || 0) : null;
-          const contestedWins = (inW != null && inW === outW) ? inW : null; // null = saubere Trennung
-          const wrows = rankedT.map((t,i) => {
-            const w = winsByTeam[t] || 0;
-            let tag = '';
-            if (advCount > 0) {
-              if (everyoneAdvances) tag = '<span class="wt-go">✓ weiter</span>';
-              else if (contestedWins != null && w === contestedWins) tag = '<span class="wt-tie">Stechen?</span>';
-              else if (w > outW) tag = '<span class="wt-go">✓ weiter</span>';
-              else tag = '<span class="wt-out">✗ raus</span>';
-            }
-            return `<div class="wt-row"><span class="wt-rank">${i+1}.</span><span class="wt-team">Team ${t} <small>${memOf(t)}</small></span><span class="wt-wins">${w} ${w===1?'Sieg':'Siege'}</span>${tag}</div>`;
-          }).join('');
-          const note = curPhase === '1v1-Finale' ? 'Das 1v1-Finale entscheidet den Sieg.' : 'Es zählen die Siege; bei Gleichstand entscheidet Sudden Death (§ 13).';
-          wertungHtml = `<div class="nd-block"><div class="nd-label">Wertung · Aufstieg nach Siegen</div>${wrows}<div class="wt-note">${note}</div></div>`;
-        }
+        // Team-basierte „Wertung · Aufstieg nach Siegen" wird im neuen Modus nicht mehr gezeigt —
+        // die Spieler-Tabelle (kumuliert über alle Auslosungen) erscheint rechts wie eine Bundesliga-Tabelle.
         teamsHtml = `
           <div class="nd-block">
             <div class="nd-label">Turnierbaum · ${bo}${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
             <div class="bracket${haxFlash}">${stages}</div>
             ${nextHtml}${pendHtml}${histHtml}
-          </div>${wertungHtml}`;
+          </div>`;
       } else {
         teamsHtml = `
           <div class="nd-block">

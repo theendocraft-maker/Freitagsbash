@@ -1247,9 +1247,9 @@
     const gpp = br.gpp[phase] || haxDefGpp(phase);
     const games = br.games[phase] || {};
     const PHASE_REC = {
-      'Teams': '1 Spiel pro Paarung · jedes Spiel: erster mit 3 Toren oder 3-Min-Cap',
-      '2v2': '1 Spiel pro Paarung · so spielen alle so lange wie möglich mit',
-      '1v1-Finale': '1 Spiel pro Paarung · entscheidet alles'
+      'Teams': '1 Spiel pro Paarung · 3 Tore oder 3 min — schnelle Vorrunden',
+      '2v2': '1 Spiel pro Paarung · 5 Tore oder 5 min — Halbfinale, etwas wichtiger',
+      '1v1-Finale': '1 Spiel · 5 Tore oder 5 min — entscheidet alles'
     };
     const recHtml = `<p class="section-desc">💡 Empfohlen (${phase}): ${PHASE_REC[phase] || ''}</p>`;
     const gppSel = `<div class="draw-control"><span class="draw-label">Spiele je Paarung:</span>${[1,2,3,5].map(n => `<button class="phase-btn ${gpp===n?'active':''}" onclick="setHaxGpp('${d.id}','${phase}',${n})">${n}</button>`).join('')}</div>`;
@@ -1558,10 +1558,17 @@
       }
       placedAbove += group.length;
     }
+    // Haxball-eigene Punkteverteilung: Finale-Sieger 10, Finale-Verlierer 8,
+    // 2v2-raus 4 (alle gleich), Teams-raus 2 (alle gleich).
+    const haxPointsFor = e => {
+      if (e.depth === lastIdx) return e.place === 1 ? 10 : 8; // Finale: nach Platz
+      if (e.depth === lastIdx - 1) return 4;                  // in 2v2 ausgeschieden
+      return 2;                                               // in Teams (oder früher) ausgeschieden
+    };
     for (const e of entries) {
       const sealed = e.place != null;
       await upsertResultDirect(discId, e.p.id, sealed
-        ? { placement: e.place, points: soloPoints(e.place) }
+        ? { placement: e.place, points: haxPointsFor(e) }
         : { placement: null, points: 0 });
     }
   }
