@@ -443,6 +443,25 @@
   .br-histrow .bh-mt { flex: 1; }
   .br-histrow .bh-mt b { color: var(--text); }
   .br-histrow .bh-w { color: var(--primary); }
+  /* Sudden-Death-Info im Now-Detail-Panel (sichtbar in allen Phasen) */
+  .nd-sd-info {
+    margin-top: 0.9rem;
+    padding: 0.7rem 0.95rem;
+    border-radius: var(--radius-sm);
+    background: var(--alert-soft);
+    border: 1px solid var(--alert-line);
+    display: flex; align-items: flex-start; gap: 0.7rem;
+    font-size: 0.85rem; line-height: 1.45; color: var(--text);
+  }
+  .nd-sd-info .sd-badge {
+    flex-shrink: 0;
+    display: inline-block; background: var(--alert); color: #0b0d10;
+    font-family: var(--font-mono); font-size: 0.66rem; font-weight: 800;
+    letter-spacing: 0.1em; padding: 3px 8px; border-radius: 4px;
+    margin-top: 1px;
+  }
+  .nd-sd-info b { color: var(--alert); font-family: var(--font-mono); letter-spacing: 0.04em; }
+  .nd-sd-info .sd-names { color: var(--alert); font-weight: 700; }
   .wt-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.86rem; }
   .wt-row:last-of-type { border-bottom: none; }
   .wt-rank { font-family: var(--font-mono); color: var(--muted); width: 22px; }
@@ -2512,13 +2531,27 @@
             : `<div class="br-history"><div class="br-stage-label">Match-Historie</div>${inner}</div>`;
         }
 
+        // Sudden-Death-Info: phasenübergreifend sichtbar (in 2v2/Finale ist die Hax-Tabelle ausgeblendet,
+        // daher wandert die SD-Erklärung hier ins Now-Detail-Panel — modes.haxSdWins bleibt nach Phasenwechsel erhalten)
+        const sdInfoPlayers = [];
+        myRows.forEach(r => {
+          const sw = (r.modes && typeof r.modes.haxSdWins === 'number') ? r.modes.haxSdWins : 0;
+          if (sw > 0) {
+            const nm = nameOf(r.player_id);
+            sdInfoPlayers.push(sw > 1 ? `${nm} (${sw}×)` : nm);
+          }
+        });
+        const sdInfoHtml = sdInfoPlayers.length
+          ? `<div class="nd-sd-info"><span class="sd-badge">SD</span><div><b>Sudden Death</b> — <span class="sd-names">${sdInfoPlayers.join(', ')}</span> hat${sdInfoPlayers.length === 1 ? '' : 'en'} ein Stech-Spiel gewonnen. Der Bonus-Sieg zählt für die Aufstiegsentscheidung in der Teams-Phase.</div></div>`
+          : '';
+
         // Team-basierte „Wertung · Aufstieg nach Siegen" wird im neuen Modus nicht mehr gezeigt —
         // die Spieler-Tabelle (kumuliert über alle Auslosungen) erscheint rechts wie eine Bundesliga-Tabelle.
         teamsHtml = `
           <div class="nd-block">
             <div class="nd-label">Turnierbaum · ${bo}${animateTeams ? ' · frisch ausgelost 🎲' : ''}</div>
             <div class="bracket${haxFlash}">${stages}</div>
-            ${nextHtml}${pendHtml}${histHtml}
+            ${sdInfoHtml}${nextHtml}${pendHtml}${histHtml}
           </div>`;
       } else {
         teamsHtml = `
