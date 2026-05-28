@@ -1990,10 +1990,10 @@
     }
     renderIntro();
     clearInterval(introTimer); introTimer = null;
-    if ((introCtl || autoLoop) && !introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500);
+    if (autoLoop && !introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500);
   }
   window.introNav = dir => { introIdx += dir; introPaused = true; clearInterval(introTimer); introTimer = null; renderIntro(); };
-  window.introToggle = () => { introPaused = !introPaused; renderIntro(); clearInterval(introTimer); introTimer = null; if (!introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500); };
+  window.introToggle = () => { introPaused = !introPaused; renderIntro(); clearInterval(introTimer); introTimer = null; };
 
   // "Wie im Fernsehen": zeigt für die aktuelle Disziplin Regeln/Modus,
   // den Phasen-Fortschritt (z.B. Haxball Teams → 2v2 → 1v1) und die aktuellen Teams.
