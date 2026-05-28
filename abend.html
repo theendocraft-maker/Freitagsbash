@@ -707,6 +707,9 @@
   .scoreboard.sb-haxmode .cd-pill::before { left: -18%; }
   .scoreboard.sb-haxmode .cd-pill::after { right: -18%; }
   .scoreboard.sb-haxmode .cd-pill .cd-sep { opacity: 0.4; }
+  /* Spieler unter der Aufstiegslinie: Siege rot — Achtung, Stich-Kandidat */
+  .scoreboard.sb-haxmode tr.below-cutoff td.total-col { color: var(--alert); font-weight: 800; }
+  .scoreboard.sb-haxmode tr.below-cutoff .sb-sub .sb-cur { color: var(--alert); }
   .live-aside .scoreboard { overflow-x: hidden; }
   .sb-mini .sb-name { overflow-wrap: anywhere; }
 
@@ -1765,19 +1768,20 @@
       // Aufstiegslinie: Teams-Phase 4 weiter, 2v2 2 weiter, Finale keine
       const haxPhase = currentDisc.phase || 'Teams';
       const advCount = haxPhase === 'Teams' ? 4 : (haxPhase === '2v2' ? 2 : 0);
-      let rk = 0, lastW = -1, activeIdx = 0;
+      let rk = 0, lastW = -1, activeIdx = 0, pastCutoff = false;
       const rowParts = [];
       haxLiveRows.forEach((r,i) => {
         if (!r.hax) activeIdx++;
         if (!r.hax && r.wins !== lastW) { rk = i + 1; lastW = r.wins; }
         const tier = (!r.hax && rk <= 3 && r.wins > 0) ? `tier-${rk}` : '';
+        const belowCls = (pastCutoff && !r.hax) ? ' below-cutoff' : '';
         const col = pColor(r.player.id);
         const av = r.player.avatar_url
           ? `background-image:url(${r.player.avatar_url});border-color:${col}`
           : `background:${col};border-color:${col};color:#0b0d10`;
         const place = r.hax ? '—' : pad2(rk);
         const sub = r.hax ? `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>` : `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}</span>`;
-        rowParts.push(`<tr class="${tier}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
+        rowParts.push(`<tr class="${tier}${belowCls}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
             <td class="rank-col"><span class="rank-pill">${place}</span></td>
             <td class="player-col">
               <div class="sb-player">
@@ -1793,6 +1797,7 @@
         // Nach der letzten Aufsteiger-Zeile eine eigene Trenner-Zeile einfügen
         if (!r.hax && advCount > 0 && activeIdx === advCount) {
           rowParts.push(`<tr class="cutoff-divider"><td colspan="3"><div class="cd-pill"><span>↑ Aufstieg</span><span class="cd-sep">·</span><span>↓ Stich</span></div></td></tr>`);
+          pastCutoff = true;
         }
       });
       const rowsHtml = rowParts.join('');

@@ -1310,8 +1310,33 @@
       }
       tieHint = `<div class="fg-suggest" style="background:var(--alert-soft);border-color:var(--alert-line)"><div class="fg-suggest-head" style="color:var(--alert)">⚠ Gleichstand — Golden Goal</div><div class="fg-suggest-body">Punktgleiche Teams: erst zählt das <b>direkte Duell</b>. Bleibt's gleich, spielen sie <b>Golden Goal</b> (erstes Tor gewinnt) — tipp unten den Sieger an, der Sieg zählt zur Wertung. Immer noch gleich → <b>W20</b> (§ 12).</div>${duels.join('')}</div>`;
     }
+    // Sudden Death: nach 3+ Auslosungen in der Teams-Phase, wenn am Cutoff (Position 4) Gleichstand herrscht
+    let suddenDeathHtml = '';
+    if (phase === 'Teams' && subN >= 3) {
+      const ADV = 4;
+      const isElim = p => { const r = currentResults[d.id]?.[p.id]; return !!(r && r.modes && r.modes.hax); };
+      const sortedActive = playing.filter(p => !isElim(p))
+        .map(p => ({ p, w: haxPlayerWinsCumulative(d, p) }))
+        .sort((a,b) => b.w - a.w);
+      if (sortedActive.length > ADV) {
+        const cutoffWins = sortedActive[ADV-1].w;
+        const nextWins = sortedActive[ADV].w;
+        if (cutoffWins === nextWins) {
+          const tied = sortedActive.filter(x => x.w === cutoffWins);
+          const safeAbove = sortedActive.slice(0, ADV).filter(x => x.w > cutoffWins).length;
+          const slots = ADV - safeAbove;
+          suddenDeathHtml = `<div class="fg-suggest" style="background:var(--alert-soft);border-color:var(--alert-line);margin-top:0.7rem">
+            <div class="fg-suggest-head" style="color:var(--alert)">⚠ Sudden Death — Stech-Spiel</div>
+            <div class="fg-suggest-body"><b>${tied.length} Spieler</b> haben gleich viele Siege (${cutoffWins}). Nur <b>${slots}</b> von ihnen ziehen weiter ins 2v2 — die Plätze sind umkämpft.<br>Spielt ein <b>1v1 Sudden-Death-Spiel</b> (Golden Goal, erstes Tor gewinnt) zwischen den Gleichstand-Spielern. Trage hier den Sieger ein — er bekommt einen Bonus-Sieg und überholt die anderen:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem">
+              ${tied.map(t => `<button class="mg-btn" onclick="addHaxSuddenDeath('${d.id}','${t.p.id}')">${t.p.name} hat gewonnen</button>`).join('')}
+            </div>
+          </div>`;
+        }
+      }
+    }
     const subInfo = subN > 1 ? ` · Auslosung ${subN}` : '';
-    return `<div class="haxball-step-title">Partien · Phase „${phase}"${subInfo}</div>${recHtml}${gppSel}${pairs.join('')}${cumTable}${nextSubBtn}${historyHtml}${tieHint}`;
+    return `<div class="haxball-step-title">Partien · Phase „${phase}"${subInfo}</div>${recHtml}${gppSel}${pairs.join('')}${cumTable}${suddenDeathHtml}${nextSubBtn}${historyHtml}${tieHint}`;
   }
   window.setHaxGpp = async function(discId, phase, n) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
@@ -1333,6 +1358,22 @@
     renderDisciplineBodyFor(discId); renderOverview();
     if (typeof toast === 'function') toast('Sieg eingetragen', 'ok');
   };
+  // Sudden Death: ein Spieler hat das Stech-Spiel gewonnen → er bekommt +1 in der Gesamtsiege-Summe,
+  // damit er den/die Gleichstand-Spieler eindeutig überholt und in die nächste Phase einzieht.
+  window.addHaxSuddenDeath = async function(discId, pid) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const winner = players.find(p => p.id === pid);
+    if (!winner) return;
+    if (!confirm(`Sudden-Death-Sieg für ${winner.name} eintragen? Er bekommt +1 Bonus-Sieg in der Gesamtwertung.`)) return;
+    const cur = currentResults[discId]?.[pid] || {};
+    const modes = Object.assign({}, cur.modes || {});
+    const prior = typeof modes.haxRoundWins === 'number' ? modes.haxRoundWins : 0;
+    modes.haxRoundWins = prior + 1;
+    await upsertResultDirect(discId, pid, { modes });
+    toast(`🥇 Sudden Death: ${winner.name} +1`, 'ok');
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
   // Nächste Auslosung in der aktuellen Phase: aktuelle Siege je Spieler ins Kumulativ-Konto buchen,
   // Bracket dieser Phase leeren und Teams neu auslosen (Anzahl bleibt gleich). Für faire Mehrfach-Runden.
   window.nextHaxSubround = async function(discId) {
