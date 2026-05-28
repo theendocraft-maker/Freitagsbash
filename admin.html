@@ -1110,6 +1110,10 @@
   // --- Haxball: Phasen-Steuerung + Teams (Anzeige) + Endplatzierung (Klick-Reihenfolge) ---
   function renderHaxballBody(d, participants) {
     const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
+    // Aktiv = noch im Trichter (nicht ausgeschieden). Ausgeschiedene haben modes.hax gesetzt.
+    const isElim = p => { const r = currentResults[d.id]?.[p.id]; return !!(r && r.modes && r.modes.hax); };
+    const active = playing.filter(p => !isElim(p));
+    const eliminated = playing.filter(isElim);
     const activePhase = d.phase || HAXBALL_PHASES[0];
 
     // Phasen-Strip (steuert disciplines.phase → Live-Anzeige auf der Abend-Seite)
@@ -1121,8 +1125,8 @@
         `).join('')}
       </div>`;
 
-    // Team-Zuordnung (nur für die Live-Anzeige, beeinflusst die Wertung NICHT)
-    const teamRows = playing.map(p => {
+    // Team-Zuordnung (nur für die Live-Anzeige) — nur noch aktive Spieler dieser Phase
+    const teamRows = active.map(p => {
       const team = currentResults[d.id]?.[p.id]?.team || 0;
       return `
         <div class="result-row" style="grid-template-columns:1fr auto">
@@ -1135,15 +1139,25 @@
         </div>`;
     }).join('');
 
+    // Kompakte Übersicht der bereits Ausgeschiedenen (read-only)
+    const elimHtml = eliminated.length
+      ? `<div class="haxball-step" style="opacity:0.65"><div class="haxball-step-title">Ausgeschieden (${eliminated.length})</div><p class="section-desc">${eliminated.map(p => {
+          const r = currentResults[d.id]?.[p.id] || {};
+          const phIdx = r.modes && r.modes.hax ? r.modes.hax.elim : 0;
+          return `<span style="text-decoration:line-through;color:var(--muted);margin-right:0.7rem">${p.name}</span><small style="color:var(--muted);font-size:.78em">${HAXBALL_PHASES[phIdx] || '–'}</small>`;
+        }).join(' · ')}</p></div>`
+      : '';
+
     return `
       <div style="padding-top:1rem">
         ${phaseStrip}
-        <div class="haxball-step-title">Teams (nur Anzeige · per Los)</div>
-        <p class="section-desc">Lose die Teams aus (Reveal-Animation läuft live bei den Spielern) oder ordne sie manuell zu. Zählt nicht für die Punkte.</p>
+        <div class="haxball-step-title">Teams (aktuelle Phase · per Los)</div>
+        <p class="section-desc">Lose die Teams aus (Reveal-Animation läuft live bei den Spielern) oder ordne sie manuell zu. Zählt nicht für die Punkte. ${eliminated.length ? `<b>${eliminated.length}</b> Spieler bereits ausgeschieden.` : ''}</p>
         ${drawControlHtml(d.id, 'haxball')}
         ${teamRows}
-        ${renderHaxballMatches(d, playing)}
-        ${renderPhaseAdvance(d, playing)}
+        ${elimHtml}
+        ${renderHaxballMatches(d, active)}
+        ${renderPhaseAdvance(d, active)}
         ${renderHaxStandings(d, playing)}
       </div>`;
   }
