@@ -1894,9 +1894,12 @@
     const next = { draft: 'live', live: 'done', done: 'draft' };
     const cur = (d.status === 'live' || d.status === 'done') ? d.status : 'draft';
     const ns = next[cur];
-    const { error } = await sb.from('disciplines').update({ status: ns }).eq('id', discId);
+    const patch = { status: ns };
+    if (ns === 'live' && !d.live_since) patch.live_since = new Date().toISOString(); // Spiel-Uhr starten
+    const { error } = await sb.from('disciplines').update(patch).eq('id', discId);
     if (error) { console.error(error); toast('Status-Update fehlgeschlagen', 'error'); return; }
     d.status = ns;
+    if (patch.live_since) d.live_since = patch.live_since;
     const card = document.querySelector(`.discipline-card[data-disc="${discId}"]`);
     const pill = card && card.querySelector('.status-pill');
     if (pill) {
@@ -2203,9 +2206,12 @@
     const goLive = currentEvent.status !== 'live';
     if (goLive && !confirm(`„${currentEvent.name}" live schalten? Vetos werden gesperrt und die Wertung erscheint öffentlich auf der Hauptseite.`)) return;
     const newStatus = goLive ? 'live' : 'draft';
-    const { error } = await sb.from('events').update({ status: newStatus }).eq('id', currentEvent.id);
+    const patch = { status: newStatus };
+    if (goLive && !currentEvent.live_since) patch.live_since = new Date().toISOString(); // Sendezeit-Uhr starten
+    const { error } = await sb.from('events').update(patch).eq('id', currentEvent.id);
     if (error) { console.error(error); toast('Status-Update fehlgeschlagen', 'error'); return; }
     currentEvent.status = newStatus;
+    if (patch.live_since) currentEvent.live_since = patch.live_since;
     if (goLive) await persistParticipants(); // genau die aktuelle Auswahl live sichtbar machen
     toast(goLive ? '🔴 Abend ist live' : 'Zurück auf Entwurf', 'ok');
     renderDetail();

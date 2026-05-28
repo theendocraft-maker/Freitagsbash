@@ -252,25 +252,32 @@
   .bracket.just-scored { animation: brFlash 0.7s ease; }
   @keyframes brFlash { 0% { box-shadow: 0 0 0 0 var(--primary-line); } 40% { box-shadow: 0 0 0 4px var(--primary-soft); } 100% { box-shadow: 0 0 0 0 transparent; } }
   /* Score-Bug: TV-Fußball-Stil, zeigt den aktuellen Stand präsent oben */
+  /* Broadcast Lower-Third Score-Bug */
   .scorebug {
-    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--alert);
-    border-radius: var(--radius-sm); padding: 0.7rem 1.1rem; margin-bottom: 1.25rem;
+    display: flex; align-items: stretch; gap: 0;
+    background: var(--surface); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); padding: 0; margin-bottom: 0.6rem; overflow: hidden;
     box-shadow: var(--shadow); position: sticky; top: 8px; z-index: 5;
   }
-  .sbug-left { display: flex; align-items: center; gap: 0.7rem; }
-  .sbug-live { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; color: var(--alert); }
-  .sbug-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--alert); animation: dppulse 1.4s ease-in-out infinite; }
-  .sbug-game { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-display); font-weight: 900; font-size: 1rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text); }
-  .sbug-ico { font-family: var(--font-display); font-size: 0.68rem; background: var(--bg-2); border-radius: 4px; padding: 2px 6px; color: var(--muted); }
-  .sbug-rows { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; margin-left: auto; }
-  .sbug-p { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); }
-  .sbug-pos { font-weight: 700; color: var(--muted); }
-  .sbug-av { width: 24px; height: 24px; border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: var(--bg); }
-  .sbug-name { color: var(--text); }
-  .sbug-pts { font-family: var(--font-display); font-size: 1.3rem; color: var(--primary); margin-left: 0.15rem; }
-  .sbug-p.lead .sbug-pts { color: var(--primary); }
-  @media (max-width: 560px) { .scorebug { gap: 0.6rem; } .sbug-rows { margin-left: 0; gap: 0.7rem; } .sbug-game { font-size: 0.85rem; } .sbug-pts { font-size: 1.1rem; } }
+  .lt-live { display: flex; align-items: center; gap: 0.5rem; padding: 0 1rem; border-right: 1px solid var(--border); }
+  .lt-live b { font-family: var(--font-mono); letter-spacing: 0.16em; font-size: 0.72rem; color: var(--alert); }
+  .lt-rec { width: 10px; height: 10px; border-radius: 50%; background: var(--alert); animation: dppulse 1.4s ease-in-out infinite; }
+  .lt-game { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 1rem; min-width: 0; }
+  .lt-chip { width: 38px; height: 38px; border-radius: 9px; color: #0b0d10; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.04em; flex: none; }
+  .lt-gwrap { display: flex; flex-direction: column; min-width: 0; }
+  .lt-gname { font-family: var(--font-display); font-size: 1.5rem; line-height: 0.95; letter-spacing: 0.03em; color: var(--text); }
+  .lt-gsub { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lt-clocks { margin-left: auto; display: flex; align-items: center; gap: 1.2rem; padding: 0 1.1rem; border-left: 1px solid var(--border); }
+  .lt-c { text-align: right; }
+  .lt-c .lab { display: block; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .lt-c .val { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.04em; color: var(--text); }
+  .lt-c .val.cool { color: var(--cool); }
+  /* Ticker unter dem Score-Bug */
+  .live-ticker { display: flex; align-items: center; gap: 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.9rem; margin-bottom: 1.25rem; overflow: hidden; }
+  .live-ticker .tk-tag { flex: none; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; color: #0b0d10; background: var(--cool); padding: 0.2rem 0.5rem; border-radius: 5px; text-transform: uppercase; }
+  .live-ticker .tk-flow { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .live-ticker .tk-flow b { color: var(--primary); }
+  @media (max-width: 560px) { .lt-gname { font-size: 1.2rem; } .lt-c .val { font-size: 1.2rem; } .lt-clocks { gap: 0.7rem; padding: 0 0.7rem; } }
 
   .pause-banner {
     display: flex; align-items: center; justify-content: center; gap: 0.7rem;
@@ -497,12 +504,29 @@
   @keyframes lsPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
 
   /* Ereignis-Toasts: kurze Einblendungen oben mittig */
-  .live-toasts { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 120; display: flex; flex-direction: column; gap: 0.5rem; align-items: center; pointer-events: none; width: min(92vw, 460px); }
-  .live-toast { width: 100%; box-sizing: border-box; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px; padding: 0.7rem 1.2rem; font-size: 0.98rem; font-weight: 600; color: var(--text); box-shadow: var(--shadow); text-align: center; opacity: 0; transform: translateY(-12px); transition: opacity 0.3s ease, transform 0.3s ease; }
-  .live-toast.show { opacity: 1; transform: translateY(0); }
-  .live-toast.t-start { border-color: var(--alert-line); background: var(--alert-soft); }
-  .live-toast.t-win { border-color: var(--primary-line); background: var(--primary-soft); }
-  .live-toast.t-draw { border-color: var(--cool-soft); }
+  /* Broadcast-Einblendungen (Lower-Thirds, unten links) */
+  .live-toasts { position: fixed; left: 18px; bottom: 18px; z-index: 120; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; pointer-events: none; width: min(86vw, 380px); }
+  .live-toast { display: flex; align-items: stretch; gap: 0; width: 100%; box-sizing: border-box; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); overflow: hidden; box-shadow: 0 14px 40px -20px #000; opacity: 0; transform: translateX(-26px); transition: opacity 0.32s ease, transform 0.32s ease; }
+  .live-toast.show { opacity: 1; transform: translateX(0); }
+  .lt3-bar { width: 6px; flex: none; background: var(--muted); }
+  .lt3-ico { display: flex; align-items: center; justify-content: center; width: 46px; flex: none; font-size: 1.25rem; background: #00000022; }
+  .lt3-body { display: flex; flex-direction: column; justify-content: center; padding: 0.55rem 0.9rem 0.55rem 0.7rem; min-width: 0; }
+  .lt3-kicker { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .lt3-main { font-family: var(--font-display); font-size: 1.35rem; line-height: 1; letter-spacing: 0.03em; color: var(--text); margin-top: 2px; }
+  .live-toast.t-start .lt3-bar { background: var(--alert); } .live-toast.t-start .lt3-kicker { color: var(--alert); }
+  .live-toast.t-win .lt3-bar { background: var(--primary); } .live-toast.t-win .lt3-kicker { color: var(--primary); }
+  .live-toast.t-draw .lt3-bar { background: var(--cool); } .live-toast.t-draw .lt3-kicker { color: var(--cool); }
+  /* Übergangs-Bumper (Vollbild-Einblendung beim Disziplinwechsel) */
+  .bumper-overlay { position: fixed; inset: 0; z-index: 130; display: flex; align-items: center; justify-content: center; background: rgba(7,9,12,0.72); opacity: 0; transition: opacity 0.4s ease; pointer-events: none; }
+  .bumper-overlay.show { opacity: 1; }
+  .bp-card { display: flex; align-items: center; gap: 1.6rem; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 1.6rem 2rem; box-shadow: 0 30px 80px -30px #000; transform: translateY(14px); transition: transform 0.4s ease; }
+  .bumper-overlay.show .bp-card { transform: none; }
+  .bp-logo { width: 60px; height: 60px; }
+  .bp-kicker { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cool); }
+  .bp-name { font-family: var(--font-display); font-size: 3rem; line-height: 0.95; letter-spacing: 0.03em; color: var(--text); }
+  .bp-mode { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-top: 3px; }
+  .bp-ring { width: 56px; height: 56px; border-radius: 50%; border: 5px solid var(--border); border-top-color: var(--primary); animation: spin 1.1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .nd-join { margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 1.1rem; }
   .join-toggle {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
@@ -643,8 +667,14 @@
   .sb-mini .sb-avatar { width: 30px; height: 30px; font-size: 0.62rem; }
   .sb-mini .sb-name { font-size: 0.9rem; }
   .sb-pwrap { min-width: 0; }
-  .sb-sub { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
+  .sb-sub { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .sb-sub .sb-cur { color: var(--cool); }
+  .sb-mini tr[data-pid] td.rank-col { border-left: 3px solid var(--pc, transparent); }
+  .sb-mini .sb-avatar { border: 2px solid transparent; }
+  .sb-cdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .sb-form { display: inline-flex; gap: 3px; align-items: center; }
+  .sb-form i { width: 7px; height: 7px; border-radius: 2px; background: #2a2f38; display: inline-block; }
+  .sb-form i.g { background: var(--primary); } .sb-form i.s { background: var(--cool); } .sb-form i.b { background: var(--muted); }
   .sb-mini tr.tier-1 td.total-col { font-size: 1.25rem; }
   .sb-mini tr.tier-2 td.total-col, .sb-mini tr.tier-3 td.total-col { font-size: 1.1rem; }
   .sb-table {
@@ -958,6 +988,8 @@
     </div>
 
     <div class="scorebug" id="liveScoreBug" style="display:none;"></div>
+    <div class="live-ticker" id="liveTicker" style="display:none;"></div>
+    <div class="bumper-overlay" id="liveBumper" style="display:none;"></div>
 
     <div class="pause-banner" id="livePause" style="display:none;">
       <span class="pause-ico">☕</span>
@@ -1195,6 +1227,9 @@
   ];
   const grad = i => { const c=COLORS[i%COLORS.length]; return `linear-gradient(135deg,${c[0]},${c[1]})`; };
   const ini = s => s.slice(0,2).toUpperCase();
+  // Feste Spieler-Farbe (Trikotfarbe) — stabil über die Reihenfolge der Anmeldung
+  const PCOLORS = ['#d4ff3a','#7df0ff','#ff7ce0','#ff7a4a','#6cf2a0','#b39cff','#ffd34a','#5cc8ff','#ff5c5c','#9cff8f','#ff9cf0','#7affd4'];
+  const pColor = pid => { const i = evPlayers.findIndex(p => p.id === pid); return PCOLORS[(i < 0 ? 0 : i) % PCOLORS.length]; };
   const pad2 = n => String(n).padStart(2,'0');
 
   const VDISCS = [
@@ -1258,7 +1293,7 @@
       { id:'p5', name:'Pixie',     cry:'Glück gehört dazu' },
       { id:'p6', name:'Tank',      cry:'Slow and steady' },
     ];
-    const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live', tiebreaker:'haxball' };
+    const event = { id:'e1', name:'Abend 01', event_date:'2026-05-29', status:'live', tiebreaker:'haxball', live_since:new Date(Date.now() - 74*60000).toISOString() };
     const DEMO_JOIN = {
       geoguessr:  'https://www.geoguessr.com/challenge/DEMO123',
       haxball:    'https://www.haxball.com/play?c=DEMO-ROOM',
@@ -1271,6 +1306,7 @@
       id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1,
       phase: d.kind === 'haxball' ? demoHaxPhase : null,
       join_link: DEMO_JOIN[d.kind] || null,
+      live_since: new Date(Date.now() - 6*60000).toISOString(),
       teams_drawn_at: d.kind === 'haxball' ? '2026-05-29T18:05:00Z' : null,
       bracket: d.kind === 'haxball' ? { gpp: { 'Teams':1, '2v2':3, '1v1-Finale':1 }, games: { 'Teams': { '1-2':[1] }, '2v2': { '1-2':[1,2] }, '1v1-Finale': { '1-2':[1] } } } : null
     }));
@@ -1339,24 +1375,45 @@
   // === Ereignis-Toasts (Einblendungen, einzeln nacheinander) ===
   const toastQueue = [];
   let toastBusy = false;
-  function showLiveToast(msg, kind) {
-    toastQueue.push({ msg, kind: kind || '' });
+  const TOAST_META = { 't-start': { icon: '🎮', kicker: 'Jetzt' }, 't-win': { icon: '🏆', kicker: 'Sieger' }, 't-draw': { icon: '🎲', kicker: 'Auslosung' } };
+  function showLiveToast(main, kind, kicker) {
+    toastQueue.push({ main, kind: kind || '', kicker: kicker || '' });
     if (!toastBusy) nextLiveToast();
   }
   function nextLiveToast() {
     const wrap = document.getElementById('liveToasts');
     if (!wrap || !toastQueue.length) { toastBusy = false; return; }
     toastBusy = true;
-    const { msg, kind } = toastQueue.shift();
+    const { main, kind, kicker } = toastQueue.shift();
+    const meta = TOAST_META[kind] || { icon: '•', kicker: '' };
     const el = document.createElement('div');
     el.className = 'live-toast ' + kind;
-    el.textContent = msg;
+    el.innerHTML = `<span class="lt3-bar"></span><span class="lt3-ico">${meta.icon}</span><span class="lt3-body"><span class="lt3-kicker">${kicker || meta.kicker}</span><span class="lt3-main">${main}</span></span>`;
     wrap.appendChild(el);
     requestAnimationFrame(() => el.classList.add('show'));
     setTimeout(() => {
       el.classList.remove('show');
-      setTimeout(() => { el.remove(); nextLiveToast(); }, 320);
-    }, 3400);
+      setTimeout(() => { el.remove(); nextLiveToast(); }, 340);
+    }, 3600);
+  }
+  // Übergangs-Bumper beim Disziplinwechsel
+  let bumperT = null;
+  function showBumper(disc, idx, total) {
+    const el = document.getElementById('liveBumper'); if (!el || !disc) return;
+    el.innerHTML = `
+      <div class="bp-card">
+        <img class="bp-logo" src="logos/${disc.kind}.svg" alt="" onerror="this.style.display='none'">
+        <div class="bp-txt">
+          <div class="bp-kicker">Als Nächstes${idx ? ' · Spiel ' + idx + ' von ' + total : ''}</div>
+          <div class="bp-name">${discName(disc.kind)}</div>
+          <div class="bp-mode">${discMode(disc.kind)}</div>
+        </div>
+        <div class="bp-ring"></div>
+      </div>`;
+    el.style.display = 'flex';
+    requestAnimationFrame(() => el.classList.add('show'));
+    clearTimeout(bumperT);
+    bumperT = setTimeout(() => { el.classList.remove('show'); setTimeout(() => { el.style.display = 'none'; }, 400); }, 4200);
   }
 
   // Trackt Zustandsübergänge zwischen zwei Renders, um die richtigen Toasts auszulösen
@@ -1371,6 +1428,22 @@
   const brawlBuf = {};                              // `${discId}|${n}|${lobby}` -> [pid,...] (laufendes Spiel)
   const brawlCodeEditing = new Set();               // Lobbys, deren Code gerade bearbeitet wird
   const bkey = (discId, n, l) => `${discId}|${n}|${l}`;
+
+  // === Broadcast-Uhren (synchron via live_since-Zeitstempel) ===
+  const clockSince = { match: null, disc: null };
+  function fmtClock(ms) {
+    if (ms == null || ms < 0) return '0:00';
+    const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return h > 0 ? `${h}:${pad2(m)}:${pad2(x)}` : `${m}:${pad2(x)}`;
+  }
+  function tickClocks() {
+    const now = Date.now();
+    const mEl = document.getElementById('clockMatch');
+    if (mEl) mEl.textContent = clockSince.match ? fmtClock(now - new Date(clockSince.match).getTime()) : '0:00';
+    const dEl = document.getElementById('clockDisc');
+    if (dEl && clockSince.disc) dEl.textContent = fmtClock(now - new Date(clockSince.disc).getTime());
+  }
+  setInterval(tickClocks, 1000);
   function rerenderNow() { if (lastNowDisc) buildNowDetail(lastNowDisc, lastNowResults); }
 
   async function refreshEvents() {
@@ -1575,29 +1648,37 @@
     } else {
       // Kompakte Tabelle (Bundesliga-Stil) für die Seitenleiste: Rang · Spieler · Punkte
       const curShort = currentDisc ? discShort(currentDisc.kind) : '';
+      const doneOrder = orderedDiscs.filter(d => discDone[d.id]);
       const rowsHtml = rows.map((r,i) => {
         const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
         const flash = r.pointsDelta > 0 && !demoFirstRender ? ' flash' : '';
         const bump = (r.delta.kind === 'up' && !demoFirstRender) ? ' bump' : '';
+        const col = pColor(r.player.id);
         const av = r.player.avatar_url
-          ? `background-image:url(${r.player.avatar_url});`
-          : `background:${grad(i)}`;
+          ? `background-image:url(${r.player.avatar_url});border-color:${col}`
+          : `background:${col};border-color:${col};color:#0b0d10`;
         let deltaBadge = '';
         if (r.delta.kind === 'up')   deltaBadge = `<span class="rank-delta up">▲${r.delta.value}</span>`;
         if (r.delta.kind === 'down') deltaBadge = `<span class="rank-delta down">▼${r.delta.value}</span>`;
         if (r.delta.kind === 'new')  deltaBadge = `<span class="rank-delta new">NEU</span>`;
         const curPts = currentDisc ? r.points[currentDisc.id] : null;
         const pointsFlash = r.pointsDelta > 0 && !demoFirstRender ? `<span class="pts-flash">+${r.pointsDelta}</span>` : '';
+        // Formkurve: Platzierung je abgeschlossener Disziplin (1=gold, 2–3=ice, sonst grau)
+        const form = doneOrder.map(d => {
+          const pl = r.placements[d.id];
+          const c = pl === 1 ? 'g' : (pl && pl <= 3 ? 's' : (pl ? 'b' : 'o'));
+          return `<i class="${c}" title="${discShort(d.kind)}: ${pl ? pl + '.' : '–'}"></i>`;
+        }).join('');
         const sub = (curPts != null) ? `<span class="sb-cur">${curShort} ${curPts}</span>` : (r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : '');
         return `
-          <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}">
+          <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}" style="--pc:${col}">
             <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span>${deltaBadge}</td>
             <td class="player-col">
               <div class="sb-player">
                 <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
                 <div class="sb-pwrap">
-                  <div class="sb-name">${r.player.name}${pointsFlash}</div>
-                  ${sub ? `<div class="sb-sub">${sub}</div>` : ''}
+                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}${pointsFlash}</div>
+                  <div class="sb-sub">${sub}${form ? `<span class="sb-form">${form}</span>` : ''}</div>
                 </div>
               </div>
             </td>
@@ -1645,20 +1726,37 @@
       }
     }
 
-    // Score-Bug oben: aktueller Stand präsent wie bei einer Fußball-Übertragung
+    // Score-Bug oben als Broadcast-Lower-Third: LIVE + Disziplin + Sendezeit/Spiel-Uhr
     const sbEl = document.getElementById('liveScoreBug');
     if (sbEl) {
+      const gameLbl = currentDisc ? discName(currentDisc.kind) : 'Abend durch';
+      const subLbl = currentDisc ? (currentDisc.kind === 'haxball' && currentDisc.phase ? 'K.O.-Trichter · ' + currentDisc.phase : discMode(currentDisc.kind)) : 'Wertung steht';
+      // Uhren-Quellen merken (sekündliches Update via Interval)
+      clockSince.match = liveEvent.live_since || null;
+      clockSince.disc = currentDisc ? (currentDisc.live_since || null) : null;
+      sbEl.innerHTML = `
+        <div class="lt-live"><span class="lt-rec"></span><b>LIVE</b></div>
+        <div class="lt-game">
+          <span class="lt-chip" style="background:${currentDisc ? 'var(--primary)' : 'var(--muted)'}">${currentDisc ? discShort(currentDisc.kind) : '—'}</span>
+          <span class="lt-gwrap"><span class="lt-gname">${gameLbl}</span><span class="lt-gsub">${subLbl}</span></span>
+        </div>
+        <div class="lt-clocks">
+          <div class="lt-c"><span class="lab">Sendezeit</span><span class="val" id="clockMatch">–:–</span></div>
+          ${currentDisc ? `<div class="lt-c"><span class="lab">Spiel</span><span class="val cool" id="clockDisc">–:–</span></div>` : ''}
+        </div>`;
+      sbEl.style.display = 'flex';
+      tickClocks();
+    }
+
+    // Ticker-Zeile: Top-Stände + als Nächstes (nur wenn schon Punkte da sind)
+    const tkEl = document.getElementById('liveTicker');
+    if (tkEl) {
       if (rows.length) {
-        const top = rows.slice(0, 3);
-        const gameLbl = currentDisc ? discName(currentDisc.kind) : 'Abend durch';
-        sbEl.innerHTML = `
-          <div class="sbug-left"><span class="sbug-live"><span class="sbug-dot"></span>LIVE</span>${currentDisc ? `<span class="sbug-game"><span class="sbug-ico">${discShort(currentDisc.kind)}</span>${gameLbl}</span>` : `<span class="sbug-game">${gameLbl}</span>`}</div>
-          <div class="sbug-rows">${top.map((r,i) => {
-            const av = r.player.avatar_url ? `background-image:url(${r.player.avatar_url});` : `background:${grad(i)}`;
-            return `<span class="sbug-p${i===0?' lead':''}"><span class="sbug-pos">${r.rank}</span><span class="sbug-av" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</span><span class="sbug-name">${r.player.name}</span><b class="sbug-pts">${r.total}</b></span>`;
-          }).join('')}</div>`;
-        sbEl.style.display = 'flex';
-      } else { sbEl.style.display = 'none'; }
+        const top = rows.slice(0, 5).map(r => `<b>${r.rank}</b> ${r.player.name} ${r.total}`).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+        const nxt = nextDisc ? `&nbsp;&nbsp;·&nbsp;&nbsp;als Nächstes: ${discName(nextDisc.kind)}` : '';
+        tkEl.innerHTML = `<span class="tk-tag">Tabelle</span><span class="tk-flow">${top}${nxt}</span>`;
+        tkEl.style.display = 'flex';
+      } else { tkEl.style.display = 'none'; }
     }
 
     // === Klartext-Statuszeile: in einfachen Worten, was gerade passiert ===
@@ -1693,12 +1791,14 @@
     if (!demoFirstRender) {
       const curId = currentDisc ? currentDisc.id : null;
       if (curId && lastCurrentDiscId !== null && curId !== lastCurrentDiscId && (!liveEvent.pause_msg)) {
-        showLiveToast(`🎮 Jetzt: ${discName(currentDisc.kind)}`, 't-start');
+        showLiveToast(discName(currentDisc.kind), 't-start', 'Jetzt');
+        const ci = orderedDiscs.findIndex(d => d.id === curId);
+        showBumper(currentDisc, ci >= 0 ? ci + 1 : 0, totalCount);
       }
       orderedDiscs.forEach(d => {
         const da = d.teams_drawn_at || null;
         if (da && lastDrawnByDisc[d.id] !== undefined && lastDrawnByDisc[d.id] !== da) {
-          showLiveToast(d.kind === 'brawlhalla' ? '🎲 Neue Lobbies ausgelost' : `🎲 Teams stehen — ${discName(d.kind)}`, 't-draw');
+          showLiveToast(d.kind === 'brawlhalla' ? 'Neue Lobbies ausgelost' : `Teams stehen — ${discName(d.kind)}`, 't-draw');
         }
       });
     }
@@ -1727,7 +1827,7 @@
     if (newlyDoneDisc) {
       const winPid = ((results || []).find(r => r.discipline_id === newlyDoneDisc.id && parseInt(r.placement) === 1) || {}).player_id;
       const winName = winPid ? (evPlayers.find(p => p.id === winPid) || {}).name : null;
-      showLiveToast(winName ? `🏆 ${discName(newlyDoneDisc.kind)} — Sieg: ${winName}` : `🏁 ${discName(newlyDoneDisc.kind)} beendet`, 't-win');
+      showLiveToast(winName || discName(newlyDoneDisc.kind), 't-win', winName ? `${discName(newlyDoneDisc.kind)} — Sieger` : 'Beendet');
       if (winPid) {
         showWinnerCry(winPid, newlyDoneDisc);
         setTimeout(() => showGameEndscore(newlyDoneDisc, results, rows), 2600);

@@ -102,3 +102,12 @@ alter table events add column if not exists roster jsonb;
 -- disciplines.rounds: Anzahl GeoGuessr-Runden im Challenge-Link (Standard 5).
 -- Rein informativ — wird live im Regeltext angezeigt; die Wertung bleibt nach Platzierung.
 alter table disciplines add column if not exists rounds int;
+
+-- ============================================================
+-- 11) SYNCHRONE UHREN (Broadcast-Look: Sendezeit + Spiel-Uhr)
+-- ============================================================
+-- events.live_since: Zeitpunkt des Live-Schaltens → „Sendezeit"-Uhr auf der Spielabend-Seite.
+-- disciplines.live_since: Zeitpunkt, ab dem eine Disziplin auf „läuft" steht → „Spiel"-Uhr.
+-- Beide werden im Admin gesetzt; die Live-Seite zählt clientseitig sekündlich hoch (synchron für alle).
+alter table events      add column if not exists live_since timestamptz;
+alter table disciplines add column if not exists live_since timestamptz;

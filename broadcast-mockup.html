@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freitags Bash · Broadcast-Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0d10; --bg-2:#101319; --surface:#14171d; --surface-2:#191d25;
+    --border:#ffffff14; --border-strong:#ffffff2a;
+    --text:#f2f4f7; --muted:#8b90a0;
+    --primary:#d4ff3a; --alert:#ff3d6e; --cool:#7df0ff;
+    --font-display:'Bebas Neue',sans-serif; --font-sans:'DM Sans',sans-serif; --font-mono:'DM Mono',monospace;
+    --radius:14px; --radius-sm:9px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 70% -10%, #15202a 0%, var(--bg) 55%);color:var(--text);font-family:var(--font-sans);padding:28px 22px 60px;-webkit-font-smoothing:antialiased}
+  .stage{max-width:1320px;margin:0 auto}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px;font-size:13px;color:var(--muted)}
+  .legend .lg{display:flex;align-items:center;gap:7px}
+  .num{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--primary);color:#0b0d10;font-weight:700;font-size:12px;align-items:center;justify-content:center;font-family:var(--font-mono)}
+  .anno{position:absolute;top:-11px;left:-11px;z-index:5}
+
+  /* === ① Lower-Third Score-Bug === */
+  .scorebug{position:relative;display:flex;align-items:stretch;gap:0;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden;box-shadow:0 18px 50px -28px #000}
+  .sb-live{display:flex;align-items:center;gap:10px;padding:0 18px;background:linear-gradient(90deg,#ff3d6e22,transparent);border-right:1px solid var(--border)}
+  .sb-rec{width:11px;height:11px;border-radius:50%;background:var(--alert);box-shadow:0 0 0 0 #ff3d6e88;animation:rec 1.4s infinite}
+  @keyframes rec{0%{box-shadow:0 0 0 0 #ff3d6e88}70%{box-shadow:0 0 0 9px #ff3d6e00}100%{box-shadow:0 0 0 0 #ff3d6e00}}
+  .sb-live b{font-family:var(--font-mono);letter-spacing:.18em;font-size:13px;color:var(--alert)}
+  .sb-logo{display:flex;align-items:center;gap:12px;padding:14px 20px}
+  .sb-chip{width:42px;height:42px;border-radius:11px;background:var(--primary);color:#0b0d10;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:20px;letter-spacing:.04em}
+  .sb-gname{font-family:var(--font-display);font-size:30px;line-height:.9;letter-spacing:.03em}
+  .sb-gsub{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:3px}
+  .sb-clock{margin-left:auto;display:flex;align-items:center;gap:22px;padding:0 22px;border-left:1px solid var(--border)}
+  .sb-c{ text-align:right}
+  .sb-c .lab{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .sb-c .val{font-family:var(--font-display);font-size:30px;letter-spacing:.04em;color:var(--text)}
+  .sb-c .val.cool{color:var(--cool)}
+  /* ticker line */
+  .ticker{margin-top:10px;display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 16px;overflow:hidden;white-space:nowrap}
+  .ticker .tk-tag{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;color:#0b0d10;background:var(--cool);padding:3px 9px;border-radius:6px;text-transform:uppercase}
+  .ticker .tk{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+  .ticker .tk b{color:var(--text)}
+
+  /* === layout === */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;margin-top:24px;align-items:start}
+
+  .panel{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:0 18px 50px -34px #000}
+  .panel-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .ph-logo{width:46px;height:46px;border-radius:12px;background:#1f6f3a;display:flex;align-items:center;justify-content:center;font-size:24px}
+  .ph-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .ph-title{font-family:var(--font-display);font-size:26px;letter-spacing:.03em}
+  .funnel{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:6px;align-items:start}
+  .fcol .fhead{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+  .team{border-radius:10px;padding:9px 11px;margin-bottom:8px;background:var(--surface-2);border:1px solid var(--border);border-left:4px solid var(--tc,#888)}
+  .team .tt{font-family:var(--font-display);font-size:16px;letter-spacing:.03em;display:flex;justify-content:space-between;align-items:center}
+  .team .tt .w{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+  .team .mem{font-size:12.5px;color:var(--text);opacity:.92;margin-top:3px}
+  .sep{align-self:center;color:var(--muted);font-size:18px;padding-top:26px}
+  .ghost{opacity:.4;font-family:var(--font-mono);font-size:12px;padding-top:30px}
+
+  /* commentary line ⑩ style */
+  .commentary{position:relative;margin-top:16px;display:flex;align-items:center;gap:10px;background:#0d1014;border:1px solid var(--border);border-left:3px solid var(--alert);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:11px 15px}
+  .commentary .dot{width:8px;height:8px;border-radius:50%;background:var(--alert);animation:rec 1.4s infinite}
+  .commentary .txt{font-size:14px;font-weight:600}
+
+  /* === ② broadcast event lower-third === */
+  .lower3{position:relative;margin-top:18px;display:inline-flex;align-items:center;gap:0;border-radius:var(--radius-sm);overflow:hidden;box-shadow:0 14px 40px -22px #000;animation:slidein .5s ease}
+  @keyframes slidein{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+  .l3-bar{width:6px;align-self:stretch;background:var(--alert)}
+  .l3-ico{display:flex;align-items:center;justify-content:center;width:50px;background:#1c0f15;color:var(--alert);font-size:22px}
+  .l3-body{background:var(--surface-2);padding:11px 22px 11px 16px}
+  .l3-kicker{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;color:var(--alert);text-transform:uppercase}
+  .l3-main{font-family:var(--font-display);font-size:22px;letter-spacing:.03em;line-height:1}
+  .l3-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+  /* === ③ league table with player colors === */
+  .aside-head{font-family:var(--font-display);font-size:24px;letter-spacing:.03em;margin-bottom:10px}
+  .table{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 18px 50px -34px #000}
+  .trow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:11px 14px 11px 12px;border-top:1px solid var(--border);border-left:4px solid var(--pc,#888)}
+  .trow:first-child{border-top:none}
+  .trow.lead{background:#171c12}
+  .rkp{width:26px;height:26px;border-radius:50%;background:#0c0f13;border:1px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--muted)}
+  .trow.lead .rkp{background:var(--primary);color:#0b0d10;border-color:var(--primary)}
+  .pl{display:flex;align-items:center;gap:10px;min-width:0}
+  .av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;color:#0b0d10;border:2px solid var(--pc,#888)}
+  .pn{min-width:0}
+  .pn .nm{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:6px}
+  .pn .nm .cdot{width:8px;height:8px;border-radius:50%;background:var(--pc,#888);flex:none}
+  .pn .sub{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:1px}
+  .pn .sub .cur{color:var(--cool)}
+  .pts{font-family:var(--font-mono);font-weight:700;font-size:20px;color:var(--primary)}
+  .trow:not(.lead) .pts{color:var(--text)}
+  .form{display:flex;gap:3px;margin-top:3px}
+  .form i{width:7px;height:7px;border-radius:2px;background:#2a2f38}
+  .form i.g{background:var(--primary)} .form i.s{background:var(--cool)} .form i.b{background:var(--muted)}
+
+  /* === ④ transition bumper === */
+  .bumper{position:relative;margin-top:28px;display:flex;align-items:center;gap:26px;background:linear-gradient(100deg,#14171d, #0d1014);border:1px solid var(--border-strong);border-radius:var(--radius);padding:26px 30px;overflow:hidden}
+  .bumper::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#ffffff05 0 2px,transparent 2px 7px);pointer-events:none}
+  .bp-kicker{font-family:var(--font-mono);font-size:12px;letter-spacing:.2em;color:var(--cool);text-transform:uppercase}
+  .bp-logo{width:64px;height:64px;border-radius:16px;background:#0b3a52;display:flex;align-items:center;justify-content:center;font-size:34px}
+  .bp-name{font-family:var(--font-display);font-size:52px;line-height:.9;letter-spacing:.03em}
+  .bp-mode{font-family:var(--font-mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:4px}
+  .bp-count{margin-left:auto;text-align:center}
+  .bp-ring{width:78px;height:78px;border-radius:50%;border:5px solid var(--border);border-top-color:var(--primary);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:34px;animation:spin 8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bp-count .l{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:7px}
+  .caption{font-size:12px;color:var(--muted);margin:7px 2px 0;font-family:var(--font-mono)}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="legend">
+    <span class="lg"><span class="num">1</span> Match-Uhr + Lower-Third Score-Bug</span>
+    <span class="lg"><span class="num">2</span> Broadcast-Einblendung</span>
+    <span class="lg"><span class="num">3</span> Spieler-Farbidentität + Formkurve</span>
+    <span class="lg"><span class="num">4</span> Übergangs-Bumper</span>
+  </div>
+
+  <!-- ① SCORE BUG -->
+  <div class="scorebug">
+    <span class="anno"><span class="num">1</span></span>
+    <div class="sb-live"><span class="sb-rec"></span><b>LIVE</b></div>
+    <div class="sb-logo">
+      <div class="sb-chip">HAX</div>
+      <div><div class="sb-gname">Haxball</div><div class="sb-gsub">K.O.-Trichter · 2v2-Phase</div></div>
+    </div>
+    <div class="sb-clock">
+      <div class="sb-c"><div class="lab">Sendezeit</div><div class="val">01:14:32</div></div>
+      <div class="sb-c"><div class="lab">Spiel</div><div class="val cool">06:12</div></div>
+    </div>
+  </div>
+  <div class="ticker">
+    <span class="tk-tag">Tabelle</span>
+    <span class="tk"><b>1</b> Endo 18 &nbsp;·&nbsp; <b>2</b> Dow 15 &nbsp;·&nbsp; <b>3</b> Kronzeuge 12 &nbsp;·&nbsp; <b>4</b> Wire 10 &nbsp;·&nbsp; als Nächstes: GeoGuessr</span>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: current game -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="ph-logo">🥅</div>
+          <div><div class="ph-eyebrow">Aktuelles Spiel · K.O.-Trichter</div><div class="ph-title">Haxball</div></div>
+        </div>
+        <div class="funnel">
+          <div class="fcol">
+            <div class="fhead">Teams · jetzt</div>
+            <div class="team" style="--tc:#d4ff3a"><div class="tt">Team 1 <span class="w">2 S</span></div><div class="mem">Endo · Wire</div></div>
+            <div class="team" style="--tc:#7df0ff"><div class="tt">Team 2 <span class="w">1 S</span></div><div class="mem">Dow · Afrosamuraiy</div></div>
+            <div class="team" style="--tc:#ff7a4a"><div class="tt">Team 3 <span class="w">0 S</span></div><div class="mem">Querdenkendo · Kronzeuge</div></div>
+          </div>
+          <div class="sep">›</div>
+          <div class="fcol"><div class="fhead">2v2</div><div class="ghost">kommt noch</div></div>
+          <div class="sep">›</div>
+          <div class="fcol"><div class="fhead">🏆 1v1-Finale</div><div class="ghost">kommt noch</div></div>
+        </div>
+
+        <!-- ② broadcast event lower-third -->
+        <div class="lower3">
+          <span class="anno"><span class="num">2</span></span>
+          <div class="l3-bar"></div>
+          <div class="l3-ico">⚽</div>
+          <div class="l3-body">
+            <div class="l3-kicker">Ausgeschieden · Teams-Phase</div>
+            <div class="l3-main">Team 3 raus</div>
+            <div class="l3-sub">Querdenkendo · Kronzeuge — Platz 7–8</div>
+          </div>
+        </div>
+
+        <div class="commentary">
+          <span class="dot"></span>
+          <span class="txt">Jetzt: Haxball, 2v2 · Spiel 1 von 5 — Team 3 vor dem Aus</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: ③ league table -->
+    <div>
+      <div class="aside-head">Tabelle</div>
+      <div class="table">
+        <span class="anno"><span class="num">3</span></span>
+        <div class="trow lead" style="--pc:#d4ff3a">
+          <div class="rkp">1</div>
+          <div class="pl"><div class="av" style="--pc:#d4ff3a;background:#d4ff3a">EN</div>
+            <div class="pn"><div class="nm"><span class="cdot"></span>Endo</div><div class="sub"><span class="cur">BRA 10</span> · letzte: <span class="form"><i class="g"></i><i class="g"></i><i class="s"></i></span></div></div></div>
+          <div class="pts">18</div>
+        </div>
+        <div class="trow" style="--pc:#7df0ff">
+          <div class="rkp">2</div>
+          <div class="pl"><div class="av" style="--pc:#7df0ff;background:#7df0ff">DO</div>
+            <div class="pn"><div class="nm"><span class="cdot"></span>Dow</div><div class="sub"><span class="cur">BRA 8</span> · letzte: <span class="form"><i class="g"></i><i class="b"></i><i class="g"></i></span></div></div></div>
+          <div class="pts">15</div>
+        </div>
+        <div class="trow" style="--pc:#ff7ce0">
+          <div class="rkp">3</div>
+          <div class="pl"><div class="av" style="--pc:#ff7ce0;background:#ff7ce0">KR</div>
+            <div class="pn"><div class="nm"><span class="cdot"></span>Kronzeuge</div><div class="sub"><span class="cur">BRA 4</span> · letzte: <span class="form"><i class="s"></i><i class="g"></i><i class="b"></i></span></div></div></div>
+          <div class="pts">12</div>
+        </div>
+        <div class="trow" style="--pc:#ff7a4a">
+          <div class="rkp">4</div>
+          <div class="pl"><div class="av" style="--pc:#ff7a4a;background:#ff7a4a">WI</div>
+            <div class="pn"><div class="nm"><span class="cdot"></span>Wire</div><div class="sub"><span class="cur">BRA 6</span> · letzte: <span class="form"><i class="b"></i><i class="s"></i><i class="g"></i></span></div></div></div>
+          <div class="pts">10</div>
+        </div>
+        <div class="trow" style="--pc:#6cf2a0">
+          <div class="rkp">5</div>
+          <div class="pl"><div class="av" style="--pc:#6cf2a0;background:#6cf2a0">QU</div>
+            <div class="pn"><div class="nm"><span class="cdot"></span>Querdenkendo</div><div class="sub"><span class="cur">BRA 2</span> · letzte: <span class="form"><i class="b"></i><i class="b"></i><i class="s"></i></span></div></div></div>
+          <div class="pts">8</div>
+        </div>
+        <div class="trow" style="--pc:#b39cff">
+          <div class="rkp">6</div>
+          <div class="pl"><div class="av" style="--pc:#b39cff;background:#b39cff">AF</div>
+            <div class="pn"><div class="nm"><span class="cdot"></span>Afrosamuraiy</div><div class="sub">🃏 Veto FAL · letzte: <span class="form"><i class="b"></i><i class="g"></i><i></i></span></div></div></div>
+          <div class="pts">6</div>
+        </div>
+      </div>
+      <div class="caption">Feste Farbe je Spieler — taucht überall auf (Tabelle, Teams, Einblendungen).</div>
+    </div>
+  </div>
+
+  <!-- ④ transition bumper -->
+  <div class="bumper">
+    <span class="anno"><span class="num">4</span></span>
+    <div class="bp-logo">🌍</div>
+    <div>
+      <div class="bp-kicker">Als Nächstes · Spiel 2 von 5</div>
+      <div class="bp-name">GeoGuessr</div>
+      <div class="bp-mode">Einzeln · No Move · 5 Runden</div>
+    </div>
+    <div class="bp-count"><div class="bp-ring">8</div><div class="l">startet in</div></div>
+  </div>
+  <div class="caption">Kurze Vollbild-Einblendung beim Wechsel zwischen zwei Disziplinen.</div>
+
+</div>
+</body>
+</html>
