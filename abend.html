@@ -762,27 +762,33 @@
     0%, 100% { box-shadow: inset 3px 0 0 var(--alert); }
     50%      { box-shadow: inset 3px 0 0 var(--alert), 0 0 14px -2px rgba(255,61,110,0.55); }
   }
+  /* Stech-Pille im Sub-Text: kompakt, links neben dem Status-Text, bricht NICHT um */
   .scoreboard.sb-haxmode .sd-tag {
-    display: inline-block;
-    background: transparent;
-    color: var(--alert);
-    border: 1px solid var(--alert);
+    display: inline-flex; align-items: center; gap: 3px;
+    background: var(--alert);
+    color: #0b0d10;
+    border: none;
     font-family: var(--font-mono);
-    font-size: 0.56rem;
+    font-size: 0.58rem;
     font-weight: 800;
-    letter-spacing: 0.12em;
-    padding: 1px 6px;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
     border-radius: 4px;
-    margin-left: 5px;
-    vertical-align: middle;
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
     text-transform: uppercase;
     animation: sdTagBlink 1.4s ease-in-out infinite;
+    flex-shrink: 0;
   }
   @keyframes sdTagBlink {
     0%, 100% { opacity: 1; }
-    50%      { opacity: 0.55; }
+    50%      { opacity: 0.7; }
   }
   .scoreboard.sb-haxmode tr.sd-candidate .sb-sub .sb-cur { color: var(--alert); font-weight: 700; }
+  .scoreboard.sb-haxmode .sb-sub { flex-wrap: wrap; }
+  /* Lange Spielernamen sollen Wörter intakt halten — vor allem wenn Pillen mitgerendert werden */
+  .scoreboard.sb-haxmode .sb-name { overflow-wrap: break-word; word-break: normal; }
   /* Erklärung unter der Tabelle */
   .scoreboard.sb-haxmode .sd-explain {
     padding: 0.6rem 0.9rem;
@@ -1918,12 +1924,12 @@
           : `background:${col};border-color:${col};color:#0b0d10`;
         const place = r.hax ? '—' : pad2(rk);
         const sdMark = (r.sdWins > 0) ? ` <span class="sd-mark" title="${r.sdWins} Sudden-Death-Sieg${r.sdWins > 1 ? 'e' : ''}">SD</span>` : '';
-        const sdTag  = (isSdCand && r.sdWins === 0) ? ` <span class="sd-tag" title="Muss Stech-Spiel spielen">Stech</span>` : '';
+        const sdTagInSub = (isSdCand && r.sdWins === 0) ? `<span class="sd-tag" title="Muss Stech-Spiel spielen">Stech</span>` : '';
         let sub;
         if (r.hax) {
           sub = `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>`;
         } else if (isSdCand) {
-          sub = `<span class="sb-cur">${r.wins} Siege · <b>Stechspiel um Aufstieg</b>${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
+          sub = `${sdTagInSub}<span class="sb-cur">${r.wins} Siege · um Aufstieg${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
         } else {
           sub = `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
         }
@@ -1933,7 +1939,7 @@
               <div class="sb-player">
                 <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
                 <div class="sb-pwrap">
-                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}${sdTag}${sdMark}</div>
+                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}${sdMark}</div>
                   <div class="sb-sub">${sub}</div>
                 </div>
               </div>
