@@ -1517,9 +1517,16 @@
     // Fortschritt: bevorzugt expliziter Status (offen → läuft → fertig) aus dem Admin,
     // sonst aus den Ergebnissen abgeleitet.
     const useStatus = orderedDiscs.some(d => d.status === 'live' || d.status === 'done');
+    const rosterPlayers = (evParticipants && evParticipants.length) ? evParticipants : evPlayers;
     const discDone = {};
     orderedDiscs.forEach(d => {
-      discDone[d.id] = useStatus ? (d.status === 'done') : results.some(r => r.discipline_id === d.id && r.points);
+      if (useStatus) { discDone[d.id] = d.status === 'done'; return; }
+      // Ohne Admin-Status: erst fertig, wenn ALLE Teilnehmer platziert sind.
+      // Wichtig für Haxball/Brawlhalla, die schon während des Spiels Teilpunkte vergeben
+      // (sonst würde die Ansicht nach der 1. Runde fälschlich zur nächsten Disziplin springen).
+      const playing = rosterPlayers.filter(p => vetoBy[p.id] !== d.kind);
+      discDone[d.id] = playing.length > 0 && playing.every(p =>
+        results.some(r => r.discipline_id === d.id && r.player_id === p.id && r.placement));
     });
     const doneCount = Object.values(discDone).filter(Boolean).length;
     const totalCount = orderedDiscs.length || 5;
@@ -1699,26 +1706,30 @@
     const copterEl = document.getElementById('liveCopter');
     if (copterEl) {
       const copterOn = isDemo || (liveEvent && liveEvent.copter_active);
-      if (vetoes && vetoes.length && copterOn) {
+      if (copterOn) {
         const pName = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
         const kindId = {}; orderedDiscs.forEach(d => kindId[d.kind] = d.id);
-        copterVetoes = vetoes; copterKindId = kindId;
-        const cRows = vetoes.map(v => {
+        copterVetoes = vetoes || []; copterKindId = kindId;
+        const hasVeto = !!(vetoes && vetoes.length);
+        const cRows = (vetoes || []).map(v => {
           const did = kindId[v.discipline_kind];
           const rr = results.find(x => x.discipline_id === did && x.player_id === v.player_id);
           const score = rr && rr.modes ? (parseFloat(rr.modes.copter) || 0) : 0;
           return { pid: v.player_id, score };
         }).sort((a,b) => b.score - a.score);
-        const entry = isDemo ? '' : `
+        const entry = (isDemo || !hasVeto) ? '' : `
           <div class="copter-entry">
             <select id="copterPlayer"><option value="">Dein Name…</option>${vetoes.map(v => `<option value="${v.player_id}">${pName(v.player_id)}</option>`).join('')}</select>
             <input type="number" id="copterScore" min="0" placeholder="Dein Score">
             <button onclick="saveCopter()">Eintragen</button>
           </div>`;
+        const board = hasVeto
+          ? `<div class="copter-rows">${cRows.map((r,i) => `<div class="copter-row"><span class="cr-pos">${i+1}.</span><span class="cr-name">${pName(r.pid)}</span><span class="cr-pts">${r.score || '–'}</span></div>`).join('')}</div>`
+          : `<div class="copter-sub" style="margin-top:0.4rem">Noch kein Veto gesetzt — sobald jemand eine Disziplin vetoed, erscheint hier die Score-Eingabe. Spielen kann trotzdem schon jeder.</div>`;
         copterEl.innerHTML = `
           <div class="copter-head"><span class="copter-title">🃏 Joker-Minispiel · Fly the Copter</span><a class="copter-link" href="${COPTER_URL}" target="_blank" rel="noopener">Spielen →</a></div>
           <div class="copter-sub">Veto-Spieler zocken nebenbei am Handy — wer den höchsten Score hält, gewinnt. Score selbst eintragen, per Screen-Share oder Foto beweisen.</div>
-          <div class="copter-rows">${cRows.map((r,i) => `<div class="copter-row"><span class="cr-pos">${i+1}.</span><span class="cr-name">${pName(r.pid)}</span><span class="cr-pts">${r.score || '–'}</span></div>`).join('')}</div>
+          ${board}
           ${entry}`;
         copterEl.style.display = 'block';
       } else {
