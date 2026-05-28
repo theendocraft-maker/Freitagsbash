@@ -932,9 +932,11 @@
       if (currentEvent.status === 'live') {
         introSec.style.display = 'block';
         const step = currentEvent.intro_step;
+        const vetoStep = currentDisciplines.length + 1;
         const btns = [`<span class="draw-label">Zeigen:</span>`,
           `<button class="phase-btn ${step === 0 ? 'active' : ''}" onclick="setIntroStep(0)">👥 Teilnehmer</button>`]
-          .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+1 ? 'active' : ''}" onclick="setIntroStep(${i+1})">${i+1} ${d.name}</button>`));
+          .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+1 ? 'active' : ''}" onclick="setIntroStep(${i+1})">${i+1} ${d.name}</button>`))
+          .concat([`<button class="phase-btn ${step === vetoStep ? 'active' : ''}" onclick="setIntroStep(${vetoStep})">🃏 Vetos</button>`]);
         $('introControl').innerHTML = btns.join('');
         const cb = $('copterToggleBtn');
         cb.textContent = currentEvent.copter_active ? '✓ aktiv — deaktivieren' : 'aktivieren';

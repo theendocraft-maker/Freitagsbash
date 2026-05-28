@@ -1614,10 +1614,10 @@
     if (showIntro && currentDisc) {
       const roster = (evParticipants && evParticipants.length) ? evParticipants : evPlayers;
       if (isDemo) {
-        buildIntroSlideshow(orderedDiscs, roster, { controls: true });
+        buildIntroSlideshow(orderedDiscs, roster, { controls: true, vetoes });
       } else {
         // Admin-gesteuert: zeigt genau den Slide, den der Admin gesetzt hat (intro_step). Kein Auto-Scroll.
-        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step });
+        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step, vetoes });
       }
     } else {
       clearInterval(introTimer); introTimer = null;
@@ -1978,7 +1978,7 @@
   // Vorstellungs-Slideshow vor dem Start: alle Disziplinen, steuerbar (◀ ⏸/▶ ▶) zum Besprechen
   // Vorstellung: Slide 0 = Teilnehmer des Tages, Slide 1..N = Disziplinen.
   // Real: admin-gesteuert (events.intro_step), keine lokalen Buttons. Demo: lokal steuerbar (◀ ⏸ ▶).
-  let introTimer = null, introIdx = 0, introPaused = false, introDiscs = [], introRoster = [], introCtl = false;
+  let introTimer = null, introIdx = 0, introPaused = false, introDiscs = [], introRoster = [], introCtl = false, introVetoes = [];
   function introCtrlHtml() {
     return `<div class="intro-ctrl">
       <button class="intro-btn" onclick="introNav(-1)" aria-label="Zurück">◀</button>
@@ -1992,8 +1992,10 @@
   function renderIntro() {
     const box = document.getElementById('liveNowDetail');
     if (!box) return;
-    const n = introDiscs.length + 1;
+    // Slides: 0 = Teilnehmer, 1..N = Disziplinen, N+1 = Vetos
+    const n = introDiscs.length + 2;
     const step = ((introIdx % n) + n) % n;
+    const vetoStep = introDiscs.length + 1;
     if (step === 0) {
       const ps = (introRoster && introRoster.length) ? introRoster : evPlayers;
       box.innerHTML = `
@@ -2008,6 +2010,29 @@
           }).join('')}</div>
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(0, n)}
+        </div>`;
+    } else if (step === vetoStep) {
+      // Vetos vorstellen
+      const vs = introVetoes || [];
+      const cardsHtml = vs.length ? vs.map(v => {
+        const p = evPlayers.find(x => x.id === v.player_id) || {};
+        const col = pColor(p.id);
+        const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
+        const kind = v.discipline_kind;
+        return `<div class="ir-card" style="--ir-c:${col}">
+            <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
+            <div class="ir-name">${p.name || '—'}</div>
+            <div class="ir-cry">🃏 vetoed <b>${discName(kind)}</b><br><small style="color:var(--cool)">spielt Fly the Copter</small></div>
+          </div>`;
+      }).join('') : `<div class="ir-card" style="grid-column:1/-1;--ir-c:var(--muted)"><div class="ir-name">Niemand vetoed heute</div><div class="ir-cry">Alle spielen alle Disziplinen mit.</div></div>`;
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label">Vorstellung · Vetos</div>
+          <div class="intro-name">${vs.length ? '🃏 Heute mit Joker' : '✓ Volle Crew'}</div>
+          <div class="intro-mode">${vs.length} Veto${vs.length === 1 ? '' : 's'} · ${vs.length ? 'Joker-Minispiel statt der vetoten Disziplin' : 'Niemand sitzt eine Disziplin aus'}</div>
+          <div class="intro-roster">${cardsHtml}</div>
+          ${introCtl ? introCtrlHtml() : ''}
+          ${introDotsHtml(step, n)}
         </div>`;
     } else {
       const d = introDiscs[step - 1]; const k = d.kind;
@@ -2031,6 +2056,7 @@
   let lastIntroStepFromDB = undefined;
   function buildIntroSlideshow(discs, roster, opts) {
     introDiscs = discs; introRoster = roster || [];
+    introVetoes = (opts && opts.vetoes) || [];
     introCtl = !!(opts && opts.controls);
     const autoLoop = !!(opts && opts.autoLoop);
     if (opts && typeof opts.step === 'number') {
