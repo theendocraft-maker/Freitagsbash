@@ -823,7 +823,10 @@
   .scoreboard.sb-brawlmode td.total-col { color: #ffd34a; }
   .scoreboard.sb-brawlmode .sb-sub .sb-cur { color: #ffd34a; }
   .live-aside .scoreboard { overflow-x: hidden; }
-  .sb-mini .sb-name { overflow-wrap: anywhere; }
+  /* Namen brechen NUR an Wortgrenzen — sonst kollabiert die Spielerspalte auf 1-Buchstabenbreite,
+     weil "anywhere" jeder Buchstaben-Position als gültige Bruchstelle wertet. */
+  .sb-mini .sb-name { overflow-wrap: break-word; word-break: normal; }
+  .sb-mini .sb-pwrap { min-width: 80px; flex: 1; }
 
   /* ============================
      SCOREBOARD — broadcast-sized
