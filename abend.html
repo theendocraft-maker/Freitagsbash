@@ -729,7 +729,10 @@
   .sb-mini td { padding: 0.5rem 0.5rem; }
   .sb-mini th.rank-col, .sb-mini td.rank-col { width: 46px; padding-left: 0.6rem; }
   .sb-mini th.player-col, .sb-mini td.player-col { padding-left: 0.3rem; }
-  .sb-mini th.total-col, .sb-mini td.total-col { padding-right: 0.8rem; width: 48px; }
+  .sb-mini th.total-col, .sb-mini td.total-col { padding-right: 0.4rem; width: 42px; text-align: right; }
+  .sb-mini th.season-col, .sb-mini td.season-col { padding-right: 0.8rem; padding-left: 0.4rem; width: 44px; text-align: right; font-family: var(--font-mono); font-weight: 700; color: var(--cool); border-left: 1px solid var(--border); }
+  .sb-mini th.season-col { color: var(--muted); font-weight: 600; }
+  .sb-mini tr.tier-1 td.season-col { color: var(--cool); font-size: 1.05rem; }
   .sb-mini .sb-avatar { width: 30px; height: 30px; font-size: 0.62rem; }
   .sb-mini .sb-name { font-size: 0.9rem; }
   .sb-pwrap { min-width: 0; }
@@ -1760,7 +1763,7 @@
       if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--cool);color:#0b0d10">HAX</span> Tabelle <span class="ah-sub">${currentDisc.phase || 'Teams'} · Auslosung ${subN}</span>`;
       if (sbWrap) sbWrap.classList.add('sb-haxmode');
     } else {
-      if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--primary);color:#0b0d10">GES</span> Gesamtwertung <span class="ah-sub">${doneCount}/${totalCount} Spiele</span>`;
+      if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--primary);color:#0b0d10">GES</span> Gesamtwertung <span class="ah-sub">${doneCount}/${totalCount} Spiele · Saison als Vorschau</span>`;
       if (sbWrap) sbWrap.classList.remove('sb-haxmode');
     }
     if (haxLiveRows && doneCount === 0) {
@@ -1829,6 +1832,7 @@
           return `<i class="${c}" title="${discShort(d.kind)}: ${pl ? pl + '.' : '–'}"></i>`;
         }).join('');
         const sub = (curPts != null) ? `<span class="sb-cur">${curShort} ${curPts}</span>` : (r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : '');
+        const seasonPreview = seasonPointsByRank(r.rank);
         return `
           <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}" style="--pc:${col}">
             <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span>${deltaBadge}</td>
@@ -1842,10 +1846,11 @@
               </div>
             </td>
             <td class="total-col">${r.total}</td>
+            <td class="season-col">+${seasonPreview}</td>
           </tr>`;
       }).join('');
 
-      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th><th class="season-col">Saison</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
     }
 
     // Update snapshot AFTER rendering so deltas next time are vs this state
