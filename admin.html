@@ -1427,14 +1427,32 @@
         ? { p, depth: hax.elim, wins: hax.wins || 0, elim: true }
         : { p, depth: curIdx, wins: curWins[r.team] || 0, elim: false };
     });
-    // später ausgeschieden (höhere depth) zuerst, dann mehr Siege
-    entries.sort((a,b) => (b.depth - a.depth) || (b.wins - a.wins));
-    for (let i = 0; i < entries.length; i++) {
-      const e = entries[i];
-      const sealed = e.elim || finaleDecided; // Platz steht fest?
-      const place = i + 1;
+    // Gruppieren nach depth (höhere depth = weiter gekommen). Innerhalb derselben
+    // Ausscheide-Phase bekommen ALLE Spieler denselben Platz → gleiche Punkte.
+    // Nur die Finalisten werden nach Sieg/Niederlage des Finales unterschieden.
+    const byDepth = {};
+    entries.forEach(e => { (byDepth[e.depth] = byDepth[e.depth] || []).push(e); });
+    const depths = Object.keys(byDepth).map(Number).sort((a,b) => b - a);
+    let placedAbove = 0;
+    for (const depth of depths) {
+      const group = byDepth[depth];
+      const isFinaleGroup = (depth === lastIdx) && group.some(e => !e.elim);
+      if (isFinaleGroup) {
+        // Finale: nach Siegen sortieren → distinct Plätze (1. und 2.); nur sealen, wenn entschieden
+        group.sort((a,b) => b.wins - a.wins);
+        group.forEach((e,i) => { e.place = finaleDecided ? (placedAbove + i + 1) : null; });
+      } else {
+        // Ausscheide-Gruppe oder noch nicht entschiedene Survivor: alle gleicher Platz
+        const samePlace = placedAbove + 1;
+        const sealedHere = group[0].elim; // Survivor (nicht elim) bleiben null bis Finale entschieden
+        group.forEach(e => { e.place = sealedHere ? samePlace : null; });
+      }
+      placedAbove += group.length;
+    }
+    for (const e of entries) {
+      const sealed = e.place != null;
       await upsertResultDirect(discId, e.p.id, sealed
-        ? { placement: place, points: soloPoints(place) }
+        ? { placement: e.place, points: soloPoints(e.place) }
         : { placement: null, points: 0 });
     }
   }
