@@ -728,6 +728,13 @@
   /* Spieler unter der Aufstiegslinie: Siege rot — Achtung, Stich-Kandidat */
   .scoreboard.sb-haxmode tr.below-cutoff td.total-col { color: var(--alert); font-weight: 800; }
   .scoreboard.sb-haxmode tr.below-cutoff .sb-sub .sb-cur { color: var(--alert); }
+  /* Brawlhalla-Modus der Tabelle: Gold/Amber-Akzent — distinkt von Lime/Ice */
+  .scoreboard.sb-brawlmode { border-color: rgba(255,211,74,0.3); box-shadow: 0 18px 50px -34px #000; }
+  .scoreboard.sb-brawlmode tr.tier-1 { background: rgba(255,211,74,0.12) !important; }
+  .scoreboard.sb-brawlmode tr.tier-1 .rank-pill { background: #ffd34a !important; color: #0b0d10 !important; border-color: #ffd34a !important; }
+  .scoreboard.sb-brawlmode tr.tier-1 td.total-col, .scoreboard.sb-brawlmode tr.tier-1 .sb-name { color: #ffd34a !important; }
+  .scoreboard.sb-brawlmode td.total-col { color: #ffd34a; }
+  .scoreboard.sb-brawlmode .sb-sub .sb-cur { color: #ffd34a; }
   .live-aside .scoreboard { overflow-x: hidden; }
   .sb-mini .sb-name { overflow-wrap: anywhere; }
 
@@ -1742,6 +1749,23 @@
       }
     });
 
+    // Während Brawlhalla läuft: kumulative Punkte (über alle Spiele aller Lobbies) als Tabelle rechts
+    let brawlLiveRows = null;
+    if (currentDisc && currentDisc.kind === 'brawlhalla') {
+      const rounds = (Array.isArray(currentDisc.modes) ? currentDisc.modes : []).filter(m => m.type === 'brawl');
+      if (rounds.length) {
+        const playingB = (evParticipants && evParticipants.length ? evParticipants : evPlayers).filter(p => vetoBy[p.id] !== 'brawlhalla');
+        const rowsB = playingB.map(p => {
+          const r = (results || []).find(x => x.discipline_id === currentDisc.id && x.player_id === p.id) || {};
+          let pts = 0;
+          let gamesTotal = 0;
+          rounds.forEach(m => { const g = brawlGamesOf(r, m.n); pts += brawlPts(g); gamesTotal += g.length; });
+          return { player: p, points: pts, games: gamesTotal };
+        });
+        rowsB.sort((a,b) => b.points - a.points);
+        if (rowsB.some(r => r.games > 0)) brawlLiveRows = rowsB;
+      }
+    }
     // Während Haxball läuft: Spieler-Tabelle der laufenden Phase (kumulative Siege) rechts anzeigen
     // ABER nur in der Teams-Phase — in 2v2/1v1-Finale macht der Trichter links alles, Tabelle wäre Lärm
     let haxLiveRows = null;
@@ -1766,8 +1790,8 @@
         haxLiveRows.sort((a,b) => (a.hax === b.hax ? 0 : a.hax ? 1 : -1) || (b.wins - a.wins));
       }
     }
-    // Tabelle erst NACH dem ersten Spiel zeigen — oder schon während Haxball läuft
-    const showTable = doneCount >= 1 || !!haxLiveRows;
+    // Tabelle erst NACH dem ersten Spiel zeigen — oder schon während Haxball/Brawlhalla läuft
+    const showTable = doneCount >= 1 || !!haxLiveRows || !!brawlLiveRows;
     const liveAside = document.querySelector('.live-aside');
     const liveLayout = document.querySelector('.live-layout');
     if (liveAside) liveAside.style.display = showTable ? '' : 'none';
@@ -1781,10 +1805,14 @@
       const br = currentDisc.bracket || {};
       const subN = (br.sub && br.sub[currentDisc.phase || 'Teams']) || 1;
       if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--cool);color:#0b0d10">HAX</span> Tabelle <span class="ah-sub">${currentDisc.phase || 'Teams'} · Auslosung ${subN}</span>`;
-      if (sbWrap) sbWrap.classList.add('sb-haxmode');
+      if (sbWrap) { sbWrap.classList.add('sb-haxmode'); sbWrap.classList.remove('sb-brawlmode'); }
+    } else if (brawlLiveRows && doneCount === 0) {
+      const totalGames = brawlLiveRows.reduce((m,r) => Math.max(m, r.games), 0);
+      if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:#ffd34a;color:#0b0d10">BRA</span> Tabelle <span class="ah-sub">Brawlhalla · ${totalGames} Spiele</span>`;
+      if (sbWrap) { sbWrap.classList.add('sb-brawlmode'); sbWrap.classList.remove('sb-haxmode'); }
     } else {
       if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--primary);color:#0b0d10">GES</span> Gesamtwertung <span class="ah-sub">${doneCount}/${totalCount} Spiele · Saison als Vorschau</span>`;
-      if (sbWrap) sbWrap.classList.remove('sb-haxmode');
+      if (sbWrap) sbWrap.classList.remove('sb-haxmode', 'sb-brawlmode');
     }
     if (haxLiveRows && doneCount === 0) {
       // Haxball läuft → Bundesliga-Stil mit Spieler-Siegen der aktuellen Phase
@@ -1825,6 +1853,33 @@
       });
       const rowsHtml = rowParts.join('');
       body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Siege</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+    } else if (brawlLiveRows && doneCount === 0) {
+      // Brawlhalla läuft → Bundesliga-Stil mit kumulativen Lobby-Punkten
+      let rkB = 0, lastPB = -1;
+      const rowsHtmlB = brawlLiveRows.map((r,i) => {
+        if (r.points !== lastPB) { rkB = i + 1; lastPB = r.points; }
+        const tier = (rkB <= 3 && r.points > 0) ? `tier-${rkB}` : '';
+        const col = pColor(r.player.id);
+        const av = r.player.avatar_url
+          ? `background-image:url(${r.player.avatar_url});border-color:${col}`
+          : `background:${col};border-color:${col};color:#0b0d10`;
+        const place = r.points > 0 ? pad2(rkB) : '—';
+        const sub = `<span class="sb-cur">${r.games} ${r.games === 1 ? 'Spiel' : 'Spiele'}</span>`;
+        return `<tr class="${tier}" style="--pc:${col}">
+            <td class="rank-col"><span class="rank-pill">${place}</span></td>
+            <td class="player-col">
+              <div class="sb-player">
+                <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
+                <div class="sb-pwrap">
+                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}</div>
+                  <div class="sb-sub">${sub}</div>
+                </div>
+              </div>
+            </td>
+            <td class="total-col">${r.points}</td>
+          </tr>`;
+      }).join('');
+      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th></tr></thead><tbody>${rowsHtmlB}</tbody></table>`;
     } else if (rows.length === 0) {
       body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
     } else {
