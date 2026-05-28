@@ -496,16 +496,24 @@
   .brawl-go { font-size: 0.85rem; font-weight: 700; padding: 0.45rem 0.9rem; border-radius: var(--radius-sm); border: none; background: var(--primary); color: #0b0d10; cursor: pointer; }
   .brawl-go:disabled { opacity: 0.4; cursor: not-allowed; }
   .brawl-undo { font-size: 0.82rem; padding: 0.45rem 0.7rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
-  /* „Abend durch" — Endstand-Panel mit Saisonpunkten */
-  .abend-durch { padding: 1rem 0 0.5rem; text-align: center; }
-  .ad-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.4rem; }
-  .ad-champ { font-family: var(--font-display); font-size: 2.8rem; line-height: 1; letter-spacing: 0.03em; margin-bottom: 0.3rem; }
-  .ad-sub { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); margin-bottom: 1.1rem; }
-  .ad-table-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
+  /* „Abend durch" — Endstand-Bühne mit Champion-Show */
+  .abend-durch { padding: 1.5rem 0 0.5rem; text-align: center; position: relative; }
+  .ad-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.2rem; }
+  .ad-champ-stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.8rem; animation: adChampIn 0.7s cubic-bezier(.2,.8,.3,1.2); }
+  .ad-champ-av { width: 130px; height: 130px; border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; letter-spacing: 0.04em; color: #0b0d10; border: 5px solid var(--primary); }
+  .ad-champ-name { font-family: var(--font-display); font-size: 4rem; line-height: 0.95; letter-spacing: 0.03em; margin-top: 0.5rem; }
+  .ad-champ-title { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; margin-top: -0.2rem; }
+  .ad-champ-cry { font-family: var(--font-serif, Georgia, serif); font-style: italic; font-size: 1.1rem; color: var(--text); margin-top: 0.7rem; max-width: 480px; padding: 0 1rem; line-height: 1.4; }
+  .ad-table-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); animation: adChampIn 0.7s 0.4s both cubic-bezier(.2,.8,.3,1.2); }
   .ad-tab th { text-align: center; padding: 0.7rem 0.4rem; }
   .ad-tab td { padding: 0.55rem 0.4rem; }
-  .ad-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+  .ad-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; animation: adChampIn 0.5s 0.8s both ease; }
   .ad-note small { display: block; margin-top: 0.2rem; font-size: 0.72rem; opacity: 0.75; }
+  @keyframes adChampIn { from { opacity: 0; transform: translateY(20px) scale(0.92); } to { opacity: 1; transform: none; } }
+  /* CSS-Confetti: 18 fallende Teilchen in Spielerfarben */
+  .ad-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .ad-confetti-piece { position: absolute; top: -10px; width: 8px; height: 14px; background: var(--c, var(--primary)); transform: rotate(calc(var(--n) * 23deg)); animation: adFall 4s linear infinite; animation-delay: calc(var(--n) * -0.22s); left: calc(var(--n) * 5.4% + 2%); opacity: 0.8; }
+  @keyframes adFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 0; } 10% { opacity: 0.85; } 100% { transform: translateY(600px) rotate(540deg); opacity: 0; } }
 
   /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
   .live-status { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; color: var(--text); line-height: 1.35; }
@@ -661,13 +669,34 @@
   .sb-aside-head { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.02em; color: var(--text); margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
   .sb-aside-head .ah-chip { display: inline-flex; align-items: center; justify-content: center; padding: 2px 7px; border-radius: 5px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; font-weight: 700; }
   .sb-aside-head .ah-sub { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
-  /* Haxball-Modus der Tabelle: magenta-Akzente + dezenter Glow zur Unterscheidung von der Gesamtwertung */
-  .scoreboard.sb-haxmode { border-color: var(--alert-line); box-shadow: 0 18px 50px -34px #000, 0 0 0 1px var(--alert-soft) inset; }
-  .scoreboard.sb-haxmode tr.tier-1 { background: var(--alert-soft) !important; }
-  .scoreboard.sb-haxmode tr.tier-1 .rank-pill { background: var(--alert) !important; color: #0b0d10 !important; border-color: var(--alert) !important; box-shadow: 0 0 18px -4px var(--alert) !important; }
-  .scoreboard.sb-haxmode tr.tier-1 td.total-col, .scoreboard.sb-haxmode tr.tier-1 .sb-name { color: var(--alert) !important; }
-  .scoreboard.sb-haxmode td.total-col { color: var(--alert); }
-  .scoreboard.sb-haxmode .sb-sub .sb-cur { color: var(--alert); }
+  /* Haxball-Modus der Tabelle: Ice-Blau-Akzente — distinkt von der Gesamtwertung, aber freundlich */
+  .scoreboard.sb-haxmode { border-color: var(--cool-soft); box-shadow: 0 18px 50px -34px #000; }
+  .scoreboard.sb-haxmode tr.tier-1 { background: var(--cool-soft) !important; }
+  .scoreboard.sb-haxmode tr.tier-1 .rank-pill { background: var(--cool) !important; color: #0b0d10 !important; border-color: var(--cool) !important; }
+  .scoreboard.sb-haxmode tr.tier-1 td.total-col, .scoreboard.sb-haxmode tr.tier-1 .sb-name { color: var(--cool) !important; }
+  .scoreboard.sb-haxmode td.total-col { color: var(--cool); }
+  .scoreboard.sb-haxmode .sb-sub .sb-cur { color: var(--cool); }
+  /* Aufstiegslinie: trennt Aufsteiger von Ausgeschiedenen — gut sichtbar und beschriftet */
+  .scoreboard.sb-haxmode tr.cutoff td { position: relative; padding-bottom: 1.4rem; }
+  .scoreboard.sb-haxmode tr.cutoff td::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0.5rem; height: 3px; background: var(--cool); pointer-events: none; }
+  .scoreboard.sb-haxmode tr.cutoff td.player-col::before {
+    content: "↑ Aufstieg · ↓ Stich";
+    position: absolute;
+    left: 50%;
+    bottom: -0.55rem;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #0b0d10;
+    background: var(--cool);
+    padding: 3px 10px;
+    border-radius: 999px;
+    z-index: 2;
+    white-space: nowrap;
+  }
+  .scoreboard.sb-haxmode tr.cutoff + tr td { padding-top: 1.4rem; }
   .live-aside .scoreboard { overflow-x: hidden; }
   .sb-mini .sb-name { overflow-wrap: anywhere; }
 
@@ -1013,7 +1042,7 @@
 
     <div class="scorebug" id="liveScoreBug" style="display:none;"></div>
     <div class="live-ticker" id="liveTicker" style="display:none;"></div>
-    <div class="bumper-overlay" id="liveBumper" style="display:none;"></div>
+    <div class="bumper-overlay" id="liveBumper" role="status" aria-live="polite" style="display:none;"></div>
 
     <div class="pause-banner" id="livePause" style="display:none;">
       <span class="pause-ico">☕</span>
@@ -1254,7 +1283,8 @@
   const grad = i => { const c=COLORS[i%COLORS.length]; return `linear-gradient(135deg,${c[0]},${c[1]})`; };
   const ini = s => s.slice(0,2).toUpperCase();
   // Feste Spieler-Farbe (Trikotfarbe) — stabil über die Reihenfolge der Anmeldung
-  const PCOLORS = ['#d4ff3a','#7df0ff','#ff7ce0','#ff7a4a','#6cf2a0','#b39cff','#ffd34a','#5cc8ff','#ff5c5c','#9cff8f','#ff9cf0','#7affd4'];
+  // 8 maximal unterscheidbare Farben — hue-Abstand groß genug, dass auf einen Blick klar ist, wer wer ist
+  const PCOLORS = ['#d4ff3a','#7df0ff','#ff7ce0','#ff7a4a','#b39cff','#ffd34a','#5cff8f','#ff5c5c'];
   const pColor = pid => { const i = evPlayers.findIndex(p => p.id === pid); return PCOLORS[(i < 0 ? 0 : i) % PCOLORS.length]; };
   const pad2 = n => String(n).padStart(2,'0');
 
@@ -1401,7 +1431,7 @@
   // === Ereignis-Toasts (Einblendungen, einzeln nacheinander) ===
   const toastQueue = [];
   let toastBusy = false;
-  const TOAST_META = { 't-start': { icon: '🎮', kicker: 'Jetzt' }, 't-win': { icon: '🏆', kicker: 'Sieger' }, 't-draw': { icon: '🎲', kicker: 'Auslosung' } };
+  const TOAST_META = { 't-start': { icon: '▶', kicker: 'Jetzt' }, 't-win': { icon: '🏆', kicker: 'Sieger' }, 't-draw': { icon: '◆', kicker: 'Auslosung' } };
   function showLiveToast(main, kind, kicker) {
     toastQueue.push({ main, kind: kind || '', kicker: kicker || '' });
     if (!toastBusy) nextLiveToast();
@@ -1439,7 +1469,7 @@
     el.style.display = 'flex';
     requestAnimationFrame(() => el.classList.add('show'));
     clearTimeout(bumperT);
-    bumperT = setTimeout(() => { el.classList.remove('show'); setTimeout(() => { el.style.display = 'none'; }, 400); }, 4200);
+    bumperT = setTimeout(() => { el.classList.remove('show'); setTimeout(() => { el.style.display = 'none'; }, 300); }, 1900);
   }
 
   // Trackt Zustandsübergänge zwischen zwei Renders, um die richtigen Toasts auszulösen
@@ -1714,7 +1744,7 @@
     if (haxLiveRows && doneCount === 0) {
       const br = currentDisc.bracket || {};
       const subN = (br.sub && br.sub[currentDisc.phase || 'Teams']) || 1;
-      if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--alert);color:#0b0d10">HAX</span> Tabelle <span class="ah-sub">${currentDisc.phase || 'Teams'} · Auslosung ${subN}</span>`;
+      if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--cool);color:#0b0d10">HAX</span> Tabelle <span class="ah-sub">${currentDisc.phase || 'Teams'} · Auslosung ${subN}</span>`;
       if (sbWrap) sbWrap.classList.add('sb-haxmode');
     } else {
       if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--primary);color:#0b0d10">GES</span> Gesamtwertung <span class="ah-sub">${doneCount}/${totalCount} Spiele</span>`;
@@ -1722,17 +1752,22 @@
     }
     if (haxLiveRows && doneCount === 0) {
       // Haxball läuft → Bundesliga-Stil mit Spieler-Siegen der aktuellen Phase
-      let rk = 0, lastW = -1;
+      // Aufstiegslinie: Teams-Phase 4 weiter, 2v2 2 weiter, Finale keine
+      const haxPhase = currentDisc.phase || 'Teams';
+      const advCount = haxPhase === 'Teams' ? 4 : (haxPhase === '2v2' ? 2 : 0);
+      let rk = 0, lastW = -1, activeIdx = 0;
       const rowsHtml = haxLiveRows.map((r,i) => {
+        if (!r.hax) activeIdx++;
         if (!r.hax && r.wins !== lastW) { rk = i + 1; lastW = r.wins; }
         const tier = (!r.hax && rk <= 3 && r.wins > 0) ? `tier-${rk}` : '';
+        const isCutoff = !r.hax && advCount > 0 && activeIdx === advCount;
         const col = pColor(r.player.id);
         const av = r.player.avatar_url
           ? `background-image:url(${r.player.avatar_url});border-color:${col}`
           : `background:${col};border-color:${col};color:#0b0d10`;
         const place = r.hax ? '—' : pad2(rk);
-        const sub = r.hax ? `<span class="sb-cur" style="color:var(--alert)">ausgeschieden</span>` : `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}</span>`;
-        return `<tr class="${tier}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
+        const sub = r.hax ? `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>` : `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}</span>`;
+        return `<tr class="${tier} ${isCutoff ? 'cutoff' : ''}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
             <td class="rank-col"><span class="rank-pill">${place}</span></td>
             <td class="player-col">
               <div class="sb-player">
@@ -1857,9 +1892,11 @@
     }
 
     // Ticker-Zeile: Top-Stände + als Nächstes (nur wenn schon Punkte da sind)
+    // Ticker nur zeigen, wenn weder die Bundesliga-Sidebar noch die Haxball-Tabelle die Info schon redundant trägt.
     const tkEl = document.getElementById('liveTicker');
     if (tkEl) {
-      if (rows.length) {
+      const asideShows = doneCount >= 1; // Sidebar zeigt eh Gesamtwertung; Ticker wäre Doppelinfo
+      if (rows.length && !asideShows) {
         const top = rows.slice(0, 5).map(r => `<b>${r.rank}</b> ${r.player.name} ${r.total}`).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
         const nxt = nextDisc ? `&nbsp;&nbsp;·&nbsp;&nbsp;als Nächstes: ${discName(nextDisc.kind)}` : '';
         tkEl.innerHTML = `<span class="tk-tag">Tabelle</span><span class="tk-flow">${top}${nxt}</span>`;
@@ -1875,24 +1912,26 @@
       let txt = '', cls = '';
       if (pauseMsg) {
         const pm = String(pauseMsg).trim();
-        txt = '☕ Pause' + (pm && pm !== '1' ? ' — ' + pm : ' läuft'); cls = 'pause';
+        txt = 'Pause' + (pm && pm !== '1' ? ' — ' + pm : ' läuft'); cls = 'pause';
       } else if (!started) {
-        txt = '🎬 Gleich geht’s los — die Spiele werden gerade vorgestellt';
+        txt = 'Gleich geht’s los — die Spiele werden gerade vorgestellt';
       } else if (!currentDisc) {
         const champ = rows[0] ? rows[0].player.name : null;
-        txt = champ ? `🏁 Abend beendet — ${champ} gewinnt!` : '🏁 Abend beendet'; cls = 'done';
+        txt = champ ? `Abend beendet — ${champ} gewinnt!` : 'Abend beendet'; cls = 'done';
       } else {
         const idx = orderedDiscs.findIndex(d => d.id === currentDisc.id);
         const pos = `Spiel ${idx + 1} von ${totalCount}`;
         let detail = '';
         if (currentDisc.kind === 'haxball' && currentDisc.phase) detail = ' · ' + currentDisc.phase;
         const isLive = isDemo || !!(liveDisc && liveDisc.id === currentDisc.id);
-        if (isLive) { txt = `🎮 Jetzt: ${discName(currentDisc.kind)}${detail} · ${pos}`; cls = 'now'; }
-        else { txt = `⏭ Als Nächstes: ${discName(currentDisc.kind)} · ${pos}`; }
+        if (isLive) { txt = `Jetzt: ${discName(currentDisc.kind)}${detail} · ${pos}`; cls = 'now'; }
+        else { txt = `Als Nächstes: ${discName(currentDisc.kind)} · ${pos}`; }
       }
       stEl.className = 'live-status ' + cls;
       stEl.innerHTML = `<span class="ls-dot"></span><span>${txt}</span>`;
-      stEl.style.display = 'flex';
+      // Nur in besonderen Momenten zeigen — sonst macht der Hero schon alles
+      const showStatusLine = !!liveEvent.pause_msg || !currentDisc || !started;
+      stEl.style.display = showStatusLine ? 'flex' : 'none';
     }
 
     // === Ereignis-Toasts bei Zustandswechseln (nicht beim allerersten Render) ===
@@ -2129,6 +2168,11 @@
       });
       const champ = finalRows[0];
       const champCol = champ ? pColor(champ.player.id) : 'var(--primary)';
+      const champPlayer = champ ? evPlayers.find(p => p.id === champ.player.id) : null;
+      const champAvBg = champPlayer && champPlayer.avatar_url
+        ? `background-image:url(${champPlayer.avatar_url});border-color:${champCol}`
+        : `background:${champCol};border-color:${champCol};color:#0b0d10`;
+      const champCry = champPlayer && champPlayer.cry ? champPlayer.cry : null;
       const rowsHtml = finalRows.map(r => {
         const col = pColor(r.player.id);
         const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
@@ -2139,11 +2183,17 @@
           <td class="total-col" style="color:var(--cool);font-weight:800">+${r.seasonPts}</td>
         </tr>`;
       }).join('');
+      const confetti = Array.from({length:18}).map((_,i) => `<span class="ad-confetti-piece" style="--n:${i};--c:${pColor(finalRows[i % finalRows.length].player.id)}"></span>`).join('');
       box.innerHTML = `
         <div class="abend-durch">
-          <div class="ad-eyebrow">🏁 Abend durch · Endstand</div>
-          <div class="ad-champ" style="color:${champCol}">${champ ? '🏆 ' + champ.player.name : 'Abend beendet'}</div>
-          <div class="ad-sub">Tagessieger · ${champ ? champ.total + ' Disziplinpunkte' : ''}</div>
+          <div class="ad-confetti">${confetti}</div>
+          <div class="ad-eyebrow">Abend durch · Endstand</div>
+          <div class="ad-champ-stage">
+            <div class="ad-champ-av" style="${champAvBg}">${champPlayer && champPlayer.avatar_url ? '' : (champ ? ini(champ.player.name) : '')}</div>
+            <div class="ad-champ-name" style="color:${champCol}">${champ ? champ.player.name : 'Abend beendet'}</div>
+            <div class="ad-champ-title">Tagessieger</div>
+            ${champCry ? `<div class="ad-champ-cry">„${champCry}"</div>` : ''}
+          </div>
           <div class="ad-table-wrap">
             <table class="sb-table sb-mini ad-tab">
               <thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th style="text-align:right">Pkt</th><th class="total-col">Saison</th></tr></thead>
