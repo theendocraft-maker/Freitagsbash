@@ -1302,6 +1302,7 @@
 
   // --- Phasenwechsel: Aufsteiger wählen → System bildet die neuen Teams (per Los) ---
   let haxAdvanceSel = {};
+  let haxTeamCount = {}; // gewählte Team-Anzahl für die nächste Phase, pro Disziplin
   const ADV_TARGET = { '2v2': 4, '1v1-Finale': 2 };
   const nextPhaseOf = p => p === 'Teams' ? '2v2' : (p === '2v2' ? '1v1-Finale' : null);
   function renderPhaseAdvance(d, playing) {
@@ -1320,17 +1321,47 @@
       haxAdvanceSel[d.id] = sel;
     }
     const sel = haxAdvanceSel[d.id];
+    const N = sel.size;
     const chips = playing.slice().sort((a,b) => teamWins(b) - teamWins(a)).map(p => `<button class="adv-chip ${sel.has(p.id) ? 'on' : ''}" onclick="toggleHaxAdvance('${d.id}','${p.id}')">${p.name} <small>${teamWins(p)} S</small></button>`).join('');
+
+    // Team-Anzahl-Picker: nur Optionen ohne 1er-Team (außer 1v1-Finale, da hat jeder sein eigenes Team)
+    let teamPickerHtml = '';
+    if (N >= 2) {
+      if (next === '1v1-Finale') {
+        haxTeamCount[d.id] = N;
+        teamPickerHtml = `<p class="section-desc" style="margin-top:0.5rem">Finale: jeder ein eigenes Team — <b>${N} Teams</b>.</p>`;
+      } else {
+        const minTeams = 2;
+        const maxTeams = Math.floor(N / 2); // mehr Teams → 1er-Team, daher ausgeschlossen
+        if (maxTeams >= minTeams) {
+          let chosen = haxTeamCount[d.id];
+          if (chosen == null || chosen < minTeams || chosen > maxTeams) { chosen = maxTeams; haxTeamCount[d.id] = chosen; }
+          const opts = [];
+          for (let n = minTeams; n <= maxTeams; n++) {
+            const sizes = []; for (let i = 0; i < n; i++) sizes.push(Math.floor(N/n) + (i < N%n ? 1 : 0));
+            opts.push(`<button class="phase-btn ${n === chosen ? 'active' : ''}" onclick="setHaxTeamCount('${d.id}',${n})">${n} Teams · ${sizes.join('+')}</button>`);
+          }
+          teamPickerHtml = `<div class="draw-control" style="margin-top:0.5rem"><span class="draw-label">Team-Aufteilung:</span>${opts.join('')}</div>`;
+        } else {
+          // N=2 oder N=3 mit maxTeams=1 → keine Option ohne 1er-Team möglich
+          teamPickerHtml = `<p class="section-desc" style="margin-top:0.5rem;color:var(--alert)">⚠ Mit ${N} Aufsteigern kein 2er-Team ohne Solo möglich — wähle eine gerade Anzahl Aufsteiger.</p>`;
+        }
+      }
+    }
+    const goDisabled = (next === '2v2' && N >= 2 && Math.floor(N/2) < 2) ? 'disabled style="opacity:0.5;cursor:not-allowed"' : '';
     return `<div class="haxball-step-title">Phase weiter → ${next}</div>
       <p class="section-desc">Aufsteiger wählen — vorausgewählt sind die Spieler der <b>siegreichsten Teams</b> (empfohlen <b>${target}</b>). Beim Weiterklicken werden daraus automatisch die neuen Teams <b>ausgelost</b>; die Spieler sehen live die Auslos-Animation. Nicht-Aufsteiger scheiden aus.</p>
       <div class="adv-chips">${chips}</div>
-      <div class="draw-control" style="margin-top:0.6rem"><button class="draw-btn" onclick="applyHaxAdvance('${d.id}','${next}')">→ Weiter zu ${next} (${sel.size} gewählt)</button></div>`;
+      ${teamPickerHtml}
+      <div class="draw-control" style="margin-top:0.6rem"><button class="draw-btn" ${goDisabled} onclick="applyHaxAdvance('${d.id}','${next}')">→ Weiter zu ${next} (${N} gewählt)</button></div>`;
   }
   window.toggleHaxAdvance = function(discId, pid) {
     const sel = haxAdvanceSel[discId] = haxAdvanceSel[discId] || new Set();
     if (sel.has(pid)) sel.delete(pid); else sel.add(pid);
+    haxTeamCount[discId] = null; // Team-Auswahl zurücksetzen, da N sich geändert hat
     renderDisciplineBodyFor(discId);
   };
+  window.setHaxTeamCount = function(discId, n) { haxTeamCount[discId] = n; renderDisciplineBodyFor(discId); };
   window.applyHaxAdvance = async function(discId, next) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
     const advancers = [...(haxAdvanceSel[discId] || new Set())];
@@ -1357,9 +1388,10 @@
 
     const arr = advancers.slice();
     for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
-    // 1v1-Finale: jeder ein eigenes Team. 2v2: 2er-Teams bilden → ceil(N/2) Teams
-    // (z.B. 6 Aufsteiger = 3 Teams à 2, nicht 2 Teams à 3). Bei ungerader Zahl ein 1er-Team.
-    const nTeams = (next === '1v1-Finale') ? arr.length : Math.ceil(arr.length / 2);
+    // 1v1-Finale: jeder ein eigenes Team. 2v2: Anzahl aus dem Picker (haxTeamCount); Fallback floor(N/2).
+    const chosenN = haxTeamCount[discId];
+    const nTeams = (next === '1v1-Finale') ? arr.length : (chosenN || Math.max(2, Math.floor(arr.length / 2)));
+    if (next !== '1v1-Finale' && nTeams < 2) { toast('Team-Aufteilung ungültig', 'error'); return; }
     const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
     for (const p of playing) {
       const idx = arr.indexOf(p.id);
@@ -1369,6 +1401,7 @@
     await sb.from('disciplines').update({ phase: next, teams_drawn_at: ts }).eq('id', discId);
     d.phase = next; d.teams_drawn_at = ts;
     delete haxAdvanceSel[discId];
+    delete haxTeamCount[discId];
     await recomputeHaxball(discId);
     renderDisciplineBodyFor(discId); renderOverview();
     toast(`Weiter zu ${next} — Teams ausgelost 🎲`, 'ok');
