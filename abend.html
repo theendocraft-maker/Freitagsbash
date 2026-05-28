@@ -2600,16 +2600,18 @@
             : `<div class="br-history"><div class="br-stage-label">Match-Historie</div>${inner}</div>`;
         }
 
-        // Sudden-Death-Info: phasenübergreifend sichtbar (in 2v2/Finale ist die Hax-Tabelle ausgeblendet,
-        // daher wandert die SD-Erklärung hier ins Now-Detail-Panel — modes.haxSdWins bleibt nach Phasenwechsel erhalten)
+        // Sudden-Death-Info nur während der Teams-Phase relevant — danach (2v2/Finale) wieder weg,
+        // weil die Aufstiegsentscheidung erledigt ist und's nur noch ablenkt.
         const sdInfoPlayers = [];
-        myRows.forEach(r => {
-          const sw = (r.modes && typeof r.modes.haxSdWins === 'number') ? r.modes.haxSdWins : 0;
-          if (sw > 0) {
-            const nm = nameOf(r.player_id);
-            sdInfoPlayers.push(sw > 1 ? `${nm} (${sw}×)` : nm);
-          }
-        });
+        if (curPhase === 'Teams') {
+          myRows.forEach(r => {
+            const sw = (r.modes && typeof r.modes.haxSdWins === 'number') ? r.modes.haxSdWins : 0;
+            if (sw > 0) {
+              const nm = nameOf(r.player_id);
+              sdInfoPlayers.push(sw > 1 ? `${nm} (${sw}×)` : nm);
+            }
+          });
+        }
         const sdInfoHtml = sdInfoPlayers.length
           ? `<div class="nd-sd-info"><span class="sd-badge">SD</span><div><b>Sudden Death</b> — <span class="sd-names">${sdInfoPlayers.join(', ')}</span> hat${sdInfoPlayers.length === 1 ? '' : 'en'} ein Stech-Spiel gewonnen. Der Bonus-Sieg zählt für die Aufstiegsentscheidung in der Teams-Phase.</div></div>`
           : '';

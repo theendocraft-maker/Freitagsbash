@@ -1517,6 +1517,9 @@
 
     // Ausscheiden festhalten: Nicht-Aufsteiger scheiden in der AKTUELLEN Phase aus.
     // Siege in dieser Phase (aus den aktuellen Teams) merken → spätere Auto-Platzierung.
+    // WICHTIG: Wer in einer FRÜHEREN Phase schon ausgeschieden ist (modes.hax existiert), darf
+    // hier NICHT überschrieben werden — sonst springt sein elim auf die neue Phase und er bekommt
+    // beim Wechsel 2v2→Finale plötzlich Punkte der höheren Stufe.
     const curPhase = d.phase || 'Teams';
     const curIdx = HAXBALL_PHASES.indexOf(curPhase);
     const brNow = normBracket(d); const gamesNow = brNow.games[curPhase] || {};
@@ -1525,13 +1528,18 @@
     for (const p of playingNow) {
       const cur = currentResults[discId]?.[p.id] || {};
       const modes = Object.assign({}, cur.modes || {});
-      const prior = (typeof modes.haxRoundWins === 'number') ? modes.haxRoundWins : 0;
-      const cumWins = prior + (winsNow[cur.team] || 0);
+      const wasAlreadyElim = !!(modes.hax);
       if (advancers.includes(p.id)) {
         if (modes.hax) delete modes.hax;          // Sicherheit beim erneuten Weiterziehen
         if (modes.haxRoundWins != null) delete modes.haxRoundWins; // neue Phase, neuer Zähler
-      } else {
+      } else if (!wasAlreadyElim) {
+        // Frisch in dieser Phase ausgeschieden → Siege der aktuellen Phase sichern
+        const prior = (typeof modes.haxRoundWins === 'number') ? modes.haxRoundWins : 0;
+        const cumWins = prior + (winsNow[cur.team] || 0);
         modes.hax = { elim: curIdx, wins: cumWins };
+        if (modes.haxRoundWins != null) delete modes.haxRoundWins;
+      } else {
+        // Schon in einer früheren Phase raus → hax.elim/wins NICHT anfassen
         if (modes.haxRoundWins != null) delete modes.haxRoundWins;
       }
       await upsertResultDirect(discId, p.id, { modes });
