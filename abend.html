@@ -822,6 +822,30 @@
   .scoreboard.sb-brawlmode tr.tier-1 td.total-col, .scoreboard.sb-brawlmode tr.tier-1 .sb-name { color: #ffd34a !important; }
   .scoreboard.sb-brawlmode td.total-col { color: #ffd34a; }
   .scoreboard.sb-brawlmode .sb-sub .sb-cur { color: #ffd34a; }
+  /* Fall-Guys-Modus der Tabelle: Pink-Akzent (#ff7ce0) — gleicher Bundesliga-Look wie HAX/BRA */
+  .scoreboard.sb-falmode { border-color: rgba(255,124,224,0.3); box-shadow: 0 18px 50px -34px #000; }
+  .scoreboard.sb-falmode tr.tier-1 { background: rgba(255,124,224,0.12) !important; }
+  .scoreboard.sb-falmode tr.tier-1 .rank-pill { background: #ff7ce0 !important; color: #0b0d10 !important; border-color: #ff7ce0 !important; }
+  .scoreboard.sb-falmode tr.tier-1 td.total-col, .scoreboard.sb-falmode tr.tier-1 .sb-name { color: #ff7ce0 !important; }
+  .scoreboard.sb-falmode td.total-col { color: #ff7ce0; }
+  .scoreboard.sb-falmode .sb-sub .sb-cur { color: #ff7ce0; }
+  /* Cup-Wertungs-Tabelle: Mode-Spalten zwischen Spieler und Σ (M1/M2/... oder R1/R2/...) */
+  .sb-table.sb-cup .mode-col {
+    width: 38px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding: 0.5rem 0.25rem;
+  }
+  .sb-table.sb-cup th.mode-col {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    padding: 0.6rem 0.25rem;
+  }
+  .sb-table.sb-cup td.mode-col.scored { color: var(--text); font-weight: 600; }
+  .sb-table.sb-cup tr.tier-1 td.mode-col.scored { color: var(--text); font-weight: 700; }
   .live-aside .scoreboard { overflow-x: hidden; }
   /* Sidebar-Tabelle: feste Spaltenbreiten, damit lange Namen die SAISON/PKT-Spalte nicht aus dem Sichtbereich
      drücken. Namen brechen an Wortgrenzen, im Notfall (sehr lange Wörter wie "Querdenkendo") buchstabenweise. */
@@ -2778,12 +2802,47 @@
         rws.sort((a,b) => b.tot - a.tot);
         let rank = 0, last = -1;
         rws.forEach((r,i) => { if (r.tot !== last) rank = i + 1; r.rank = rank; last = r.tot; });
-        const head = `<th>#</th><th style="text-align:left">Spieler</th>${mdefs.map((m,i) => `<th title="${lblOf(m,i)}">${px}${i+1}</th>`).join('')}<th>Σ</th>`;
+        // Bundesliga-Stil wie die Haxball-/Brawlhalla-Tabelle (Avatar · Farbpunkt · Tier-Highlight)
+        const modeLabel = kind === 'brawlhalla' ? 'Runde' : 'Modus';
+        const modeMode = kind === 'brawlhalla' ? 'sb-brawlmode' : 'sb-falmode';
+        const head = `<tr>
+            <th class="rank-col">#</th>
+            <th class="player-col">Spieler</th>
+            ${mdefs.map((m,i) => `<th class="mode-col" title="${lblOf(m,i)}">${px}${i+1}</th>`).join('')}
+            <th class="total-col">Σ</th>
+          </tr>`;
         const body = rws.map(r => {
-          const tier = r.rank <= 3 ? ` class="tier-${r.rank}"` : '';
-          return `<tr${tier}><td class="r-rank">${r.rank}</td><td style="text-align:left">${nameOf(r.pid)}</td>${r.per.map(p => `<td>${p||'–'}</td>`).join('')}<td><b>${r.tot}</b></td></tr>`;
+          const p = evPlayers.find(pl => pl.id === r.pid) || { name: nameOf(r.pid) };
+          const col = pColor(r.pid);
+          const av = p.avatar_url
+            ? `background-image:url(${p.avatar_url});border-color:${col}`
+            : `background:${col};border-color:${col};color:#0b0d10`;
+          const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
+          const subTxt = `<span class="sb-cur">${r.tot} ${r.tot === 1 ? 'Punkt' : 'Punkte'} · ${modeLabel} ${r.per.filter(x => x > 0).length}/${mdefs.length}</span>`;
+          return `<tr class="${tier}" style="--pc:${col}">
+            <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span></td>
+            <td class="player-col">
+              <div class="sb-player">
+                <div class="sb-avatar" style="${av}">${p.avatar_url ? '' : ini(p.name)}</div>
+                <div class="sb-pwrap">
+                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${p.name}</div>
+                  <div class="sb-sub">${subTxt}</div>
+                </div>
+              </div>
+            </td>
+            ${r.per.map(pts => `<td class="mode-col${pts > 0 ? ' scored' : ''}">${pts || '–'}</td>`).join('')}
+            <td class="total-col">${r.tot}</td>
+          </tr>`;
         }).join('');
-        modeTblHtml = `<div class="nd-block"><div class="nd-label">${kind === 'brawlhalla' ? 'Runden-Wertung' : 'Cup-Wertung'} · Gesamt</div><table class="nd-modetbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+        modeTblHtml = `<div class="nd-block">
+          <div class="nd-label">${kind === 'brawlhalla' ? 'Runden-Wertung' : 'Cup-Wertung'} · Gesamt</div>
+          <div class="scoreboard ${modeMode}" style="overflow-x:auto">
+            <table class="sb-table sb-mini sb-cup">
+              <thead>${head}</thead>
+              <tbody>${body}</tbody>
+            </table>
+          </div>
+        </div>`;
       }
     }
 
