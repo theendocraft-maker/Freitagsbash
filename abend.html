@@ -658,7 +658,16 @@
   .live-main { min-width: 0; }
   /* Während der Vorstellungs-Slideshow gehört die Bühne dem Intro */
   #live.intro-on .live-hero { display: none !important; }
-  .sb-aside-head { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.02em; color: var(--text); margin-bottom: 0.5rem; }
+  .sb-aside-head { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.02em; color: var(--text); margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+  .sb-aside-head .ah-chip { display: inline-flex; align-items: center; justify-content: center; padding: 2px 7px; border-radius: 5px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; font-weight: 700; }
+  .sb-aside-head .ah-sub { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
+  /* Haxball-Modus der Tabelle: magenta-Akzente + dezenter Glow zur Unterscheidung von der Gesamtwertung */
+  .scoreboard.sb-haxmode { border-color: var(--alert-line); box-shadow: 0 18px 50px -34px #000, 0 0 0 1px var(--alert-soft) inset; }
+  .scoreboard.sb-haxmode tr.tier-1 { background: var(--alert-soft) !important; }
+  .scoreboard.sb-haxmode tr.tier-1 .rank-pill { background: var(--alert) !important; color: #0b0d10 !important; border-color: var(--alert) !important; box-shadow: 0 0 18px -4px var(--alert) !important; }
+  .scoreboard.sb-haxmode tr.tier-1 td.total-col, .scoreboard.sb-haxmode tr.tier-1 .sb-name { color: var(--alert) !important; }
+  .scoreboard.sb-haxmode td.total-col { color: var(--alert); }
+  .scoreboard.sb-haxmode .sb-sub .sb-cur { color: var(--alert); }
   .live-aside .scoreboard { overflow-x: hidden; }
   .sb-mini .sb-name { overflow-wrap: anywhere; }
 
@@ -1057,7 +1066,7 @@
       </div>
 
       <aside class="live-aside">
-        <div class="sb-aside-head">Tabelle</div>
+        <div class="sb-aside-head" id="sbAsideHead">Tabelle</div>
         <div class="scoreboard">
           <div id="liveBody"></div>
         </div>
@@ -1699,6 +1708,18 @@
     if (liveLayout) liveLayout.classList.toggle('no-aside', !showTable);
 
     const body = document.getElementById('liveBody');
+    // Tabellen-Überschrift dynamisch — damit sich Haxball-Wertung und Gesamtwertung sichtbar unterscheiden
+    const headEl = document.getElementById('sbAsideHead');
+    const sbWrap = document.querySelector('.live-aside .scoreboard');
+    if (haxLiveRows && doneCount === 0) {
+      const br = currentDisc.bracket || {};
+      const subN = (br.sub && br.sub[currentDisc.phase || 'Teams']) || 1;
+      if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--alert);color:#0b0d10">HAX</span> Tabelle <span class="ah-sub">${currentDisc.phase || 'Teams'} · Auslosung ${subN}</span>`;
+      if (sbWrap) sbWrap.classList.add('sb-haxmode');
+    } else {
+      if (headEl) headEl.innerHTML = `<span class="ah-chip" style="background:var(--primary);color:#0b0d10">GES</span> Gesamtwertung <span class="ah-sub">${doneCount}/${totalCount} Spiele</span>`;
+      if (sbWrap) sbWrap.classList.remove('sb-haxmode');
+    }
     if (haxLiveRows && doneCount === 0) {
       // Haxball läuft → Bundesliga-Stil mit Spieler-Siegen der aktuellen Phase
       let rk = 0, lastW = -1;
