@@ -1368,7 +1368,9 @@
     const cur = currentResults[discId]?.[pid] || {};
     const modes = Object.assign({}, cur.modes || {});
     const prior = typeof modes.haxRoundWins === 'number' ? modes.haxRoundWins : 0;
+    const priorSd = typeof modes.haxSdWins === 'number' ? modes.haxSdWins : 0;
     modes.haxRoundWins = prior + 1;
+    modes.haxSdWins = priorSd + 1;            // separat tracken, damit live klar gemacht werden kann
     await upsertResultDirect(discId, pid, { modes });
     toast(`🥇 Sudden Death: ${winner.name} +1`, 'ok');
     renderDisciplineBodyFor(discId); renderOverview();

@@ -718,6 +718,31 @@
   /* Spieler unter der Aufstiegslinie: Siege rot — Achtung, Stich-Kandidat */
   .scoreboard.sb-haxmode tr.below-cutoff td.total-col { color: var(--alert); font-weight: 800; }
   .scoreboard.sb-haxmode tr.below-cutoff .sb-sub .sb-cur { color: var(--alert); }
+  /* Sudden-Death-Markierung: kleine Pille am Namen + (+1 SD) im Subtext */
+  .scoreboard.sb-haxmode .sd-mark {
+    display: inline-block;
+    background: var(--alert);
+    color: #0b0d10;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 5px;
+    vertical-align: middle;
+  }
+  .scoreboard.sb-haxmode .sb-sd { color: var(--alert); font-weight: 700; }
+  /* Erklärung unter der Tabelle */
+  .scoreboard.sb-haxmode .sd-explain {
+    padding: 0.6rem 0.9rem;
+    background: var(--bg-2);
+    border-top: 1px solid var(--alert-soft);
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .scoreboard.sb-haxmode .sd-explain b { color: var(--alert); font-family: var(--font-mono); letter-spacing: 0.06em; }
   /* Brawlhalla-Modus der Tabelle: Gold/Amber-Akzent — distinkt von Lime/Ice */
   .scoreboard.sb-brawlmode { border-color: rgba(255,211,74,0.3); box-shadow: 0 18px 50px -34px #000; }
   .scoreboard.sb-brawlmode tr.tier-1 { background: rgba(255,211,74,0.12) !important; }
@@ -1774,7 +1799,8 @@
           const r = (results || []).find(x => x.discipline_id === currentDisc.id && x.player_id === p.id) || {};
           const prior = (r.modes && typeof r.modes.haxRoundWins === 'number') ? r.modes.haxRoundWins : 0;
           const cur = winsByTeam[r.team] || 0;
-          return { player: p, wins: prior + cur, hax: !!(r.modes && r.modes.hax) };
+          const sdWins = (r.modes && typeof r.modes.haxSdWins === 'number') ? r.modes.haxSdWins : 0;
+          return { player: p, wins: prior + cur, sdWins, hax: !!(r.modes && r.modes.hax) };
         });
         // Sortieren: Aktive (mehr Siege oben), Ausgeschiedene unten
         haxLiveRows.sort((a,b) => (a.hax === b.hax ? 0 : a.hax ? 1 : -1) || (b.wins - a.wins));
@@ -1821,14 +1847,15 @@
           ? `background-image:url(${r.player.avatar_url});border-color:${col}`
           : `background:${col};border-color:${col};color:#0b0d10`;
         const place = r.hax ? '—' : pad2(rk);
-        const sub = r.hax ? `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>` : `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}</span>`;
+        const sdMark = (r.sdWins > 0) ? ` <span class="sd-mark" title="${r.sdWins} Sudden-Death-Sieg${r.sdWins > 1 ? 'e' : ''}">SD</span>` : '';
+        const sub = r.hax ? `<span class="sb-cur" style="color:var(--muted)">ausgeschieden</span>` : `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
         rowParts.push(`<tr class="${tier}${belowCls}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
             <td class="rank-col"><span class="rank-pill">${place}</span></td>
             <td class="player-col">
               <div class="sb-player">
                 <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
                 <div class="sb-pwrap">
-                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}</div>
+                  <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}${sdMark}</div>
                   <div class="sb-sub">${sub}</div>
                 </div>
               </div>
@@ -1842,7 +1869,10 @@
         }
       });
       const rowsHtml = rowParts.join('');
-      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Siege</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+      // Sudden-Death-Erklärung: wer hat ein Stech-Spiel gewonnen?
+      const sdPlayers = haxLiveRows.filter(r => r.sdWins > 0).map(r => r.player.name);
+      const sdNote = sdPlayers.length ? `<div class="sd-explain"><b>SD</b> = Sudden Death · ${sdPlayers.join(', ')} hat${sdPlayers.length === 1 ? '' : 'en'} ein Stech-Spiel gewonnen → Bonus-Sieg zählt zur Aufstiegsentscheidung.</div>` : '';
+      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Siege</th></tr></thead><tbody>${rowsHtml}</tbody></table>${sdNote}`;
     } else if (brawlLiveRows && doneCount === 0) {
       // Brawlhalla läuft → Bundesliga-Stil mit kumulativen Lobby-Punkten
       let rkB = 0, lastPB = -1;
