@@ -823,10 +823,12 @@
   .scoreboard.sb-brawlmode td.total-col { color: #ffd34a; }
   .scoreboard.sb-brawlmode .sb-sub .sb-cur { color: #ffd34a; }
   .live-aside .scoreboard { overflow-x: hidden; }
-  /* Namen brechen NUR an Wortgrenzen — sonst kollabiert die Spielerspalte auf 1-Buchstabenbreite,
-     weil "anywhere" jeder Buchstaben-Position als gültige Bruchstelle wertet. */
-  .sb-mini .sb-name { overflow-wrap: break-word; word-break: normal; }
-  .sb-mini .sb-pwrap { min-width: 80px; flex: 1; }
+  /* Sidebar-Tabelle: feste Spaltenbreiten, damit lange Namen die SAISON/PKT-Spalte nicht aus dem Sichtbereich
+     drücken. Namen brechen an Wortgrenzen, im Notfall (sehr lange Wörter wie "Querdenkendo") buchstabenweise. */
+  .sb-mini { table-layout: fixed; width: 100%; }
+  .sb-mini .sb-name { overflow-wrap: anywhere; word-break: break-word; }
+  .sb-mini .sb-pwrap { min-width: 0; flex: 1; overflow: hidden; }
+  .sb-mini .sb-sub { overflow: hidden; }
 
   /* ============================
      SCOREBOARD — broadcast-sized
