@@ -1261,15 +1261,32 @@
     const wins = {}; teams.forEach(t => wins[t] = 0);
     Object.values(games).forEach(arr => arr.forEach(w => { if (w) wins[w] = (wins[w]||0) + 1; }));
     const standing = teams.slice().sort((a,b) => wins[b] - wins[a]);
-    const winsTable = `<div class="haxball-step-title">Siege je Team (aktuelle Auslosung)</div>${standing.map(t => `<div class="team-rank-row"><span class="team-badge t${(((t-1)%3)+1)}">Team ${t}</span><span class="team-members">${haxTeamMembers(d, playing, t)}</span><span class="result-points">${wins[t]} ${wins[t]===1?'Sieg':'Siege'}</span></div>`).join('')}`;
-    // Kumulierte Siege pro Spieler (über alle Auslosungen der Phase) — Grundlage fürs Weiterkommen
+    // Kumulierte Spieler-Tabelle (Bundesliga-Stil): Platz, Name, Gesamtsiege
     const subN = (br.sub && br.sub[phase]) || 1;
     const cumRows = playing.map(p => ({ p, w: haxPlayerWinsCumulative(d, p) }))
       .sort((a,b) => b.w - a.w);
-    const cumTable = subN > 1 ? `<div class="haxball-step-title">Gesamtsiege je Spieler · ${subN} Auslosungen</div>${cumRows.map(r => `<div class="team-rank-row"><span class="team-members">${r.p.name}</span><span class="result-points">${r.w} ${r.w===1?'Sieg':'Siege'}</span></div>`).join('')}` : '';
+    let rk = 0, lastW = -1;
+    const cumTable = `<div class="haxball-step-title">Tabelle · ${subN} ${subN === 1 ? 'Auslosung' : 'Auslosungen'} · Phase „${phase}"</div>${cumRows.map((r,i) => { if (r.w !== lastW) rk = i + 1; lastW = r.w; return `<div class="team-rank-row" style="${i===0?'background:var(--primary-soft);border-radius:6px;':''}"><span class="rank-pos" style="min-width:1.6rem;font-family:var(--font-mono);font-weight:700;color:var(--muted);text-align:center">${rk}.</span><span class="team-members" style="flex:1;${i===0?'color:var(--primary);font-weight:700;':''}">${r.p.name}</span><span class="result-points" style="${i===0?'color:var(--primary);':''}">${r.w} ${r.w===1?'Sieg':'Siege'}</span></div>`; }).join('')}`;
+    // Match-Historie über alle Auslosungen (archivierte + aktuelle)
+    const archived = (br.history || []).filter(h => h.phase === phase);
+    const histEntries = archived.slice().concat([{ phase, sub: subN, namesByTeam: (() => { const m = {}; playing.forEach(p => { const t = currentResults[d.id]?.[p.id]?.team; if (!t) return; (m[t] = m[t] || []).push(p.name); }); return m; })(), games }]);
+    const histHtml = histEntries.map(h => {
+      const items = [];
+      Object.keys(h.games || {}).forEach(key => {
+        const arr = (h.games[key] || []).filter(Boolean);
+        if (!arr.length) return;
+        const [a, b] = key.split('-').map(Number);
+        const wa = arr.filter(x => x === a).length, wb = arr.filter(x => x === b).length;
+        const memA = (h.namesByTeam && h.namesByTeam[a]) ? h.namesByTeam[a].join(' & ') : `Team ${a}`;
+        const memB = (h.namesByTeam && h.namesByTeam[b]) ? h.namesByTeam[b].join(' & ') : `Team ${b}`;
+        items.push(`<div class="team-rank-row" style="font-size:.88rem"><span style="flex:1">${memA}</span><b style="margin:0 0.4rem">${wa}:${wb}</b><span style="flex:1;text-align:right">${memB}</span></div>`);
+      });
+      return items.length ? `<div style="margin-top:0.4rem"><div style="font-family:var(--font-mono);font-size:.7rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:0.2rem">Auslosung ${h.sub}</div>${items.join('')}</div>` : '';
+    }).filter(Boolean).join('');
+    const historyHtml = histHtml ? `<div class="haxball-step-title">Match-Historie</div>${histHtml}` : '';
     // Button: nächste Auslosung (sobald mind. 1 Spiel gespielt)
     const playedAnyHere = Object.values(games).some(arr => arr.some(Boolean));
-    const nextSubBtn = playedAnyHere ? `<div class="draw-control" style="margin-top:0.6rem"><button class="draw-btn" onclick="nextHaxSubround('${d.id}')">🎲 Nächste Auslosung (gleiche Phase, neue Teams)</button> <small style="color:var(--muted)">Siege werden zur Gesamtsumme addiert</small></div>` : '';
+    const nextSubBtn = playedAnyHere ? `<div class="draw-control" style="margin-top:0.6rem"><button class="draw-btn" onclick="nextHaxSubround('${d.id}')">🎲 Nächste Auslosung (gleiche Phase, neue Teams)</button> <small style="color:var(--muted)">Siege werden zur Tabelle addiert</small></div>` : '';
     const winVals = standing.map(t => wins[t]);
     const allPlayed = Object.values(games).reduce((a,arr) => a + arr.filter(Boolean).length, 0) >= teams.length * (teams.length - 1) / 2 * gpp;
     const hasTie = allPlayed && new Set(winVals).size < winVals.length && winVals.some(v => v > 0);
@@ -1285,7 +1302,7 @@
       tieHint = `<div class="fg-suggest" style="background:var(--alert-soft);border-color:var(--alert-line)"><div class="fg-suggest-head" style="color:var(--alert)">⚠ Gleichstand — Golden Goal</div><div class="fg-suggest-body">Punktgleiche Teams: erst zählt das <b>direkte Duell</b>. Bleibt's gleich, spielen sie <b>Golden Goal</b> (erstes Tor gewinnt) — tipp unten den Sieger an, der Sieg zählt zur Wertung. Immer noch gleich → <b>W20</b> (§ 12).</div>${duels.join('')}</div>`;
     }
     const subInfo = subN > 1 ? ` · Auslosung ${subN}` : '';
-    return `<div class="haxball-step-title">Partien · Phase „${phase}"${subInfo}</div>${recHtml}${gppSel}${pairs.join('')}${winsTable}${cumTable}${nextSubBtn}${tieHint}`;
+    return `<div class="haxball-step-title">Partien · Phase „${phase}"${subInfo}</div>${recHtml}${gppSel}${pairs.join('')}${cumTable}${nextSubBtn}${historyHtml}${tieHint}`;
   }
   window.setHaxGpp = async function(discId, phase, n) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
@@ -1327,8 +1344,16 @@
       const modes = Object.assign({}, r.modes || {}, { haxRoundWins: prior + cur });
       await upsertResultDirect(discId, p.id, { modes });
     }
-    // Bracket dieser Phase leeren, Sub-Round-Counter erhöhen
+    // Aktuelle Auslosung archivieren (für die Match-Historie), dann Bracket leeren
     const newBr = normBracket(d);
+    const oldGames = Object.assign({}, newBr.games[phase] || {});
+    const teamOf = {}; active.forEach(p => { teamOf[p.id] = currentResults[discId]?.[p.id]?.team || null; });
+    const namesByTeam = {};
+    Object.keys(teamOf).forEach(pid => { const t = teamOf[pid]; if (!t) return; (namesByTeam[t] = namesByTeam[t] || []).push((players.find(pp => pp.id === pid) || {}).name || '?'); });
+    newBr.history = (newBr.history || []).slice();
+    if (Object.values(oldGames).some(arr => arr.some(Boolean))) {
+      newBr.history.push({ phase, sub: (newBr.sub && newBr.sub[phase]) || 1, namesByTeam, games: oldGames });
+    }
     newBr.games = Object.assign({}, newBr.games); newBr.games[phase] = {};
     newBr.sub = Object.assign({}, newBr.sub || {});
     newBr.sub[phase] = (newBr.sub[phase] || 1) + 1;
