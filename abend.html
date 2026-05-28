@@ -1612,12 +1612,17 @@
       if (isDemo) {
         buildIntroSlideshow(orderedDiscs, roster, { controls: true });
       } else {
-        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step });
+        // Dauerschleife: Teilnehmer → Spiel 1 → Spiel 2 → … wiederholt sich. Startet beim Admin-Schritt.
+        buildIntroSlideshow(orderedDiscs, roster, { controls: false, autoLoop: true, step: liveEvent.intro_step });
       }
     } else {
       clearInterval(introTimer); introTimer = null;
+      lastIntroStepFromDB = undefined; // Schleife zurücksetzen, falls Intro später erneut aktiviert wird
       buildNowDetail(currentDisc, results);
     }
+    // Während der Vorstellung den großen „Jetzt im Spiel"-Hero ausblenden — die Slideshow soll Bühne sein.
+    const heroEl = document.querySelector('.live-hero');
+    if (heroEl) heroEl.style.display = showIntro ? 'none' : '';
 
     // === Scoreboard rows ===
     const rows = evPlayers
@@ -1962,13 +1967,18 @@
     }
     box.style.display = 'block';
   }
+  let lastIntroStepFromDB = undefined;
   function buildIntroSlideshow(discs, roster, opts) {
     introDiscs = discs; introRoster = roster || [];
     introCtl = !!(opts && opts.controls);
-    if (opts && typeof opts.step === 'number') introIdx = opts.step;
+    const autoLoop = !!(opts && opts.autoLoop);
+    if (opts && typeof opts.step === 'number') {
+      // Nur springen, wenn sich der vom Admin gesetzte Schritt geändert hat — sonst die laufende Schleife weiterlaufen lassen.
+      if (opts.step !== lastIntroStepFromDB) { introIdx = opts.step; lastIntroStepFromDB = opts.step; }
+    }
     renderIntro();
     clearInterval(introTimer); introTimer = null;
-    if (introCtl && !introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500);
+    if ((introCtl || autoLoop) && !introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500);
   }
   window.introNav = dir => { introIdx += dir; introPaused = true; clearInterval(introTimer); introTimer = null; renderIntro(); };
   window.introToggle = () => { introPaused = !introPaused; renderIntro(); clearInterval(introTimer); introTimer = null; if (!introPaused) introTimer = setInterval(() => { introIdx++; renderIntro(); }, 4500); };
