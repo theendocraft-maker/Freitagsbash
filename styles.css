@@ -30,11 +30,13 @@
   --alert-soft:   rgba(255,61,110,0.12);
   --alert-line:   rgba(255,61,110,0.35);
 
-  --cool:         #7df0ff;   /* info, secondary */
+  --cool:         #7df0ff;   /* info, secondary — UI-Akzent, NICHT mehr Disziplin-Identität */
   --cool-soft:    rgba(125,240,255,0.10);
 
-  /* Discipline-specific (distinct but harmonized) */
-  --d-geo:  #7df0ff;
+  /* Discipline-specific (jede Disziplin eine distinkte Identitäts-Farbe).
+     --d-geo bewusst von --cool entkoppelt (vorher gleicher Hex → Bedeutungs-Kollision
+     zwischen „GeoGuessr läuft" und „Pause/Sekundär-Info"). Jetzt eine Spur tiefer. */
+  --d-geo:  #5ec8ff;
   --d-hax:  #6cf2a0;
   --d-che:  #ffd34a;
   --d-bra:  #ff7a4a;
@@ -44,6 +46,23 @@
   --font-display: "Big Shoulders Display", "Anton", "Arial Narrow", sans-serif;
   --font-body:    "Geist", "Inter", system-ui, -apple-system, sans-serif;
   --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  /* === Typografie-Skalen — 4 Mono-Stufen + 3 Letter-Spacing-Stufen.
+     Vorher gab's 15+ Mikro-Varianten je Achse, die alle gleich wirken sollten. */
+  --fs-micro:    0.62rem;  /* Kleinste Mono-Labels (Sub-Sub-Hierarchie) */
+  --fs-mono:     0.72rem;  /* Standard Mono-Caps-Label (Eyebrows, Status) */
+  --fs-mono-lg:  0.82rem;  /* Größere Mono-Caps (Section-Header) */
+  --fs-mono-xl:  0.96rem;  /* Hervorgehobener Mono-Text (selten) */
+  --ls-tight:    0.06em;   /* Mono-Inline / Schmal-gespacte Caps */
+  --ls-normal:   0.12em;   /* Standard-Mono-Caps */
+  --ls-wide:     0.18em;   /* Große Eyebrows / Hero-Caps */
+
+  /* === Avatar-Skala — konsistente Größen statt 26/30/34/40/60/76/130 wild gemischt === */
+  --av-xs: 26px;
+  --av-sm: 30px;
+  --av-md: 40px;
+  --av-lg: 60px;
+  --av-xl: 130px;
 
   --radius-sm: 6px;
   --radius:    10px;

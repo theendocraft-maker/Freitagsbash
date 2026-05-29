@@ -81,8 +81,8 @@
   .lh-now-title-wrap { min-width: 0; }
 
   .lh-now-label {
-    font-family: var(--font-mono); font-size: 0.72rem;
-    letter-spacing: 0.22em; text-transform: uppercase;
+    font-family: var(--font-mono); font-size: var(--fs-mono);
+    letter-spacing: var(--ls-wide); text-transform: uppercase;
     color: var(--alert);
     margin-bottom: 0.4rem;
   }
@@ -96,8 +96,8 @@
   }
   .lh-now-mode {
     margin-top: 0.6rem;
-    font-family: var(--font-mono); font-size: 0.78rem;
-    letter-spacing: 0.16em; text-transform: uppercase;
+    font-family: var(--font-mono); font-size: var(--fs-mono-lg);
+    letter-spacing: var(--ls-normal); text-transform: uppercase;
     color: var(--text-soft);
   }
   .lh-now-mode .glyph {
@@ -346,23 +346,23 @@
     background: var(--alert); color: #fff; flex-shrink: 0;
   }
   .nd-eyebrow {
-    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--muted);
+    font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: var(--ls-normal);
+    text-transform: uppercase; color: var(--text-soft);
   }
   .nd-title {
     font-family: var(--font-display); font-weight: 900;
     font-size: 1.5rem; letter-spacing: 0.01em; line-height: 1; color: var(--text);
   }
   .nd-rules {
-    font-size: 0.92rem; line-height: 1.5; color: var(--muted);
+    font-size: 0.92rem; line-height: 1.5; color: var(--text-soft);
     padding: 0.7rem 0.9rem; margin-top: 0.8rem;
     background: var(--bg-2); border-radius: var(--radius-sm);
     border-left: 3px solid var(--border-strong);
   }
-  .nd-block { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+  .nd-block { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
   .nd-label {
-    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 0.55rem;
+    font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: var(--ls-normal);
+    text-transform: uppercase; color: var(--text-soft); margin-bottom: 0.6rem;
   }
   .nd-phases { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
   .nd-phase {
@@ -533,9 +533,9 @@
     border-radius: var(--radius-lg);
     text-align: left;
   }
-  .ce-eyebrow { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.14em; color: var(--cool); text-transform: uppercase; margin-bottom: 0.5rem; }
+  .ce-eyebrow { font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: var(--ls-normal); color: var(--cool); text-transform: uppercase; margin-bottom: 0.5rem; }
   .ce-headline { font-family: var(--font-display); font-size: 1.6rem; line-height: 1.1; letter-spacing: 0.01em; color: var(--text); margin-bottom: 1rem; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
-  .ce-headline .ce-h-pre { font-size: 0.7rem; font-family: var(--font-mono); letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .ce-headline .ce-h-pre { font-size: var(--fs-micro); font-family: var(--font-mono); letter-spacing: var(--ls-normal); color: var(--text-soft); text-transform: uppercase; }
   .ce-headline .ce-h-pts { margin-left: auto; font-size: 2.4rem; color: var(--cool); font-weight: 900; }
   .ce-rows { display: flex; flex-direction: column; gap: 0.4rem; }
   .ce-row {
@@ -636,12 +636,14 @@
     transform: none;
   }
   /* (Endstand-Steuerung erfolgt jetzt im Admin via events.endstand_stage) */
-  .ad-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.2rem; }
+  .ad-eyebrow { font-family: var(--font-mono); font-size: var(--fs-mono); letter-spacing: var(--ls-normal); color: var(--text-soft); text-transform: uppercase; margin-bottom: 1.2rem; }
   .ad-champ-stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.8rem; animation: adChampIn 0.7s cubic-bezier(.2,.8,.3,1.2); }
-  .ad-champ-av { width: 130px; height: 130px; border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; letter-spacing: 0.04em; color: #0b0d10; border: 5px solid var(--primary); }
-  .ad-champ-name { font-family: var(--font-display); font-size: 4rem; line-height: 0.95; letter-spacing: 0.03em; margin-top: 0.5rem; }
-  .ad-champ-title { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; margin-top: -0.2rem; }
-  .ad-champ-cry { font-family: var(--font-serif, Georgia, serif); font-style: italic; font-size: 1.1rem; color: var(--text); margin-top: 0.7rem; max-width: 480px; padding: 0 1rem; line-height: 1.4; }
+  .ad-champ-av { width: var(--av-xl); height: var(--av-xl); border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; letter-spacing: 0.04em; color: #0b0d10; border: 5px solid var(--primary); }
+  /* Responsive Champion-Name: 2.4rem auf Mobile bis 5.2rem auf großen Bildschirmen */
+  .ad-champ-name { font-family: var(--font-display); font-size: clamp(2.4rem, 6vw, 5.2rem); line-height: 0.95; letter-spacing: 0.03em; margin-top: 0.5rem; word-break: break-word; }
+  .ad-champ-title { font-family: var(--font-mono); font-size: var(--fs-mono); letter-spacing: var(--ls-wide); color: var(--muted); text-transform: uppercase; margin-top: -0.2rem; }
+  /* Schlachtruf: italic Body-Font (kein verirrter Serif), bleibt im Typografie-System */
+  .ad-champ-cry { font-family: var(--font-body); font-style: italic; font-size: 1.15rem; font-weight: 500; color: var(--text-soft); margin-top: 0.7rem; max-width: 480px; padding: 0 1rem; line-height: 1.4; letter-spacing: 0.01em; }
   .ad-table-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); animation: adChampIn 0.7s 0.4s both cubic-bezier(.2,.8,.3,1.2); }
   .ad-tab th { text-align: center; padding: 0.7rem 0.4rem; }
   .ad-tab td { padding: 0.55rem 0.4rem; }
@@ -845,7 +847,7 @@
   .scoreboard.sb-haxmode tr.below-cutoff td.total-col { color: var(--alert); font-weight: 800; }
   .scoreboard.sb-haxmode tr.below-cutoff .sb-sub .sb-cur { color: var(--alert); }
   .scoreboard.sb-haxmode tr.below-cutoff .sb-name { opacity: 0.78; font-size: 0.85rem; font-weight: 500; }
-  .scoreboard.sb-haxmode tr.below-cutoff .sb-avatar { width: 26px; height: 26px; }
+  .scoreboard.sb-haxmode tr.below-cutoff .sb-avatar { width: var(--av-xs); height: var(--av-xs); }
   /* Aufsteiger: Namen größer, ice-blau, etwas fetter — sie ziehen weiter und sollen sofort ins Auge fallen */
   .scoreboard.sb-haxmode tr.advancing { background: rgba(125,240,255,0.05); }
   .scoreboard.sb-haxmode tr.advancing .sb-name {
@@ -855,7 +857,7 @@
     letter-spacing: 0.005em;
   }
   .scoreboard.sb-haxmode tr.advancing td.total-col { color: var(--cool); font-weight: 800; font-size: 1.25rem; }
-  .scoreboard.sb-haxmode tr.advancing .sb-avatar { width: 34px; height: 34px; box-shadow: 0 0 0 1px var(--cool-soft); }
+  .scoreboard.sb-haxmode tr.advancing .sb-avatar { width: var(--av-sm); height: var(--av-sm); box-shadow: 0 0 0 1px var(--cool-soft); }
   .scoreboard.sb-haxmode tr.advancing.tier-1 .sb-name { font-size: 1.18rem; }
   /* SD-Kandidaten überschreiben Advancing-Farbe → rot, weil ihr Aufstieg gefährdet ist */
   .scoreboard.sb-haxmode tr.advancing.sd-candidate .sb-name { color: var(--alert); }
@@ -981,7 +983,7 @@
   .sb-mini th.season-col, .sb-mini td.season-col { padding-right: 0.5rem; padding-left: 0.3rem; width: 52px; text-align: right; font-family: var(--font-mono); font-weight: 700; color: var(--cool); border-left: 1px solid var(--border); }
   .sb-mini th.season-col { color: var(--muted); font-weight: 600; font-size: 0.58rem; }
   .sb-mini tr.tier-1 td.season-col { color: var(--cool); font-size: 1.05rem; }
-  .sb-mini .sb-avatar { width: 30px; height: 30px; font-size: 0.62rem; }
+  .sb-mini .sb-avatar { width: var(--av-sm); height: var(--av-sm); font-size: var(--fs-micro); }
   .sb-mini .sb-name { font-size: 0.9rem; }
   .sb-pwrap { min-width: 0; }
   .sb-sub { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
