@@ -2284,8 +2284,8 @@
       } else if (!started) {
         txt = 'Gleich geht’s los — die Spiele werden gerade vorgestellt';
       } else if (!currentDisc) {
-        const champ = rows[0] ? rows[0].player.name : null;
-        txt = champ ? `Abend beendet — ${champ} gewinnt!` : 'Abend beendet'; cls = 'done';
+        // Im Abend-durch übernimmt die große Champion-Bühne — Status-Banner unten weglassen.
+        txt = ''; cls = 'done';
       } else {
         const idx = orderedDiscs.findIndex(d => d.id === currentDisc.id);
         const pos = `Spiel ${idx + 1} von ${totalCount}`;
@@ -2297,9 +2297,10 @@
       }
       stEl.className = 'live-status ' + cls;
       stEl.innerHTML = `<span class="ls-dot"></span><span>${txt}</span>`;
-      // Nur in besonderen Momenten zeigen — sonst macht der Hero schon alles
-      const showStatusLine = !!liveEvent.pause_msg || !currentDisc || !started;
-      stEl.style.display = showStatusLine ? 'flex' : 'none';
+      // Nur in besonderen Momenten zeigen — sonst macht der Hero schon alles.
+      // Im Abend-durch ist die Champion-Bühne der Star, daher kein Status-Banner.
+      const showStatusLine = !!liveEvent.pause_msg || !started;
+      stEl.style.display = (showStatusLine && txt) ? 'flex' : 'none';
     }
 
     // === Ereignis-Toasts bei Zustandswechseln (nicht beim allerersten Render) ===
@@ -2320,14 +2321,19 @@
     lastCurrentDiscId = currentDisc ? currentDisc.id : null;
     orderedDiscs.forEach(d => { lastDrawnByDisc[d.id] = d.teams_drawn_at || null; });
 
-    // „Letzte Chance"-Banner: nach Disziplin 4, bevor das letzte Spiel (Fall Guys) startet
+    // „Letzte Chance"-Banner: nach Disziplin 4, BEVOR die erste Runde Fall Guys gelaufen ist.
+    // Sobald irgendeine Modus-Platzierung gesetzt ist, ist die Lage entschiedener — Banner verschwindet,
+    // sonst zeigt er veraltete „braucht +X für Platz 1"-Zahlen während Runde 2/3 schon läuft.
     const lcEl = document.getElementById('lastChance');
     if (lcEl) {
       const lastDisc = orderedDiscs[orderedDiscs.length - 1];
       const onlyLastLeft = doneCount === orderedDiscs.length - 1 && lastDisc && !discDone[lastDisc.id];
+      const firstFgRoundDone = lastDisc ? (results || []).some(r =>
+        r.discipline_id === lastDisc.id && r.modes && Object.values(r.modes).some(m => m && m.placement)
+      ) : false;
       // Nur Spieler zeigen, die im letzten Spiel (max. 10 Punkte) noch Platz 1 erreichen können
       const leader = rows[0];
-      const items = (onlyLastLeft && leader) ? rows.map(r => {
+      const items = (onlyLastLeft && !firstFgRoundDone && leader) ? rows.map(r => {
         if (r.rank === 1) return null;             // schon ganz vorne
         const need = (leader.total - r.total) + 1; // Punkte, um den Führenden zu überholen
         return need <= 10 ? { name: r.player.name, need } : null;
@@ -2551,7 +2557,7 @@
           <td class="total-col" style="color:var(--cool);font-weight:800">+${r.seasonPts}</td>
         </tr>`;
       }).join('');
-      const confetti = Array.from({length:18}).map((_,i) => `<span class="ad-confetti-piece" style="--n:${i};--c:${pColor(finalRows[i % finalRows.length].player.id)}"></span>`).join('');
+      // Konfetti-Animation entfernt — der Endstand wirkt cleaner ohne fallendes Glitter.
 
       // Veto-Spiel-Endstand: vor dem Finalbild zeigen, damit die Veto-Spieler ihren eigenen Sieger ehren können.
       // Quelle: copterVetoes (vom Joker-Widget gesetzt) + modes.copter im jeweils vetoten Result.
@@ -2608,7 +2614,6 @@
 
       box.innerHTML = `
         <div class="abend-durch ad-staged" data-stage="${abendStage}">
-          <div class="ad-confetti">${confetti}</div>
           ${copterEndHtml}
           <div class="ad-table-section">
             <div class="ad-eyebrow">Abend durch · Endstand</div>
