@@ -868,11 +868,11 @@
   .sb-table.sb-mini { min-width: 0; }
   .sb-mini th { padding: 0.6rem 0.5rem; font-size: 0.62rem; letter-spacing: 0.1em; }
   .sb-mini td { padding: 0.5rem 0.5rem; }
-  .sb-mini th.rank-col, .sb-mini td.rank-col { width: 46px; padding-left: 0.6rem; }
-  .sb-mini th.player-col, .sb-mini td.player-col { padding-left: 0.3rem; }
-  .sb-mini th.total-col, .sb-mini td.total-col { padding-right: 0.4rem; width: 42px; text-align: right; }
-  .sb-mini th.season-col, .sb-mini td.season-col { padding-right: 0.8rem; padding-left: 0.4rem; width: 44px; text-align: right; font-family: var(--font-mono); font-weight: 700; color: var(--cool); border-left: 1px solid var(--border); }
-  .sb-mini th.season-col { color: var(--muted); font-weight: 600; }
+  .sb-mini th.rank-col, .sb-mini td.rank-col { width: 44px; padding-left: 0.5rem; padding-right: 0.2rem; }
+  .sb-mini th.player-col, .sb-mini td.player-col { padding-left: 0.3rem; padding-right: 0.3rem; }
+  .sb-mini th.total-col, .sb-mini td.total-col { padding-right: 0.4rem; padding-left: 0.2rem; width: 42px; text-align: right; }
+  .sb-mini th.season-col, .sb-mini td.season-col { padding-right: 0.5rem; padding-left: 0.3rem; width: 52px; text-align: right; font-family: var(--font-mono); font-weight: 700; color: var(--cool); border-left: 1px solid var(--border); }
+  .sb-mini th.season-col { color: var(--muted); font-weight: 600; font-size: 0.58rem; }
   .sb-mini tr.tier-1 td.season-col { color: var(--cool); font-size: 1.05rem; }
   .sb-mini .sb-avatar { width: 30px; height: 30px; font-size: 0.62rem; }
   .sb-mini .sb-name { font-size: 0.9rem; }
@@ -2044,9 +2044,9 @@
     } else if (rows.length === 0) {
       body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
     } else {
-      // Kompakte Tabelle (Bundesliga-Stil) für die Seitenleiste: Rang · Spieler · Punkte
-      const curShort = currentDisc ? discShort(currentDisc.kind) : '';
-      const doneOrder = orderedDiscs.filter(d => discDone[d.id]);
+      // Kompakte Tabelle (Bundesliga-Stil) für die Seitenleiste: Rang · Spieler · Punkte · Saison-Vorschau
+      // Bewusst KEINE Sub-Texte (Formkurve / aktueller Disziplinpunkt) — die Sidebar ist schmal,
+      // jeder Sub-Zeilen-Inhalt drückt die Namen-Spalte auf 1-Buchstabenbreite.
       const rowsHtml = rows.map((r,i) => {
         const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
         const flash = r.pointsDelta > 0 && !demoFirstRender ? ' flash' : '';
@@ -2059,15 +2059,7 @@
         if (r.delta.kind === 'up')   deltaBadge = `<span class="rank-delta up">▲${r.delta.value}</span>`;
         if (r.delta.kind === 'down') deltaBadge = `<span class="rank-delta down">▼${r.delta.value}</span>`;
         if (r.delta.kind === 'new')  deltaBadge = `<span class="rank-delta new">NEU</span>`;
-        const curPts = currentDisc ? r.points[currentDisc.id] : null;
         const pointsFlash = r.pointsDelta > 0 && !demoFirstRender ? `<span class="pts-flash">+${r.pointsDelta}</span>` : '';
-        // Formkurve: Platzierung je abgeschlossener Disziplin (1=gold, 2–3=ice, sonst grau)
-        const form = doneOrder.map(d => {
-          const pl = r.placements[d.id];
-          const c = pl === 1 ? 'g' : (pl && pl <= 3 ? 's' : (pl ? 'b' : 'o'));
-          return `<i class="${c}" title="${discShort(d.kind)}: ${pl ? pl + '.' : '–'}"></i>`;
-        }).join('');
-        const sub = (curPts != null) ? `<span class="sb-cur">${curShort} ${curPts}</span>` : (r.veto ? `<span class="veto-flag">🃏 ${discShort(r.veto)}</span>` : '');
         const seasonPreview = seasonPointsByRank(r.rank);
         return `
           <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}" style="--pc:${col}">
@@ -2077,7 +2069,6 @@
                 <div class="sb-avatar" style="${av}">${r.player.avatar_url ? '' : ini(r.player.name)}</div>
                 <div class="sb-pwrap">
                   <div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${r.player.name}${pointsFlash}</div>
-                  <div class="sb-sub">${sub}${form ? `<span class="sb-form">${form}</span>` : ''}</div>
                 </div>
               </div>
             </td>
@@ -2086,7 +2077,7 @@
           </tr>`;
       }).join('');
 
-      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th><th class="season-col">Saison</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th><th class="season-col">Sais.</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
     }
 
     // Update snapshot AFTER rendering so deltas next time are vs this state
