@@ -593,42 +593,47 @@
     transition: opacity 0.5s ease, transform 0.5s ease, background-color 0.5s;
   }
   .ad-staged .ad-tab tbody tr.revealed { opacity: 1; transform: none; }
-  /* Stage 1: Veto dimmt leicht, Tabelle erscheint */
+  /* Übergänge: jede Stufe ersetzt die vorige komplett (Höhe + Opacity + Padding) */
+  .ad-staged .copter-endstand,
+  .ad-staged .ad-table-section {
+    transition: opacity 0.6s ease, transform 0.6s ease, max-height 0.7s ease, margin 0.6s ease, padding 0.6s ease;
+    overflow: hidden;
+  }
+  /* Stage 1: Veto-Endstand komplett weg, Tabelle voll sichtbar */
   .ad-staged[data-stage="1"] .copter-endstand,
   .ad-staged[data-stage="2"] .copter-endstand {
-    opacity: 0.32;
-    transform: scale(0.94);
+    opacity: 0;
+    transform: scale(0.9);
+    max-height: 0;
+    margin: 0 auto;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    pointer-events: none;
   }
-  .ad-staged[data-stage="1"] .ad-table-section,
-  .ad-staged[data-stage="2"] .ad-table-section {
+  .ad-staged[data-stage="1"] .ad-table-section {
     opacity: 1;
     transform: none;
     pointer-events: auto;
   }
-  /* Stage 2: Champion tritt auf, alles andere tritt zurück */
+  /* Stage 2: Tabelle ist auch weg, Champion-Show alleine */
+  .ad-staged[data-stage="2"] .ad-table-section {
+    opacity: 0;
+    transform: scale(0.9);
+    max-height: 0;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    pointer-events: none;
+  }
   .ad-staged[data-stage="2"] .ad-champ-stage {
     opacity: 1;
-    transform: none;
+    transform: scale(1.04);
     pointer-events: auto;
   }
   .ad-staged[data-stage="2"] .ad-note {
     opacity: 1;
     transform: none;
-  }
-  .ad-staged[data-stage="2"] .ad-table-section {
-    opacity: 0.42;
-    transform: scale(0.96);
-  }
-  /* Stage 2: Top-1-Zeile pulst kurz nach dem Auftritt — der finale Moment */
-  .ad-staged[data-stage="2"] .ad-tab tbody tr.tier-1 {
-    opacity: 1 !important;
-    transform: scale(1.04);
-    box-shadow: 0 0 28px -6px var(--primary);
-    background: var(--primary-soft);
-  }
-  /* Champion-Sektion wird in Stage 2 noch eine Spur größer für Bühnen-Wow */
-  .ad-staged[data-stage="2"] .ad-champ-stage {
-    transform: scale(1.04);
   }
   /* (Endstand-Steuerung erfolgt jetzt im Admin via events.endstand_stage) */
   .ad-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.2rem; }
