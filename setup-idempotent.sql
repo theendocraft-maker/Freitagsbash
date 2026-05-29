@@ -120,3 +120,11 @@ alter table disciplines add column if not exists live_since timestamptz;
 -- null = noch nicht im Endstand; die Spielabend-Seite startet automatisch bei 0/1 wenn null,
 -- aber sobald der Admin einen Wert setzt, übernimmt der die Steuerung (Realtime-Sync).
 alter table events add column if not exists endstand_stage int;
+
+-- ============================================================
+-- 13) WATCH2GETHER-LINK (gemeinsamer Mitschau-Raum)
+-- ============================================================
+-- events.w2g_link: URL zum Watch2Gether-Raum des Abends. Wenn gesetzt, erscheint auf der
+-- Spielabend-Seite ein prominenter Button „📺 Mitschauen", der den Raum in einem neuen Tab öffnet.
+-- Realtime-Sync: Admin trägt ein, alle Zuschauer sehen den Button sofort.
+alter table events add column if not exists w2g_link text;

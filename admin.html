@@ -641,6 +641,13 @@
         <span class="draw-label">🃏 Joker-Minispiel:</span>
         <button class="draw-btn" id="copterToggleBtn">aktivieren</button>
       </div>
+      <div class="draw-control" style="margin-top:0.6rem;flex-wrap:wrap;align-items:center;gap:0.5rem">
+        <span class="draw-label">📺 Watch2Gether-Raum:</span>
+        <input id="w2gInput" type="url" placeholder="https://www.watch2gether.com/rooms/..." style="flex:1;min-width:220px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.5rem 0.7rem;font-family:var(--font-mono);font-size:0.86rem">
+        <button class="draw-btn" id="w2gSaveBtn">Speichern</button>
+        <button class="draw-btn" id="w2gClearBtn" style="opacity:0.7">↺ Entfernen</button>
+      </div>
+      <div id="w2gStatus" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);margin-top:0.3rem"></div>
     </div>
 
     <!-- Endstand-Reveal: vor dem Abschließen durchschalten, was der Spielerseite gezeigt wird -->
@@ -952,6 +959,11 @@
         const cb = $('copterToggleBtn');
         cb.textContent = currentEvent.copter_active ? '✓ aktiv — deaktivieren' : 'aktivieren';
         cb.classList.toggle('active', !!currentEvent.copter_active);
+        const wIn = $('w2gInput'), wSt = $('w2gStatus');
+        if (wIn && document.activeElement !== wIn) wIn.value = currentEvent.w2g_link || '';
+        if (wSt) wSt.textContent = currentEvent.w2g_link
+          ? `✓ Link gesetzt — Mitschauen-Button ist auf der Spielerseite sichtbar.`
+          : 'Kein Link gesetzt — Mitschauen-Button bleibt ausgeblendet.';
       } else {
         introSec.style.display = 'none';
       }
@@ -2545,6 +2557,21 @@
     toast(v ? '🃏 Joker aktiviert' : 'Joker deaktiviert', 'ok');
     renderDetail();
   });
+
+  // Watch2Gether-Link speichern / entfernen — Realtime-Sync zur Spielerseite
+  async function saveW2gLink(link) {
+    if (!currentEvent) return;
+    const val = link ? String(link).trim() : null;
+    if (val && !/^https?:\/\//i.test(val)) { toast('Link muss mit http:// oder https:// anfangen', 'error'); return; }
+    const { error } = await sb.from('events').update({ w2g_link: val }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Update fehlgeschlagen', 'error'); return; }
+    currentEvent.w2g_link = val;
+    toast(val ? '📺 Watch2Gether-Link gespeichert' : 'Link entfernt', 'ok');
+    renderDetail();
+  }
+  $('w2gSaveBtn').addEventListener('click', () => saveW2gLink($('w2gInput').value));
+  $('w2gClearBtn').addEventListener('click', () => { $('w2gInput').value = ''; saveW2gLink(null); });
+  $('w2gInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveW2gLink($('w2gInput').value); } });
 
   // ===== Punkte zurücksetzen (zum Üben/Wiederholen, ohne neuen Abend) =====
   $('resetScoresBtn').addEventListener('click', async () => {
