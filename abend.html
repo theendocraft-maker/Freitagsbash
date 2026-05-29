@@ -959,9 +959,13 @@
   /* Sidebar-Tabelle: feste Spaltenbreiten, damit lange Namen die SAISON/PKT-Spalte nicht aus dem Sichtbereich
      drücken. Namen brechen an Wortgrenzen, im Notfall (sehr lange Wörter wie "Querdenkendo") buchstabenweise. */
   .sb-mini { table-layout: fixed; width: 100%; }
-  .sb-mini .sb-name { overflow-wrap: anywhere; word-break: break-word; }
+  /* Namen brechen an Wortgrenzen, lange Einzelwörter (Querdenkendo) ggf. buchstabenweise als Notfall.
+     break-word > anywhere: setzt min-content auf größere Stufen statt 1 Buchstabe. */
+  .sb-mini .sb-name { overflow-wrap: break-word; word-break: normal; hyphens: auto; line-height: 1.15; }
   .sb-mini .sb-pwrap { min-width: 0; flex: 1; overflow: hidden; }
   .sb-mini .sb-sub { overflow: hidden; }
+  /* Engerer Avatar-Gap + kompakteres Player-Layout für die schmale Sidebar */
+  .sb-mini .sb-player { gap: 0.55rem; }
 
   /* ============================
      SCOREBOARD — broadcast-sized
@@ -1942,6 +1946,11 @@
     } else {
       clearInterval(introTimer); introTimer = null;
       lastIntroStepFromDB = undefined; // Schleife zurücksetzen, falls Intro später erneut aktiviert wird
+      // Copter-Daten FRÜH setzen, damit der Veto-Endstand im Abend-durch nicht leer ist.
+      // Vorher wurden copterVetoes/copterKindId erst im Joker-Widget-Block (weiter unten) gesetzt —
+      // buildNowDetail lief davor und sah deshalb beim ersten Render einen leeren Veto-Endstand.
+      copterVetoes = vetoes || [];
+      copterKindId = {}; orderedDiscs.forEach(d => copterKindId[d.kind] = d.id);
       buildNowDetail(currentDisc, results);
     }
     // Während der Vorstellung den großen „Jetzt im Spiel"-Hero ausblenden — die Slideshow soll Bühne sein.
@@ -2162,7 +2171,9 @@
       // Bewusst KEINE Sub-Texte (Formkurve / aktueller Disziplinpunkt) — die Sidebar ist schmal,
       // jeder Sub-Zeilen-Inhalt drückt die Namen-Spalte auf 1-Buchstabenbreite.
       const rowsHtml = rows.map((r,i) => {
-        const tier = r.rank <= 3 ? `tier-${r.rank}` : '';
+        // Tier-Highlights nur wenn der Spieler tatsächlich Punkte hat — sonst leuchtet bei
+        // Gleichstand-auf-0 die ganze Tabelle als „alle Tagessieger" lime.
+        const tier = (r.rank <= 3 && r.total > 0) ? `tier-${r.rank}` : '';
         const flash = r.pointsDelta > 0 && !demoFirstRender ? ' flash' : '';
         const bump = (r.delta.kind === 'up' && !demoFirstRender) ? ' bump' : '';
         const col = pColor(r.player.id);
@@ -2174,7 +2185,9 @@
         if (r.delta.kind === 'down') deltaBadge = `<span class="rank-delta down">▼${r.delta.value}</span>`;
         if (r.delta.kind === 'new')  deltaBadge = `<span class="rank-delta new">NEU</span>`;
         const pointsFlash = r.pointsDelta > 0 && !demoFirstRender ? `<span class="pts-flash">+${r.pointsDelta}</span>` : '';
-        const seasonPreview = seasonPointsByRank(r.rank);
+        // Saison-Vorschau nur zeigen, wenn der Spieler tatsächlich Punkte hat — sonst wäre die
+        // Vorschau für Rang 1-aus-Gleichstand-bei-0 irreführend (+25 für alle).
+        const seasonPreview = r.total > 0 ? '+' + seasonPointsByRank(r.rank) : '—';
         return `
           <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}" style="--pc:${col}">
             <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span>${deltaBadge}</td>
@@ -2187,7 +2200,7 @@
               </div>
             </td>
             <td class="total-col">${r.total}</td>
-            <td class="season-col">+${seasonPreview}</td>
+            <td class="season-col">${seasonPreview}</td>
           </tr>`;
       }).join('');
 
@@ -2206,8 +2219,7 @@
       const copterOn = isDemo || (liveEvent && liveEvent.copter_active);
       if (copterOn) {
         const pName = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
-        const kindId = {}; orderedDiscs.forEach(d => kindId[d.kind] = d.id);
-        copterVetoes = vetoes || []; copterKindId = kindId;
+        const kindId = copterKindId; // wurde schon früh gesetzt
         const hasVeto = !!(vetoes && vetoes.length);
         const cRows = (vetoes || []).map(v => {
           const did = kindId[v.discipline_kind];
@@ -2738,6 +2750,11 @@
     } else {
       myRows.forEach(r => { if (r.team != null && r.team !== '') { const k = (kind === 'haxball') ? ('Team ' + r.team) : r.team; (teams[k] = teams[k] || []).push(r.player_id); } });
     }
+    // Spielerliste pro Team stabil sortieren — sonst springt die Reihenfolge, sobald der Admin
+    // einen Sieger setzt und Supabase die results in anderer Reihenfolge zurückliefert.
+    // Stabile Quelle: Index in evPlayers (Reihenfolge wie beim Page-Load).
+    const pIdx = pid => { const i = evPlayers.findIndex(p => p.id === pid); return i === -1 ? 9999 : i; };
+    Object.keys(teams).forEach(k => teams[k].sort((a,b) => pIdx(a) - pIdx(b)));
     const teamKeys = Object.keys(teams).sort((a,b) => String(a).localeCompare(String(b), 'de', { numeric:true }));
     if (teamKeys.length) {
       const hideStyle = animateTeams ? ' style="opacity:0;transform:translateY(8px) scale(0.85)"' : '';
