@@ -260,6 +260,7 @@
   const pad2 = n => String(n).padStart(2,'0');
   let players = [];
   let streaks = {}; // pid -> Anzahl aufeinanderfolgender Abend-Siege
+  let seasonStats = {}; // pid -> { pts: Saisonpunkte mit Streicher, wins: Abend-Siege }
 
   async function loadAndRender() {
     const { data, error } = await sb.from('players').select('*').order('joined', { ascending: true });
@@ -268,23 +269,61 @@
     render();
   }
 
+  // Saisonpunkte und Abend-Siege aus event_participation laden — Streicher: schlechtestes
+  // Ergebnis abziehen, wenn jemand an >1 Abend teilgenommen hat (Konsistenz mit Admin-Logik).
+  async function loadSeasonStats() {
+    const { data: evs } = await sb.from('events').select('id,status').eq('status', 'finalized');
+    const events = evs || [];
+    if (!events.length) { seasonStats = {}; render(); return; }
+    const evIds = events.map(e => e.id);
+    const { data: parts } = await sb.from('event_participation').select('event_id,player_id,season_points,evening_rank,attended').in('event_id', evIds);
+    const byPid = {};
+    (parts || []).forEach(r => {
+      if (!r.attended) return;
+      if (!byPid[r.player_id]) byPid[r.player_id] = { ptsList: [], wins: 0 };
+      byPid[r.player_id].ptsList.push(parseFloat(r.season_points) || 0);
+      if (parseInt(r.evening_rank) === 1) byPid[r.player_id].wins++;
+    });
+    seasonStats = {};
+    Object.entries(byPid).forEach(([pid, d]) => {
+      const sorted = d.ptsList.slice().sort((a,b) => a - b);
+      if (sorted.length > 1) sorted.shift();   // schlechtestes Ergebnis streichen (Streicher)
+      seasonStats[pid] = { pts: Math.round(sorted.reduce((s,v) => s + v, 0) * 10) / 10, wins: d.wins };
+    });
+    render();
+  }
+
   function render() {
     document.getElementById('navCount').textContent = players.length + ' Spieler';
     const lbBody = document.getElementById('lbBody');
     const ranks = ['gold','silver','bronze'];
-    lbBody.innerHTML = players.length === 0
+    // Spieler nach Saisonpunkten sortieren (mit Punkten oben, ohne Punkte hinten in Beitrittsreihenfolge)
+    const sorted = players.slice().sort((a,b) => {
+      const pa = (seasonStats[a.id] && seasonStats[a.id].pts) || 0;
+      const pb = (seasonStats[b.id] && seasonStats[b.id].pts) || 0;
+      if (pa !== pb) return pb - pa;
+      const wa = (seasonStats[a.id] && seasonStats[a.id].wins) || 0;
+      const wb = (seasonStats[b.id] && seasonStats[b.id].wins) || 0;
+      return wb - wa;
+    });
+    lbBody.innerHTML = sorted.length === 0
       ? '<div class="lb-empty">Die Saison beginnt am <b style="color:var(--primary)">29. Mai</b>.<br>Meld dich an und sei von Anfang an dabei.</div>'
-      : players.map((p,i) => `
+      : sorted.map((p,i) => {
+          const st = seasonStats[p.id];
+          const pts = st && st.pts > 0 ? st.pts : '—';
+          const wins = st && st.wins > 0 ? st.wins : '—';
+          return `
         <div class="lb-row">
           <button class="lb-del" onclick="deletePlayer('${p.id}')" title="Löschen">×</button>
-          <div class="lb-rank ${ranks[i]||''} tnum">${pad2(i+1)}</div>
+          <div class="lb-rank ${st && st.pts > 0 ? (ranks[i]||'') : ''} tnum">${pad2(i+1)}</div>
           <div class="lb-player">
             <div class="lb-avatar" style="${p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${grad(i)}`}">${p.avatar_url ? '' : ini(p.name)}</div>
             <div><div class="lb-name">${p.name}${streaks[p.id] >= 2 ? ` <span class="lb-streak" title="${streaks[p.id]} Abende in Folge gewonnen">🔥${streaks[p.id]}</span>` : ''}</div><div class="lb-cry">„${p.cry}"</div></div>
           </div>
-          <div class="lb-pts">—</div>
-          <div class="lb-w">—</div>
-        </div>`).join('');
+          <div class="lb-pts">${pts}</div>
+          <div class="lb-w">${wins}</div>
+        </div>`;
+        }).join('');
   }
 
   // 🔥-Streak: aufeinanderfolgende Abend-Siege aus finalisierten Abenden
@@ -313,8 +352,10 @@
     render();
   }
 
-  loadAndRender().then(loadStreaks);
-  sb.channel('players-live').on('postgres_changes', { event:'*', schema:'public', table:'players' }, () => loadAndRender().then(loadStreaks)).subscribe();
+  loadAndRender().then(loadSeasonStats).then(loadStreaks);
+  sb.channel('players-live').on('postgres_changes', { event:'*', schema:'public', table:'players' }, () => loadAndRender().then(loadSeasonStats).then(loadStreaks)).subscribe();
+  // Wenn ein Abend abgeschlossen wird, kommt's per event_participation rein → Tabelle neu laden
+  sb.channel('ep-live').on('postgres_changes', { event:'*', schema:'public', table:'event_participation' }, () => loadSeasonStats()).subscribe();
 
   // LIVE-Banner: zeigen, sobald ein Abend status='live' hat
   async function checkLive() {
@@ -331,7 +372,7 @@
     }
   }
   checkLive();
-  sb.channel('events-live').on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => { checkLive(); loadStreaks(); }).subscribe();
+  sb.channel('events-live').on('postgres_changes', { event:'*', schema:'public', table:'events' }, () => { checkLive(); loadStreaks(); loadSeasonStats(); }).subscribe();
 
   // Scroll-Fortschritt + Reveal
   const prog = document.getElementById('scrollProg');
