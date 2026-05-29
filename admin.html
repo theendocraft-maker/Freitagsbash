@@ -2562,7 +2562,7 @@
         Object.assign(d, patch);
       }
       // Event-Status zurück (Sendezeit, Intro, Pause, Joker)
-      const evPatch = { intro_step: null, pause_msg: null, live_since: null, copter_active: false };
+      const evPatch = { intro_step: null, pause_msg: null, live_since: null, copter_active: false, endstand_stage: null };
       await sb.from('events').update(evPatch).eq('id', currentEvent.id);
       Object.assign(currentEvent, evPatch);
       // Lokaler State leeren
@@ -2657,9 +2657,11 @@
     const { error: epErr } = await sb.from('event_participation').insert(rows);
     if (epErr) { console.error(epErr); toast('Fehler beim Speichern', 'error'); return; }
 
-    // Status auf finalized setzen
-    await sb.from('events').update({ status: 'finalized' }).eq('id', currentEvent.id);
+    // Status auf finalized setzen + Endstand-Stufe auf 2 nageln (Champion bleibt sichtbar,
+    // auch wenn der Admin vergessen hatte, manuell durchzuschalten)
+    await sb.from('events').update({ status: 'finalized', endstand_stage: 2 }).eq('id', currentEvent.id);
     currentEvent.status = 'finalized';
+    currentEvent.endstand_stage = 2;
 
     toast('✓ Abend abgeschlossen — Saisonpunkte geschrieben', 'ok');
     renderDetail();

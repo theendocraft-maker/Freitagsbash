@@ -648,10 +648,6 @@
   .ad-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; animation: adChampIn 0.5s 0.8s both ease; }
   .ad-note small { display: block; margin-top: 0.2rem; font-size: 0.72rem; opacity: 0.75; }
   @keyframes adChampIn { from { opacity: 0; transform: translateY(20px) scale(0.92); } to { opacity: 1; transform: none; } }
-  /* CSS-Confetti: 18 fallende Teilchen in Spielerfarben */
-  .ad-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-  .ad-confetti-piece { position: absolute; top: -10px; width: 8px; height: 14px; background: var(--c, var(--primary)); transform: rotate(calc(var(--n) * 23deg)); animation: adFall 4s linear infinite; animation-delay: calc(var(--n) * -0.22s); left: calc(var(--n) * 5.4% + 2%); opacity: 0.8; }
-  @keyframes adFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 0; } 10% { opacity: 0.85; } 100% { transform: translateY(600px) rotate(540deg); opacity: 0; } }
 
   /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
   .live-status { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; color: var(--text); line-height: 1.35; }
