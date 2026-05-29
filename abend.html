@@ -630,6 +630,42 @@
   .ad-staged[data-stage="2"] .ad-champ-stage {
     transform: scale(1.04);
   }
+  /* Manuelle Steuerung — Button + Tastaturhinweis */
+  .ad-stage-nav {
+    position: sticky; bottom: 0;
+    margin-top: 2rem;
+    padding: 1rem 0 0.5rem;
+    background: linear-gradient(180deg, transparent, var(--bg) 40%);
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    z-index: 5;
+  }
+  .ad-stage-btn {
+    background: var(--primary);
+    color: #0b0d10;
+    border: none;
+    border-radius: 999px;
+    padding: 0.85rem 2rem;
+    font-family: var(--font-display); font-weight: 800;
+    font-size: 1.1rem; letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 6px 24px -10px var(--primary);
+  }
+  .ad-stage-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 30px -10px var(--primary); }
+  .ad-stage-btn:active:not(:disabled) { transform: translateY(0); }
+  .ad-stage-btn:disabled {
+    background: var(--bg-2);
+    color: var(--muted);
+    cursor: default;
+    box-shadow: none;
+  }
+  .ad-stage-hint {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
   .ad-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.2rem; }
   .ad-champ-stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.8rem; animation: adChampIn 0.7s cubic-bezier(.2,.8,.3,1.2); }
   .ad-champ-av { width: 130px; height: 130px; border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; letter-spacing: 0.04em; color: #0b0d10; border: 5px solid var(--primary); }
@@ -1743,6 +1779,9 @@
   const brawlPts = g => (Array.isArray(g) ? g : []).reduce((s, pl) => s + (pl ? (BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0) : 0), 0);
   const brawlGamesOf = (r, n) => { const a = r && r.modes && r.modes[n] && r.modes[n].games; return Array.isArray(a) ? a : []; };
   let lastNowDisc = null, lastNowResults = null;   // für lokales Re-Render bei Tap
+  // Abend-durch Reveal-State (manuell durchschaltbar)
+  let abendStage = null;            // aktuelle Stufe: 0=Veto, 1=Tabelle, 2=Champion · null wenn nicht im Endstand
+  let abendStageKbdBound = false;   // Listener nur einmal registrieren
   const brawlBuf = {};                              // `${discId}|${n}|${lobby}` -> [pid,...] (laufendes Spiel)
   const brawlCodeEditing = new Set();               // Lobbys, deren Code gerade bearbeitet wird
   const bkey = (discId, n, l) => `${discId}|${n}|${l}`;
@@ -2012,8 +2051,11 @@
         haxLiveRows.sort((a,b) => (a.hax === b.hax ? 0 : a.hax ? 1 : -1) || (b.wins - a.wins));
       }
     }
-    // Tabelle erst NACH dem ersten Spiel zeigen — oder schon während Haxball/Brawlhalla läuft
-    const showTable = doneCount >= 1 || !!haxLiveRows || !!brawlLiveRows;
+    // Tabelle erst NACH dem ersten Spiel zeigen — oder schon während Haxball/Brawlhalla läuft.
+    // ABER: wenn der Abend durch ist (currentDisc=null), Sidebar ausblenden — die große Endstand-Bühne
+    // liefert die Tabelle ja selbst, und die Sidebar daneben ist nur Lärm.
+    const isAbendDurch = !currentDisc;
+    const showTable = !isAbendDurch && (doneCount >= 1 || !!haxLiveRows || !!brawlLiveRows);
     const liveAside = document.querySelector('.live-aside');
     const liveLayout = document.querySelector('.live-layout');
     if (liveAside) liveAside.style.display = showTable ? '' : 'none';
@@ -2585,17 +2627,24 @@
           </div>`;
       }
 
-      // Drei-Phasen-Reveal:
+      // Drei-Phasen-Reveal — MANUELL durchschaltbar (Klick auf Button oder Leertaste/Pfeil-rechts/Enter):
       //   0) Veto-Endstand alleine im Bild (falls vorhanden, sonst übersprungen)
       //   1) Hauptpodest baut sich auf — Gesamttabelle füllt sich von unten nach oben
-      //   2) Tagessieger wird zentral hervorgehoben, alle anderen Sektionen dimmen ab
+      //   2) Tagessieger zentral, andere Sektionen dimmen ab
       const initialStage = hasCopterEndstand ? 0 : 1;
-      // Re-Renders während laufender Animation NICHT abbrechen (sonst springt's zurück)
-      const alreadyStaged = box.querySelector('.abend-durch.ad-staged');
-      const skipAnimation = !!alreadyStaged && alreadyStaged.dataset.stageDone === '1';
+      const finalStage = 2;
+      // Re-Renders sollen aktuelle Stufe behalten — nur beim ersten Eintritt initialisieren
+      if (abendStage === null || abendStage < initialStage) abendStage = initialStage;
+
+      const stageLabels = {
+        0: { btn: 'Weiter zur Gesamtwertung →', hint: 'Leertaste oder Pfeil rechts zum Weiterschalten' },
+        1: { btn: 'Tagessieger zeigen →',       hint: 'Leertaste oder Pfeil rechts für die Champion-Show' },
+        2: { btn: '✓ Endstand erreicht',         hint: 'Endstand erreicht — Saisonpunkte werden im Admin festgeschrieben' }
+      };
+      const stageInfo = stageLabels[abendStage] || stageLabels[finalStage];
 
       box.innerHTML = `
-        <div class="abend-durch ad-staged" data-stage="${skipAnimation ? '2' : initialStage}"${skipAnimation ? ' data-stage-done="1"' : ''}>
+        <div class="abend-durch ad-staged" data-stage="${abendStage}">
           <div class="ad-confetti">${confetti}</div>
           ${copterEndHtml}
           <div class="ad-table-section">
@@ -2614,30 +2663,43 @@
             ${champCry ? `<div class="ad-champ-cry">„${champCry}"</div>` : ''}
           </div>
           <div class="ad-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) und Streicher werden dort berücksichtigt.</small></div>
+          <div class="ad-stage-nav">
+            <button class="ad-stage-btn" onclick="advanceAbendStage()" ${abendStage >= finalStage ? 'disabled' : ''}>${stageInfo.btn}</button>
+            <div class="ad-stage-hint">${stageInfo.hint}</div>
+          </div>
         </div>`;
       box.style.display = 'block';
 
-      // Animation nur einmal pro Anzeige (vermeidet Sprünge bei Re-Renders)
-      if (!skipAnimation) {
-        const stagedEl = box.querySelector('.abend-durch.ad-staged');
-        const trs = [...box.querySelectorAll('.ad-tab tbody tr')].reverse(); // letzter Platz zuerst rein, Sieger zuletzt
-        const rowGap = 500;
-        const copterShow = hasCopterEndstand ? 4500 : 0;
-        const revealRows = () => {
-          trs.forEach((tr, i) => setTimeout(() => tr.classList.add('revealed'), i * rowGap));
-        };
-        if (hasCopterEndstand) {
-          setTimeout(() => { if (stagedEl) { stagedEl.dataset.stage = '1'; revealRows(); } }, copterShow);
-        } else {
-          setTimeout(revealRows, 200);
-        }
-        const tFinale = copterShow + (trs.length * rowGap) + 1500;
-        setTimeout(() => { if (stagedEl) { stagedEl.dataset.stage = '2'; stagedEl.dataset.stageDone = '1'; } }, tFinale);
+      // Wenn schon mindestens Stufe 1 erreicht, Tabellenzeilen sofort sichtbar markieren
+      // (sonst wären sie unsichtbar, weil der CSS-Default opacity:0 ist).
+      if (abendStage >= 1) {
+        box.querySelectorAll('.ad-tab tbody tr').forEach(tr => tr.classList.add('revealed'));
+      }
+
+      // Tastatursteuerung einmalig registrieren
+      if (!abendStageKbdBound) {
+        abendStageKbdBound = true;
+        document.addEventListener('keydown', (e) => {
+          // Nur greifen, wenn wir tatsächlich im Endstand sind
+          if (abendStage === null) return;
+          // Inputs/Selects/Buttons nicht stören
+          const t = e.target;
+          if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+          if (e.code === 'Space' || e.code === 'ArrowRight' || e.code === 'Enter') {
+            e.preventDefault();
+            window.advanceAbendStage();
+          } else if (e.code === 'ArrowLeft') {
+            e.preventDefault();
+            window.advanceAbendStage(-1);
+          }
+        });
       }
 
       lastNowDisc = null; lastNowResults = results;
       return;
     }
+    // Verlassen wir gerade den Endstand (irgendeine Disziplin wieder aktiv)? Stage-State zurücksetzen.
+    if (abendStage !== null) abendStage = null;
     lastNowDisc = currentDisc; lastNowResults = results;   // für lokales Re-Render (Brawlhalla-Self-Entry)
 
     const kind = currentDisc.kind;
@@ -3071,6 +3133,47 @@
     try { navigator.clipboard.writeText(txt); } catch (e) {}
     const b = (typeof event !== 'undefined') ? event.target : null;
     if (b) { const o = b.textContent; b.textContent = 'Kopiert ✓'; setTimeout(() => { b.textContent = o; }, 1500); }
+  };
+
+  // Abend-durch: eine Stufe weiter (oder zurück bei dir=-1)
+  // Stufe 1 wird mit gestaffelter Zeilen-Reveal-Animation eingeleitet (unten zuerst, Sieger zuletzt).
+  window.advanceAbendStage = function(dir) {
+    if (abendStage === null) return;
+    const stagedEl = document.querySelector('#liveNowDetail .abend-durch.ad-staged');
+    if (!stagedEl) return;
+    const min = 0, max = 2;
+    const newStage = Math.max(min, Math.min(max, abendStage + (dir === -1 ? -1 : 1)));
+    if (newStage === abendStage) return;
+    const enteringStage1 = abendStage < 1 && newStage >= 1;
+    abendStage = newStage;
+    stagedEl.dataset.stage = String(newStage);
+
+    // Beim Eintritt in Stufe 1 die Zeilen gestaffelt einblenden — unten (letzter Platz) zuerst
+    const trs = [...stagedEl.querySelectorAll('.ad-tab tbody tr')];
+    if (enteringStage1) {
+      const reversed = [...trs].reverse();
+      reversed.forEach((tr, i) => {
+        if (tr.classList.contains('revealed')) return;
+        setTimeout(() => tr.classList.add('revealed'), i * 350);
+      });
+    } else if (newStage >= 1) {
+      // Schon weiter — alle direkt sichtbar
+      trs.forEach(tr => tr.classList.add('revealed'));
+    } else {
+      // Zurück auf Stufe 0 — Zeilen wieder verstecken
+      trs.forEach(tr => tr.classList.remove('revealed'));
+    }
+
+    // Button + Hint updaten
+    const btn = stagedEl.querySelector('.ad-stage-btn');
+    const hint = stagedEl.querySelector('.ad-stage-hint');
+    const labels = {
+      0: { btn: 'Weiter zur Gesamtwertung →', hint: 'Leertaste oder Pfeil rechts zum Weiterschalten' },
+      1: { btn: 'Tagessieger zeigen →',       hint: 'Leertaste oder Pfeil rechts für die Champion-Show' },
+      2: { btn: '✓ Endstand erreicht',         hint: 'Endstand erreicht — Saisonpunkte werden im Admin festgeschrieben' }
+    };
+    if (btn) { btn.textContent = labels[newStage].btn; btn.disabled = newStage >= max; }
+    if (hint) hint.textContent = labels[newStage].hint;
   };
 
   // Join-Anleitung auf-/zuklappen — Status bleibt über Live-Updates erhalten
