@@ -643,6 +643,16 @@
       </div>
     </div>
 
+    <!-- Endstand-Reveal: vor dem Abschließen durchschalten, was der Spielerseite gezeigt wird -->
+    <div class="finalize-bar" id="endstandBar" style="border-color:var(--alert-line);background:linear-gradient(135deg, var(--alert-soft), var(--surface) 70%);display:none;flex-direction:column;align-items:flex-start;gap:0.7rem">
+      <div class="finalize-info" style="width:100%">
+        <strong>🎬 Endstand-Show steuern</strong><br>
+        Alle Disziplinen fertig — schalte die Spielerseite Schritt für Schritt durch das Finale.
+      </div>
+      <div id="endstandStages" style="display:flex;gap:0.4rem;flex-wrap:wrap;width:100%"></div>
+      <div id="endstandHint" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);letter-spacing:0.04em"></div>
+    </div>
+
     <!-- Finalize -->
     <div class="finalize-bar win-bar">
       <div class="finalize-info">
@@ -944,6 +954,30 @@
         cb.classList.toggle('active', !!currentEvent.copter_active);
       } else {
         introSec.style.display = 'none';
+      }
+    }
+
+    // Endstand-Steuerung: nur sichtbar wenn live UND alle Disziplinen auf "done"
+    const esBar = $('endstandBar');
+    if (esBar) {
+      const allDone = currentDisciplines.length > 0 && currentDisciplines.every(d => d.status === 'done');
+      const showEs = currentEvent.status === 'live' && allDone;
+      esBar.style.display = showEs ? 'flex' : 'none';
+      if (showEs) {
+        const cur = (typeof currentEvent.endstand_stage === 'number') ? currentEvent.endstand_stage : null;
+        const STAGES = [
+          { n: 0, label: '🃏 Veto-Endstand', desc: 'Joker-Sieger zeigen' },
+          { n: 1, label: '📊 Gesamttabelle', desc: 'Baut sich auf — letzter Platz zuerst' },
+          { n: 2, label: '🏆 Tagessieger',   desc: 'Champion-Show, Tabelle tritt zurück' }
+        ];
+        $('endstandStages').innerHTML = STAGES.map(s => {
+          const isActive = cur === s.n;
+          return `<button class="phase-btn ${isActive ? 'active' : ''}" onclick="setEndstandStage(${s.n})" title="${s.desc}">${s.label}</button>`;
+        }).join('') + `<button class="phase-btn" onclick="setEndstandStage(null)" title="Spielerseite wieder auf Default zurücksetzen" style="margin-left:auto;opacity:0.7">↺ Zurücksetzen</button>`;
+        const hint = cur === null
+          ? 'Noch nicht gestartet — die Spielerseite zeigt automatisch Veto- oder Tabellen-Stufe an.'
+          : `Aktuell: <b>${STAGES[cur].label}</b> — ${STAGES[cur].desc}.${cur < 2 ? ' Klick auf die nächste Stufe weiterschalten.' : ' Endstand erreicht — du kannst jetzt abschließen.'}`;
+        $('endstandHint').innerHTML = hint;
       }
     }
 
@@ -2489,6 +2523,17 @@
     const { error } = await sb.from('events').update({ intro_step: step }).eq('id', currentEvent.id);
     if (error) { console.error(error); toast('Update fehlgeschlagen', 'error'); return; }
     currentEvent.intro_step = step;
+    renderDetail();
+  };
+  // Endstand-Reveal-Stufe setzen (0=Veto, 1=Tabelle, 2=Champion, null=Reset)
+  window.setEndstandStage = async function(stage) {
+    if (!currentEvent) return;
+    const val = (stage === null || stage === undefined) ? null : Math.max(0, Math.min(2, parseInt(stage)));
+    const { error } = await sb.from('events').update({ endstand_stage: val }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Endstand-Update fehlgeschlagen', 'error'); return; }
+    currentEvent.endstand_stage = val;
+    const names = { 0: '🃏 Veto-Endstand', 1: '📊 Gesamttabelle baut sich auf', 2: '🏆 Tagessieger' };
+    toast(val == null ? '↺ Endstand zurückgesetzt' : `→ ${names[val]}`, 'ok');
     renderDetail();
   };
   $('copterToggleBtn').addEventListener('click', async () => {

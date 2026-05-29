@@ -111,3 +111,12 @@ alter table disciplines add column if not exists rounds int;
 -- Beide werden im Admin gesetzt; die Live-Seite zählt clientseitig sekündlich hoch (synchron für alle).
 alter table events      add column if not exists live_since timestamptz;
 alter table disciplines add column if not exists live_since timestamptz;
+
+-- ============================================================
+-- 12) ENDSTAND-REVEAL-STUFE (admin-gesteuert für die Abschluss-Bühne)
+-- ============================================================
+-- events.endstand_stage: vom Admin schrittweise hochgeschaltet, sobald alle Disziplinen durch sind.
+-- 0 = Veto-Endstand alleine, 1 = Gesamttabelle baut sich auf, 2 = Tagessieger zentral.
+-- null = noch nicht im Endstand; die Spielabend-Seite startet automatisch bei 0/1 wenn null,
+-- aber sobald der Admin einen Wert setzt, übernimmt der die Steuerung (Realtime-Sync).
+alter table events add column if not exists endstand_stage int;
