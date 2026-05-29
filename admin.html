@@ -1226,7 +1226,8 @@
       </div>`;
   }
 
-  // Read-only Auto-Endplatzierung (ergibt sich aus dem Trichter / Ausscheiden)
+  // Endplatzierung: auto-berechnet aus dem Trichter, aber Punkte und Platz pro Spieler manuell überschreibbar.
+  // Override-Flag (modes.haxOverride = true) sorgt dafür, dass recomputeHaxball den Spieler unangetastet lässt.
   function renderHaxStandings(d, playing) {
     const curPhase = d.phase || 'Teams';
     const curIdx = HAXBALL_PHASES.indexOf(curPhase);
@@ -1234,7 +1235,8 @@
     const rows = playing.map(p => {
       const r = currentResults[d.id]?.[p.id] || {};
       const hax = (r.modes && r.modes.hax) || null;
-      return { p, placement: r.placement || null, pts: r.points || 0, depth: hax ? hax.elim : curIdx, elim: !!hax };
+      const overridden = !!(r.modes && r.modes.haxOverride);
+      return { p, placement: r.placement || null, pts: parseFloat(r.points) || 0, depth: hax ? hax.elim : curIdx, elim: !!hax, overridden };
     });
     rows.sort((a,b) => {
       if (a.placement && b.placement) return a.placement - b.placement;
@@ -1245,14 +1247,53 @@
       const status = r.elim
         ? `${HAXBALL_PHASES[r.depth]} raus`
         : (r.depth === lastIdx ? (r.placement ? 'Finale' : 'im Finale — läuft') : 'noch dabei');
-      const place = r.placement ? `${r.placement}.` : '–';
-      const pts = r.placement ? `+${r.pts}` : '';
-      return `<div class="rank-row"><span class="rank-pos">${place}</span><span class="rank-name">${r.p.name}</span><span class="rank-pts">${pts}</span><span style="color:var(--muted);font-size:0.82em;margin-left:0.5rem">${status}</span></div>`;
+      const overrideTag = r.overridden
+        ? `<span style="color:var(--alert);font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;background:var(--alert-soft);padding:1px 6px;border-radius:4px;margin-left:0.4rem">manuell</span>`
+        : '';
+      const resetBtn = r.overridden
+        ? `<button onclick="clearHaxOverride('${d.id}','${r.p.id}')" title="Zurück zur Auto-Berechnung" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;margin-left:0.3rem">↺</button>`
+        : '';
+      return `<div class="rank-row" style="gap:0.4rem">
+        <input type="number" min="1" max="20" value="${r.placement || ''}" placeholder="–"
+               onchange="setHaxStanding('${d.id}','${r.p.id}','place',this.value)"
+               style="width:46px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.3rem 0.4rem;font-family:var(--font-mono);font-size:0.86rem;text-align:center">
+        <span class="rank-name" style="flex:1">${r.p.name}</span>
+        <span style="color:var(--muted);font-family:var(--font-mono);font-size:0.7rem">+</span>
+        <input type="number" min="0" max="50" step="0.5" value="${r.pts || 0}"
+               onchange="setHaxStanding('${d.id}','${r.p.id}','pts',this.value)"
+               style="width:60px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.3rem 0.4rem;font-family:var(--font-mono);font-size:0.86rem;text-align:center">
+        <span style="color:var(--muted);font-size:0.78em">${status}</span>
+        ${overrideTag}${resetBtn}
+      </div>`;
     }).join('');
-    return `<div class="haxball-step-title">Endplatzierung (automatisch nach Ausscheiden)</div>
-      <p class="section-desc">Ergibt sich aus dem Trichter: Finale oben, dann 2v2-, dann Teams-Ausgeschiedene; innerhalb einer Phase nach Siegen. Aktualisiert sich automatisch — die Finalisten bekommen ihre Punkte, sobald das Finale entschieden ist.</p>
+    return `<div class="haxball-step-title">Endplatzierung & Punkte</div>
+      <p class="section-desc">Auto-berechnet aus dem Trichter — du kannst Platzierung und Punkte pro Spieler aber jederzeit manuell überschreiben. „↺" setzt zurück auf Auto.</p>
       <div class="rank-list">${body}</div>`;
   }
+  // Manueller Override schreiben — Platz oder Punkte; Flag setzt modes.haxOverride = true
+  window.setHaxStanding = async function(discId, playerId, field, value) {
+    const v = value === '' ? null : parseFloat(value);
+    const cur = currentResults[discId]?.[playerId] || {};
+    const modes = Object.assign({}, cur.modes || {}, { haxOverride: true });
+    const patch = { modes };
+    if (field === 'place') patch.placement = (v && v > 0) ? Math.round(v) : null;
+    if (field === 'pts')   patch.points    = (v != null && v >= 0) ? v : 0;
+    const { error } = await upsertResultDirect(discId, playerId, patch);
+    if (error) { console.error(error); toast('Update fehlgeschlagen', 'error'); return; }
+    toast('✓ Manuell überschrieben', 'ok');
+    renderDisciplineBodyFor(discId);
+  };
+  // Override entfernen → recomputeHaxball übernimmt wieder
+  window.clearHaxOverride = async function(discId, playerId) {
+    const cur = currentResults[discId]?.[playerId] || {};
+    const modes = Object.assign({}, cur.modes || {});
+    delete modes.haxOverride;
+    const { error } = await upsertResultDirect(discId, playerId, { modes });
+    if (error) { console.error(error); toast('Update fehlgeschlagen', 'error'); return; }
+    await recomputeHaxball(discId);
+    renderDisciplineBodyFor(discId);
+    toast('↺ Auto-Berechnung wieder aktiv', 'ok');
+  };
 
   // --- Haxball-Partien: Jeder gegen jeden (Round-Robin), rein informativ ---
   function haxTeamsPresent(d, playing) {
@@ -1663,6 +1704,9 @@
       return 2;                                               // in Teams (oder früher) ausgeschieden
     };
     for (const e of entries) {
+      // Manueller Override → diesen Spieler komplett in Ruhe lassen
+      const cur = currentResults[discId]?.[e.p.id] || {};
+      if (cur.modes && cur.modes.haxOverride) continue;
       const sealed = e.place != null;
       await upsertResultDirect(discId, e.p.id, sealed
         ? { placement: e.place, points: haxPointsFor(e) }

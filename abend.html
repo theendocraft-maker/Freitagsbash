@@ -656,13 +656,13 @@
   @keyframes adChampIn { from { opacity: 0; transform: translateY(20px) scale(0.92); } to { opacity: 1; transform: none; } }
 
   /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
-  /* Watch2Gether — kleiner Inline-Link im Hero-Top, neben Datum */
+  /* Watch2Gether — kleiner persistenter Link über Hero/Intro (sichtbar auch beim Vorstellbild) */
+  .lh-w2g-wrap { display: flex; justify-content: flex-end; margin-bottom: 0.6rem; }
   .lh-w2g {
-    margin-left: auto;
     font-family: var(--font-mono); font-size: var(--fs-mono);
     letter-spacing: var(--ls-tight); text-transform: lowercase;
     color: var(--cool); text-decoration: none;
-    padding: 0.3rem 0.6rem; border-radius: var(--radius-sm);
+    padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
     border: 1px solid var(--cool-soft);
     transition: background 0.2s, border-color 0.2s;
   }
@@ -1337,11 +1337,11 @@
 
     <div class="live-layout">
       <div class="live-main">
+        <div class="lh-w2g-wrap"><a class="lh-w2g" id="liveW2g" target="_blank" rel="noopener" style="display:none;">watch2gether ↗</a></div>
         <div class="live-hero">
           <div class="lh-top">
             <span class="live-badge-big"><span class="dot"></span> Live</span>
             <div class="lh-event-meta"><b id="liveEventName">—</b> · <span id="liveEventDate">—</span></div>
-            <a class="lh-w2g" id="liveW2g" target="_blank" rel="noopener" style="display:none;">watch2gether ↗</a>
           </div>
 
           <div class="lh-now">
