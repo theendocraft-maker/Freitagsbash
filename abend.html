@@ -656,26 +656,17 @@
   @keyframes adChampIn { from { opacity: 0; transform: translateY(20px) scale(0.92); } to { opacity: 1; transform: none; } }
 
   /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
-  /* Watch2Gether — gemeinsamer Mitschau-Raum, klickbarer Banner unter dem Score-Bug */
-  .w2g-bar {
-    margin-top: 0.6rem;
-    display: flex; align-items: center; gap: 0.8rem;
-    padding: 0.85rem 1.1rem;
-    background: linear-gradient(90deg, var(--cool-soft), transparent 90%);
-    border: 1px solid var(--cool);
-    border-left-width: 4px;
-    border-radius: var(--radius-sm);
-    color: var(--text); text-decoration: none;
-    font-family: var(--font-body);
-    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  /* Watch2Gether — kleiner Inline-Link im Hero-Top, neben Datum */
+  .lh-w2g {
+    margin-left: auto;
+    font-family: var(--font-mono); font-size: var(--fs-mono);
+    letter-spacing: var(--ls-tight); text-transform: lowercase;
+    color: var(--cool); text-decoration: none;
+    padding: 0.3rem 0.6rem; border-radius: var(--radius-sm);
+    border: 1px solid var(--cool-soft);
+    transition: background 0.2s, border-color 0.2s;
   }
-  .w2g-bar:hover { background: linear-gradient(90deg, var(--cool-soft), var(--cool-soft) 90%); transform: translateY(-1px); box-shadow: 0 8px 22px -10px var(--cool); }
-  .w2g-bar:active { transform: translateY(0); }
-  .w2g-bar .w2g-ico { font-size: 1.4rem; flex: none; }
-  .w2g-bar .w2g-text { flex: 1; font-size: 0.95rem; }
-  .w2g-bar .w2g-text b { color: var(--cool); font-family: var(--font-display); font-weight: 800; letter-spacing: 0.02em; font-size: 1.1rem; margin-right: 0.4rem; }
-  .w2g-bar .w2g-arrow { font-family: var(--font-display); font-size: 1.4rem; color: var(--cool); flex: none; transition: transform 0.2s; }
-  .w2g-bar:hover .w2g-arrow { transform: translateX(3px); }
+  .lh-w2g:hover { background: var(--cool-soft); border-color: var(--cool); }
   .live-status { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; color: var(--text); line-height: 1.35; }
   .live-status.now { border-left-color: var(--alert); }
   .live-status.pause { border-left-color: var(--cool); color: var(--cool); }
@@ -1334,13 +1325,6 @@
       </div>
     </div>
 
-    <div class="scorebug" id="liveScoreBug" style="display:none;"></div>
-    <a class="w2g-bar" id="liveW2g" target="_blank" rel="noopener" style="display:none;">
-      <span class="w2g-ico">📺</span>
-      <span class="w2g-text"><b>Mitschauen</b> · Watch2Gether-Raum öffnen</span>
-      <span class="w2g-arrow">→</span>
-    </a>
-    <div class="live-ticker" id="liveTicker" style="display:none;"></div>
     <div class="bumper-overlay" id="liveBumper" role="status" aria-live="polite" style="display:none;"></div>
 
     <div class="pause-banner" id="livePause" style="display:none;">
@@ -1357,6 +1341,7 @@
           <div class="lh-top">
             <span class="live-badge-big"><span class="dot"></span> Live</span>
             <div class="lh-event-meta"><b id="liveEventName">—</b> · <span id="liveEventDate">—</span></div>
+            <a class="lh-w2g" id="liveW2g" target="_blank" rel="noopener" style="display:none;">watch2gether ↗</a>
           </div>
 
           <div class="lh-now">
@@ -2284,40 +2269,8 @@
       }
     }
 
-    // Score-Bug oben als Broadcast-Lower-Third: LIVE + Disziplin + Sendezeit/Spiel-Uhr
-    const sbEl = document.getElementById('liveScoreBug');
-    if (sbEl) {
-      const gameLbl = currentDisc ? discName(currentDisc.kind) : 'Abend durch';
-      const subLbl = currentDisc ? (currentDisc.kind === 'haxball' && currentDisc.phase ? 'K.O.-Trichter · ' + currentDisc.phase : discMode(currentDisc.kind)) : 'Wertung steht';
-      // Uhren-Quellen merken (sekündliches Update via Interval)
-      clockSince.match = liveEvent.live_since || null;
-      clockSince.disc = currentDisc ? (currentDisc.live_since || null) : null;
-      sbEl.innerHTML = `
-        <div class="lt-live"><span class="lt-rec"></span><b>LIVE</b></div>
-        <div class="lt-game">
-          <span class="lt-chip" style="background:${currentDisc ? 'var(--primary)' : 'var(--muted)'}">${currentDisc ? discShort(currentDisc.kind) : '—'}</span>
-          <span class="lt-gwrap"><span class="lt-gname">${gameLbl}</span><span class="lt-gsub">${subLbl}</span></span>
-        </div>
-        <div class="lt-clocks">
-          <div class="lt-c"><span class="lab">Sendezeit</span><span class="val" id="clockMatch">–:–</span></div>
-          ${currentDisc ? `<div class="lt-c"><span class="lab">Spiel</span><span class="val cool" id="clockDisc">–:–</span></div>` : ''}
-        </div>`;
-      sbEl.style.display = 'flex';
-      tickClocks();
-    }
-
-    // Ticker-Zeile: Top-Stände + als Nächstes (nur wenn schon Punkte da sind)
-    // Ticker nur zeigen, wenn weder die Bundesliga-Sidebar noch die Haxball-Tabelle die Info schon redundant trägt.
-    const tkEl = document.getElementById('liveTicker');
-    if (tkEl) {
-      const asideShows = doneCount >= 1; // Sidebar zeigt eh Gesamtwertung; Ticker wäre Doppelinfo
-      if (rows.length && !asideShows) {
-        const top = rows.slice(0, 5).map(r => `<b>${r.rank}</b> ${r.player.name} ${r.total}`).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
-        const nxt = nextDisc ? `&nbsp;&nbsp;·&nbsp;&nbsp;als Nächstes: ${discName(nextDisc.kind)}` : '';
-        tkEl.innerHTML = `<span class="tk-tag">Tabelle</span><span class="tk-flow">${top}${nxt}</span>`;
-        tkEl.style.display = 'flex';
-      } else { tkEl.style.display = 'none'; }
-    }
+    // (Score-Bug-Lower-Third und Ticker entfernt — der Hero darunter sagt schon alles,
+    //  und die Sidebar zeigt die Wertung. Lower-Third war Doppelinfo und visueller Lärm.)
 
     // === Klartext-Statuszeile: in einfachen Worten, was gerade passiert ===
     const stEl = document.getElementById('liveStatusLine');
