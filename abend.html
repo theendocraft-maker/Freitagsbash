@@ -568,6 +568,68 @@
   .ce-sep span { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; padding: 0 0.8rem; background: var(--bg); position: relative; z-index: 1; }
   /* „Abend durch" — Endstand-Bühne mit Champion-Show */
   .abend-durch { padding: 1.5rem 0 0.5rem; text-align: center; position: relative; }
+  /* === Drei-Phasen-Reveal für Abend-durch ===
+     Stage 0: nur Veto-Endstand
+     Stage 1: Veto dimmt, Gesamttabelle baut sich von unten auf
+     Stage 2: Champion zentral, alles andere dimmt ab */
+  .ad-staged .copter-endstand,
+  .ad-staged .ad-table-section,
+  .ad-staged .ad-champ-stage,
+  .ad-staged .ad-note {
+    transition: opacity 0.8s ease, transform 0.8s ease, max-height 0.8s ease, margin 0.8s ease;
+  }
+  /* Tabelle und Champion starten unsichtbar */
+  .ad-staged .ad-table-section,
+  .ad-staged .ad-champ-stage,
+  .ad-staged .ad-note {
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+  }
+  /* Tabellenzeilen: starten leer, werden via .revealed eingeblendet (von unten nach oben) */
+  .ad-staged .ad-tab tbody tr {
+    opacity: 0;
+    transform: translateX(-18px);
+    transition: opacity 0.5s ease, transform 0.5s ease, background-color 0.5s;
+  }
+  .ad-staged .ad-tab tbody tr.revealed { opacity: 1; transform: none; }
+  /* Stage 1: Veto dimmt leicht, Tabelle erscheint */
+  .ad-staged[data-stage="1"] .copter-endstand,
+  .ad-staged[data-stage="2"] .copter-endstand {
+    opacity: 0.32;
+    transform: scale(0.94);
+  }
+  .ad-staged[data-stage="1"] .ad-table-section,
+  .ad-staged[data-stage="2"] .ad-table-section {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  /* Stage 2: Champion tritt auf, alles andere tritt zurück */
+  .ad-staged[data-stage="2"] .ad-champ-stage {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .ad-staged[data-stage="2"] .ad-note {
+    opacity: 1;
+    transform: none;
+  }
+  .ad-staged[data-stage="2"] .ad-table-section {
+    opacity: 0.42;
+    transform: scale(0.96);
+  }
+  /* Stage 2: Top-1-Zeile pulst kurz nach dem Auftritt — der finale Moment */
+  .ad-staged[data-stage="2"] .ad-tab tbody tr.tier-1 {
+    opacity: 1 !important;
+    transform: scale(1.04);
+    box-shadow: 0 0 28px -6px var(--primary);
+    background: var(--primary-soft);
+  }
+  /* Champion-Sektion wird in Stage 2 noch eine Spur größer für Bühnen-Wow */
+  .ad-staged[data-stage="2"] .ad-champ-stage {
+    transform: scale(1.04);
+  }
   .ad-eyebrow { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 1.2rem; }
   .ad-champ-stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.8rem; animation: adChampIn 0.7s cubic-bezier(.2,.8,.3,1.2); }
   .ad-champ-av { width: 130px; height: 130px; border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; letter-spacing: 0.04em; color: #0b0d10; border: 5px solid var(--primary); }
@@ -2523,26 +2585,56 @@
           </div>`;
       }
 
+      // Drei-Phasen-Reveal:
+      //   0) Veto-Endstand alleine im Bild (falls vorhanden, sonst übersprungen)
+      //   1) Hauptpodest baut sich auf — Gesamttabelle füllt sich von unten nach oben
+      //   2) Tagessieger wird zentral hervorgehoben, alle anderen Sektionen dimmen ab
+      const initialStage = hasCopterEndstand ? 0 : 1;
+      // Re-Renders während laufender Animation NICHT abbrechen (sonst springt's zurück)
+      const alreadyStaged = box.querySelector('.abend-durch.ad-staged');
+      const skipAnimation = !!alreadyStaged && alreadyStaged.dataset.stageDone === '1';
+
       box.innerHTML = `
-        <div class="abend-durch">
+        <div class="abend-durch ad-staged" data-stage="${skipAnimation ? '2' : initialStage}"${skipAnimation ? ' data-stage-done="1"' : ''}>
           <div class="ad-confetti">${confetti}</div>
           ${copterEndHtml}
-          <div class="ad-eyebrow">Abend durch · Endstand</div>
+          <div class="ad-table-section">
+            <div class="ad-eyebrow">Abend durch · Endstand</div>
+            <div class="ad-table-wrap">
+              <table class="sb-table sb-mini ad-tab">
+                <thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th style="text-align:right">Pkt</th><th class="total-col">Saison</th></tr></thead>
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </div>
+          </div>
           <div class="ad-champ-stage">
             <div class="ad-champ-av" style="${champAvBg}">${champPlayer && champPlayer.avatar_url ? '' : (champ ? ini(champ.player.name) : '')}</div>
             <div class="ad-champ-name" style="color:${champCol}">${champ ? champ.player.name : 'Abend beendet'}</div>
             <div class="ad-champ-title">Tagessieger</div>
             ${champCry ? `<div class="ad-champ-cry">„${champCry}"</div>` : ''}
           </div>
-          <div class="ad-table-wrap">
-            <table class="sb-table sb-mini ad-tab">
-              <thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th style="text-align:right">Pkt</th><th class="total-col">Saison</th></tr></thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-          </div>
           <div class="ad-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) und Streicher werden dort berücksichtigt.</small></div>
         </div>`;
       box.style.display = 'block';
+
+      // Animation nur einmal pro Anzeige (vermeidet Sprünge bei Re-Renders)
+      if (!skipAnimation) {
+        const stagedEl = box.querySelector('.abend-durch.ad-staged');
+        const trs = [...box.querySelectorAll('.ad-tab tbody tr')].reverse(); // letzter Platz zuerst rein, Sieger zuletzt
+        const rowGap = 500;
+        const copterShow = hasCopterEndstand ? 4500 : 0;
+        const revealRows = () => {
+          trs.forEach((tr, i) => setTimeout(() => tr.classList.add('revealed'), i * rowGap));
+        };
+        if (hasCopterEndstand) {
+          setTimeout(() => { if (stagedEl) { stagedEl.dataset.stage = '1'; revealRows(); } }, copterShow);
+        } else {
+          setTimeout(revealRows, 200);
+        }
+        const tFinale = copterShow + (trs.length * rowGap) + 1500;
+        setTimeout(() => { if (stagedEl) { stagedEl.dataset.stage = '2'; stagedEl.dataset.stageDone = '1'; } }, tFinale);
+      }
+
       lastNowDisc = null; lastNowResults = results;
       return;
     }
