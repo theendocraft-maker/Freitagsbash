@@ -637,14 +637,18 @@
   }
   /* (Endstand-Steuerung erfolgt jetzt im Admin via events.endstand_stage) */
   .ad-eyebrow { font-family: var(--font-mono); font-size: var(--fs-mono); letter-spacing: var(--ls-normal); color: var(--text-soft); text-transform: uppercase; margin-bottom: 1.2rem; }
-  .ad-champ-stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.8rem; animation: adChampIn 0.7s cubic-bezier(.2,.8,.3,1.2); }
+  /* KEINE Auto-Entrance-Animation hier — sie würde beim Erstrender opacity von 0 auf 1 ziehen
+     und damit das Stage-System überrumpeln (Tagessieger flackerte kurz auf, wenn man auf Stage 1
+     wechselte). Die opacity-Transitions im Stage-CSS regeln den Auftritt. */
+  .ad-champ-stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1.8rem; }
   .ad-champ-av { width: var(--av-xl); height: var(--av-xl); border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 2.6rem; letter-spacing: 0.04em; color: #0b0d10; border: 5px solid var(--primary); }
   /* Responsive Champion-Name: 2.4rem auf Mobile bis 5.2rem auf großen Bildschirmen */
   .ad-champ-name { font-family: var(--font-display); font-size: clamp(2.4rem, 6vw, 5.2rem); line-height: 0.95; letter-spacing: 0.03em; margin-top: 0.5rem; word-break: break-word; }
   .ad-champ-title { font-family: var(--font-mono); font-size: var(--fs-mono); letter-spacing: var(--ls-wide); color: var(--muted); text-transform: uppercase; margin-top: -0.2rem; }
   /* Schlachtruf: italic Body-Font (kein verirrter Serif), bleibt im Typografie-System */
   .ad-champ-cry { font-family: var(--font-body); font-style: italic; font-size: 1.15rem; font-weight: 500; color: var(--text-soft); margin-top: 0.7rem; max-width: 480px; padding: 0 1rem; line-height: 1.4; letter-spacing: 0.01em; }
-  .ad-table-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); animation: adChampIn 0.7s 0.4s both cubic-bezier(.2,.8,.3,1.2); }
+  /* Tabelle: auch keine Entrance-Animation hier — Stage-Transitions regeln das */
+  .ad-table-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
   .ad-tab th { text-align: center; padding: 0.7rem 0.4rem; }
   .ad-tab td { padding: 0.55rem 0.4rem; }
   .ad-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; animation: adChampIn 0.5s 0.8s both ease; }
