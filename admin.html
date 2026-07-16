@@ -569,6 +569,16 @@
       </div>
     </div>
 
+    <!-- Abend-Checkliste: führt auch Erstbediener durch den kompletten Abend -->
+    <div class="section" id="checklistSection">
+      <div class="section-title" style="display:flex;align-items:center;gap:0.6rem">📋 Abend-Checkliste
+        <span id="clProgress" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);font-weight:400"></span>
+        <button class="draw-btn" id="clToggle" style="margin-left:auto;padding:0.2rem 0.7rem" onclick="toggleChecklist()">einklappen</button>
+      </div>
+      <p class="section-desc">Der rote Faden durch den Abend — auch für alle, die das Tool zum ersten Mal bedienen. Häkchen setzen sich automatisch, sobald der Schritt im Tool erledigt ist.</p>
+      <div id="checklistBody"></div>
+    </div>
+
     <!-- Setup -->
     <div class="section">
       <div class="section-title">⚙️ Setup</div>
@@ -967,11 +977,13 @@
       if (currentEvent.status === 'live') {
         introSec.style.display = 'block';
         const step = currentEvent.intro_step;
-        const vetoStep = currentDisciplines.length + 1;
+        // Slides: 0 Teilnehmer · 1 Spielpool · 2..N+1 Disziplinen · N+2 Vetos · N+3 Champions-Bann
+        const vetoStep = currentDisciplines.length + 2;
         const banStep = vetoStep + 1;   // Champions-Bann-Slide (nur wenn Bann gesetzt)
         const btns = [`<span class="draw-label">Zeigen:</span>`,
-          `<button class="phase-btn ${step === 0 ? 'active' : ''}" onclick="setIntroStep(0)">👥 Teilnehmer</button>`]
-          .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+1 ? 'active' : ''}" onclick="setIntroStep(${i+1})">${i+1} ${d.name}</button>`))
+          `<button class="phase-btn ${step === 0 ? 'active' : ''}" onclick="setIntroStep(0)">👥 Teilnehmer</button>`,
+          `<button class="phase-btn ${step === 1 ? 'active' : ''}" onclick="setIntroStep(1)">🎮 Spielpool</button>`]
+          .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+2 ? 'active' : ''}" onclick="setIntroStep(${i+2})">${i+1} ${d.name}</button>`))
           .concat([`<button class="phase-btn ${step === vetoStep ? 'active' : ''}" onclick="setIntroStep(${vetoStep})">🃏 Vetos</button>`])
           .concat(currentEvent.champion_ban ? [`<button class="phase-btn ${step === banStep ? 'active' : ''}" onclick="setIntroStep(${banStep})" style="border-color:var(--alert-line)">💥 Champions-Bann</button>`] : []);
         $('introControl').innerHTML = btns.join('');
@@ -1028,6 +1040,8 @@
 
     // Line-up-Editor (Spielpool)
     renderLineupEditor();
+    // Abend-Checkliste (führt durch den Abend, Häkchen automatisch)
+    renderChecklist();
 
     // Teilnehmer-Toggles
     const pg = $('participantsGrid');
@@ -1135,9 +1149,12 @@
       ? DISCIPLINES.filter(d => !inLineup.has(d.kind))
           .map(d => `<button class="rank-chip" onclick="lineupAdd('${d.kind}')">+ ${d.icon} ${d.name}</button>`).join('')
       : '';
+    const benched = DISCIPLINES.filter(d => !inLineup.has(d.kind));
     const poolHtml = poolChips
       ? `<div class="rank-pool-title" style="margin-top:0.5rem">Im Pool — anklicken = ans Ende des Line-ups</div><div class="rank-pool">${poolChips}</div>`
-      : (editable ? `<div class="rank-pool-title" style="margin-top:0.5rem">Alle Pool-Spiele sind im Line-up.</div>` : '');
+      : (editable
+        ? `<div class="rank-pool-title" style="margin-top:0.5rem">Alle Pool-Spiele sind im Line-up.</div>`
+        : (benched.length ? `<div class="rank-pool-title" style="margin-top:0.5rem">Im Pool, heute nicht dabei: ${benched.map(d => `${d.icon} ${d.name}`).join(' · ')} <span style="color:var(--muted)">(änderbar nur im Entwurf)</span></div>` : ''));
 
     wrap.innerHTML = `<div class="rank-list">${rows || '<div class="rank-empty">Noch keine Disziplinen.</div>'}</div>${poolHtml}`;
   }
@@ -1192,6 +1209,118 @@
     await renumberLineup();
     renderDetail();
   };
+
+  // ===== Abend-Checkliste =====
+  // Führt auch Erstbediener durch den kompletten Abend. Reine Anzeige — liest nur
+  // den vorhandenen Zustand, Häkchen setzen sich automatisch. Zustände:
+  // done ✓ (erledigt) · warn ⚠ (JETZT dran / vergessen) · todo ○ (kommt später) · info ℹ (nur Hinweis)
+  window.toggleChecklist = function() {
+    const collapsed = localStorage.getItem('fbClCollapsed') === '1';
+    localStorage.setItem('fbClCollapsed', collapsed ? '0' : '1');
+    renderChecklist();
+  };
+  function renderChecklist() {
+    const body = $('checklistBody'); if (!body || !currentEvent) return;
+    const collapsed = localStorage.getItem('fbClCollapsed') === '1';
+    const tgl = $('clToggle'); if (tgl) tgl.textContent = collapsed ? 'aufklappen' : 'einklappen';
+    const st = currentEvent.status;                       // draft | live | finalized
+    const isLive = st === 'live', isFinal = st === 'finalized';
+    const participants = players.filter(p => currentParticipantIds.has(p.id));
+    const vetoCount = Object.keys(currentVetoes).length;
+    const defOf = k => DISCIPLINES.find(x => x.kind === k) || { icon: '🎮', name: k };
+    const placementsOf = d => Object.values(currentResults[d.id] || {}).filter(r => r && r.placement).length;
+
+    const items = [];
+    const add = (phase, state, label, hint) => items.push({ phase, state, label, hint });
+
+    // --- Phase 1: Vorbereitung ---
+    add(1, 'info', `Line-up: ${currentDisciplines.map(d => defOf(d.kind).icon + ' ' + d.name).join(' → ')}`,
+      st === 'draft' ? 'Ändern: unten im Setup unter „🧩 Line-up des Abends" — Spiele aus dem Pool klicken, ↑/↓ sortieren. Geht nur solange der Abend im Entwurf ist.' : 'Das Line-up ist eingefroren (Abend nicht mehr im Entwurf).');
+    add(1, participants.length ? 'done' : 'warn',
+      participants.length ? `Teilnehmer ausgewählt: ${participants.length} Spieler` : 'Teilnehmer auswählen — Standard ist LEER!',
+      'Unten im Setup bei „Teilnehmer" JEDEN anklicken, der heute wirklich mitspielt. Steuert Auslosungen und „Heute am Start" auf der Live-Seite.');
+    add(1, currentEvent.tiebreaker ? 'done' : (isFinal ? 'info' : 'warn'),
+      currentEvent.tiebreaker ? `Stech-Spiel gesetzt: ${(DISCIPLINES.find(d => d.kind === currentEvent.tiebreaker) || {}).name || currentEvent.tiebreaker}` : 'Stech-Spiel wählen',
+      'Dropdown „Stech-Spiel" im Setup — entscheidet bei Punktgleichstand am Abendende.');
+    add(1, 'info', `Vetos der Spieler: ${vetoCount} gesetzt`,
+      'Setzen die Spieler selbst auf der Spielabend-Seite (Tab „Veto"). Beim Live-Schalten frieren sie ein. Der Saison-Führende (King of the Hill) hat kein Veto.');
+    const linked = currentDisciplines.filter(d => d.join_link).length;
+    add(1, linked === currentDisciplines.length && linked > 0 ? 'done' : 'info',
+      `Join-Links/Codes: ${linked}/${currentDisciplines.length} eingetragen`,
+      'Pro Spiel im aufgeklappten Spiel-Kasten das Feld „🔗 Join-Link / Code" füllen — wird den Spielern live groß angezeigt. Geht auch noch während des Abends (z.B. GeoGuessr-Challenge erst kurz vorher erstellen).');
+
+    // --- Phase 2: Live schalten & Show ---
+    add(2, isLive || isFinal ? 'done' : 'todo',
+      isLive || isFinal ? 'Abend ist live' : 'Abend live schalten',
+      'Button „Abend live schalten" (unten). Friert die Vetos ein und startet automatisch die Vorstellung auf der Spielabend-Seite.');
+    const anyStarted = currentDisciplines.some(d => d.status === 'live' || d.status === 'done');
+    add(2, anyStarted ? 'done' : (isLive ? 'warn' : 'todo'),
+      'Vorstellung durchsteppen',
+      'In „🎬 Vorstellung & Joker" die „Zeigen"-Leiste von links nach rechts durchklicken: 👥 Teilnehmer → 🎮 Spielpool → die Spiele einzeln → 🃏 Vetos. Die Spielabend-Seite folgt jedem Klick. Endet automatisch, sobald das erste Spiel auf „läuft" geht.');
+    add(2, currentEvent.champion_ban ? 'done' : (isLive && !anyStarted ? 'warn' : 'todo'),
+      currentEvent.champion_ban ? 'Champions-Bann gesetzt' : 'Champions-Bann (nach dem Veto-Slide)',
+      'Im „💥 Champions-Bann"-Block King of the Hill + sein gewähltes Spiel auswählen → „Bann aktivieren" (zerstört die betroffenen Vetos!) → dann den neuen 💥-Button in der Zeigen-Leiste drücken — die Live-Seite spielt die Enthüllung.');
+    if (vetoCount > 0) {
+      add(2, currentEvent.copter_active ? 'done' : (isLive ? 'warn' : 'todo'),
+        currentEvent.copter_active ? 'Joker-Minispiel aktiv (Dino Runner)' : 'Joker-Minispiel aktivieren!',
+        'Toggle „🃏 Joker-Minispiel: aktivieren" in der 🎬-Sektion — erst dann sehen die Veto-Spieler das Dino-Runner-Widget auf der Live-Seite. Scores tragen sie selbst ein (Beweis per Screen-Share/Foto).');
+    } else {
+      add(2, 'info', 'Joker-Minispiel: erst relevant, wenn Vetos existieren', 'Ohne (überlebende) Vetos spielt niemand Dino Runner.');
+    }
+
+    // --- Phase 3: Die Spiele ---
+    const KIND_TIPS = {
+      haxball: '🎲 „Turnierbaum auslosen" → nach jedem Match das Sieger-Team anklicken → wenn die Runde durch ist „nächste Runde auslosen" → am Ende Grand-Final-Sieger klicken. Nur die aktuelle Runde ist änderbar.',
+      geoguessr: 'Challenge auf geoguessr.com erstellen, Link ins 🔗-Feld. Nach dem Spiel die Spieler in Ziel-Reihenfolge anklicken (1. zuerst).',
+      brawlhalla: '„+ Phase" (2 Stück empfohlen) → Lobbies auslosen → Raum-Codes eintragen. Die Lobbies tippen ihre Spiele SELBST auf der Live-Seite ein — hier nur korrigieren.',
+      chess: 'Turnier-Link ins 🔗-Feld, nach dem Turnier Endplatzierung anklicken.',
+      chameleon: 'Pro Runde „Jäger auslosen" (Rotation läuft automatisch, ⚖-Zeile zeigt Fairness) → Gefundene in Reihenfolge antippen (machen auch die Spieler live) → ⚠ „🏁 Runde beenden" NICHT vergessen, sonst kriegen Überlebende keine Punkte!',
+      fallguys: '„+ Solo-/Team-Modus" je nach Show → bei Team-Modi Teams auslosen → Platzierungen anklicken. Lobby-Code ins 🔗-Feld.'
+    };
+    currentDisciplines.forEach((d, i) => {
+      const pl = placementsOf(d);
+      const ds = (d.status === 'live' || d.status === 'done') ? d.status : 'draft';
+      let state, label;
+      if (ds === 'done') { state = pl > 0 ? 'done' : 'warn'; label = `Spiel ${i + 1} · ${d.name}: fertig${pl > 0 ? ` (${pl} Platzierungen)` : ' — aber KEINE Platzierungen?!'}`; }
+      else if (ds === 'live') { state = 'warn'; label = `Spiel ${i + 1} · ${d.name}: läuft — Ergebnisse eintragen, danach Status auf „fertig"`; }
+      else { state = 'todo'; label = `Spiel ${i + 1} · ${d.name}`; }
+      add(3, state, label,
+        `Status-Pill am Spiel-Kasten anklicken schaltet offen → läuft → fertig (steuert die komplette Live-Anzeige: Uhr, Bumper, Ranking-Reveal). ${KIND_TIPS[d.kind] || ''}`);
+    });
+    add(3, 'info', '☕ Pause', 'Button „Pause starten" (mit optionalem Text) zeigt allen ein großes Pausen-Banner — danach „Pause beenden".');
+
+    // --- Phase 4: Abschluss ---
+    const doneCount = currentDisciplines.filter(d => d.status === 'done').length;
+    add(4, doneCount === currentDisciplines.length && doneCount > 0 ? 'done' : 'todo',
+      `Alle Spiele fertig (${doneCount}/${currentDisciplines.length})`,
+      'Jedes Spiel muss auf „fertig" stehen — erst dann erscheint unten die Endstand-Steuerung.');
+    add(4, (typeof currentEvent.endstand_stage === 'number') ? 'done' : 'todo',
+      'Endstand-Show durchschalten',
+      'Drei Stufen nacheinander klicken: 🃏 Veto-Endstand → 📊 Gesamttabelle (baut sich auf) → 🏆 Tagessieger. Die Spielabend-Seite inszeniert jede Stufe.');
+    add(4, isFinal ? 'done' : 'todo',
+      isFinal ? 'Abend abgeschlossen ✓' : 'Abend abschließen (Finalisieren)',
+      'Button „Abend abschließen" ganz unten: rechnet die Saisonpunkte (25/18/15/…) inkl. Krone-Bürde ×0,8 und schreibt alles fest. Danach nichts mehr ändern!');
+
+    // --- Rendern ---
+    const real = items.filter(x => x.state !== 'info');
+    const doneN = real.filter(x => x.state === 'done').length;
+    const prog = $('clProgress'); if (prog) prog.textContent = `· ${doneN}/${real.length} erledigt`;
+    if (collapsed) { body.innerHTML = ''; body.style.display = 'none'; return; }
+    body.style.display = 'block';
+    const PHASES = { 1: '1 · Vorbereitung', 2: '2 · Live schalten & Show', 3: '3 · Die Spiele', 4: '4 · Abschluss' };
+    const ICO = { done: '✓', warn: '⚠', todo: '○', info: 'ℹ' };
+    let html = '';
+    [1, 2, 3, 4].forEach(ph => {
+      const list = items.filter(x => x.phase === ph);
+      if (!list.length) return;
+      html += `<div class="cl-phase">${PHASES[ph]}</div>` + list.map(x => `
+        <div class="cl-item cl-${x.state}">
+          <span class="cl-ico">${ICO[x.state]}</span>
+          <div><div class="cl-label">${x.label}</div><div class="cl-hint">${x.hint}</div></div>
+        </div>`).join('');
+    });
+    body.innerHTML = html;
+  }
 
   // ===== Disziplinen rendern =====
   function renderDisciplines() {
@@ -3222,7 +3351,7 @@
       box.innerHTML = `
         <span class="draw-label">💥 Champions-Bann:</span>
         <select id="banBy" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
-          <option value="">Sieger des letzten Bash…</option>
+          <option value="">King of the Hill…</option>
           ${champs.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
         </select>
         <select id="banKind" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
@@ -3230,14 +3359,19 @@
           ${currentDisciplines.map(d => `<option value="${d.kind}">${d.name}</option>`).join('')}
         </select>
         <button class="draw-btn" onclick="setChampionBan()">💥 Bann aktivieren</button>`;
-      if (hint) hint.textContent = 'Bannt ein Spiel für alle: es kann nicht gevetoet werden — bestehende Vetos darauf werden zerstört (kein Ersatzspiel!).';
+      if (hint) hint.textContent = 'Der King of the Hill bannt bei JEDEM Event ein Spiel: es kann nicht gevetoet werden — bestehende Vetos darauf werden zerstört, die Betroffenen müssen mitspielen (kein Ersatzspiel!).';
     }
   }
 
   window.setChampionBan = async function() {
     const by = $('banBy') && $('banBy').value;
     const kind = $('banKind') && $('banKind').value;
-    if (!by || !kind) { toast('Champion und Spiel wählen', 'error'); return; }
+    if (!by || !kind) { toast('King of the Hill und Spiel wählen', 'error'); return; }
+    // WICHTIG: Vetos frisch aus der DB laden — currentVetoes kann veraltet sein,
+    // wenn Spieler nach dem Öffnen des Abends noch vetoed haben (Bug: „niemand betroffen").
+    const { data: freshVts } = await sb.from('vetoes').select('*').eq('event_id', currentEvent.id);
+    currentVetoes = {};
+    (freshVts || []).forEach(v => currentVetoes[v.player_id] = v.discipline_kind);
     const victims = Object.entries(currentVetoes).filter(([pid, k]) => k === kind).map(([pid]) => pid);
     const names = victims.map(pid => (players.find(p => p.id === pid) || {}).name || '?');
     const warn = victims.length

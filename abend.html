@@ -2642,6 +2642,8 @@
   // Real: admin-gesteuert (events.intro_step), keine lokalen Buttons. Demo: lokal steuerbar (◀ ⏸ ▶).
   let introTimer = null, introIdx = 0, introPaused = false, introDiscs = [], introRoster = [], introCtl = false, introVetoes = [];
   let introBan = null;                 // events.champion_ban des Live-Abends (Champions-Bann-Slide)
+  let kingOfHillId = null;             // aktueller Tabellenführer (für Veto-Slide + Bann-Slide)
+  let introPaintedStep = null;         // zuletzt gerenderter Slide (Animationen nur beim Slide-Wechsel abspielen)
   let banAnimPlayedFor = null;         // Zerstörungs-Animation nur einmal pro Bann abspielen
   function introCtrlHtml() {
     return `<div class="intro-ctrl">
@@ -2656,11 +2658,14 @@
   function renderIntro() {
     const box = document.getElementById('liveNowDetail');
     if (!box) return;
-    // Slides: 0 = Teilnehmer, 1..N = Disziplinen, N+1 = Vetos, N+2 = Champions-Bann (nur wenn gesetzt)
-    const n = introDiscs.length + 2 + (introBan ? 1 : 0);
+    // Slides: 0 = Teilnehmer, 1 = Spielpool, 2..N+1 = Disziplinen, N+2 = Vetos, N+3 = Champions-Bann (nur wenn gesetzt)
+    const n = introDiscs.length + 3 + (introBan ? 1 : 0);
     const step = ((introIdx % n) + n) % n;
-    const vetoStep = introDiscs.length + 1;
-    const banStep = introDiscs.length + 2;
+    const poolStep = 1;
+    const vetoStep = introDiscs.length + 2;
+    const banStep = introDiscs.length + 3;
+    const freshPaint = introPaintedStep !== step;   // Slide gerade gewechselt → Animation abspielen
+    introPaintedStep = step;
     if (step === 0) {
       const ps = (introRoster && introRoster.length) ? introRoster : evPlayers;
       box.innerHTML = `
@@ -2676,6 +2681,29 @@
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(0, n)}
         </div>`;
+    } else if (step === poolStep) {
+      // === Spielpool-Reveal: der ganze Pool fliegt rein, dann leuchtet das Line-up des Abends auf ===
+      const lineupKinds = introDiscs.map(d => d.kind);
+      const anim = freshPaint;
+      const cards = VDISCS.map((v, i) => {
+        const pos = lineupKinds.indexOf(v.kind);
+        const inL = pos >= 0;
+        return `<div class="pool-card ${inL ? 'picked' : 'benched'}${anim ? ' anim' : ' settled'}" style="--pd:${(i * 0.14).toFixed(2)}s;--pp:${(1.4 + (inL ? pos : VDISCS.length) * 0.3).toFixed(2)}s">
+            <img class="pool-logo" src="logos/${v.kind}.svg" alt="${v.name}" onerror="this.style.display='none'">
+            <div class="pool-name">${v.name}</div>
+            <div class="pool-mode">${v.mode}</div>
+            ${inL ? `<span class="pool-pos">${pos + 1}</span>` : `<span class="pool-bench">im Pool</span>`}
+          </div>`;
+      }).join('');
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label">Vorstellung · Der Spielpool</div>
+          <div class="intro-name">🎮 ${VDISCS.length} Spiele im Pool</div>
+          <div class="intro-mode">Der Pool wächst jede Saison — heute spielen wir <b>${introDiscs.length}</b> davon, in dieser Reihenfolge:</div>
+          <div class="pool-grid">${cards}</div>
+          ${introCtl ? introCtrlHtml() : ''}
+          ${introDotsHtml(step, n)}
+        </div>`;
     } else if (step === vetoStep) {
       // Vetos vorstellen
       const vs = introVetoes || [];
@@ -2690,11 +2718,26 @@
             <div class="ir-cry">🃏 vetoed <b>${discName(kind)}</b><br><small style="color:var(--cool)">spielt Dino Runner 🦖</small></div>
           </div>`;
       }).join('') : `<div class="ir-card" style="grid-column:1/-1;--ir-c:var(--muted)"><div class="ir-name">Niemand vetoed heute</div><div class="ir-cry">Alle spielen alle Disziplinen mit.</div></div>`;
+      const king = kingOfHillId ? evPlayers.find(x => x.id === kingOfHillId) : null;
+      const kingCol = king ? pColor(king.id) : 'var(--muted)';
+      const kingAv = king ? (king.avatar_url ? `background-image:url(${king.avatar_url});` : `background:${kingCol};`) : '';
+      const vetoInfo = `
+        <div class="intro-vinfo">
+          <div class="vinfo-card">
+            <div class="vinfo-ico">${king ? `<span class="ir-av" style="${kingAv};width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background-size:cover">${king.avatar_url ? '' : ini(king.name || '?')}</span>` : '👑'}</div>
+            <div><b>👑 King of the Hill${king ? `: ${king.name}` : ''}</b><br><span>Wer die Saison anführt, hat <b>kein Veto</b> — die Krone ist eine Bürde.</span></div>
+          </div>
+          <div class="vinfo-card">
+            <div class="vinfo-ico">🦖</div>
+            <div><b>Das Joker-Minispiel heute: Dino Runner</b><br><span>Wer vetoed, sitzt nicht rum: Dino Runner am Handy (chromedino.com) — der Highscore der Veto-Spieler wird wie eine Disziplin gewertet (10·8·6·…).</span></div>
+          </div>
+        </div>`;
       box.innerHTML = `
         <div class="intro">
           <div class="nd-label">Vorstellung · Vetos</div>
           <div class="intro-name">${vs.length ? '🃏 Heute mit Joker' : '✓ Volle Crew'}</div>
           <div class="intro-mode">${vs.length} Veto${vs.length === 1 ? '' : 's'} · ${vs.length ? 'Joker-Minispiel statt der vetoten Disziplin' : 'Niemand sitzt eine Disziplin aus'}</div>
+          ${vetoInfo}
           <div class="intro-roster">${cardsHtml}</div>
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(step, n)}
@@ -2710,24 +2753,25 @@
       const victimCards = victims.map((p, i) => {
         const col = pColor(p.id);
         const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
-        return `<div class="ir-card ban-victim${alreadyPlayed ? ' ban-destroyed' : ''}" data-ban-i="${i}" style="--ir-c:${col}">
+        return `<div class="ir-card ban-victim${alreadyPlayed ? ' ban-destroyed ban-conscripted' : ''}" data-ban-i="${i}" style="--ir-c:${col}">
             <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
             <div class="ir-name">${p.name || '—'}</div>
             <div class="ir-cry">🃏 vetoed <b>${discName(ban.kind)}</b></div>
             <div class="ban-boom">💥</div>
             <div class="ban-lost">VETO ZERSTÖRT</div>
+            <div class="ban-forced">😈 SPIELT TROTZDEM MIT</div>
           </div>`;
       }).join('');
       box.innerHTML = `
         <div class="intro">
           <div class="nd-label" style="color:var(--alert)">Neue Mechanik · Champions-Bann</div>
           <div class="intro-name">💥 Champions-Bann</div>
-          <div class="intro-mode">Der Sieger des letzten Bash bannt ein Spiel — es ist heute unantastbar.</div>
+          <div class="intro-mode">Der King of the Hill bannt ein Spiel — jedes Event aufs Neue. Es ist heute unantastbar.</div>
           <div class="ban-stage">
             <div class="ban-champ">
               <div class="ir-av" style="${cAv}">${champ.avatar_url ? '' : ini(champ.name || '?')}</div>
               <div class="ban-champ-name">👑 ${champ.name || '—'}</div>
-              <div class="ban-champ-sub">Sieger des letzten Bash — bannt:</div>
+              <div class="ban-champ-sub">King of the Hill — bannt:</div>
             </div>
             <div class="ban-target${alreadyPlayed ? ' stamped' : ''}">
               <img class="intro-logo" src="logos/${ban.kind}.svg" alt="${discName(ban.kind)}" onerror="this.style.display='none'">
@@ -2737,6 +2781,7 @@
           </div>
           <div class="intro-rules">${discName(ban.kind)} darf heute <b>nicht gevetoet werden</b>${victims.length ? ` — und wer es schon vetoed hatte, verliert sein Veto <b>ersatzlos</b>:` : ' — niemand hatte es vetoed, der Bann verpufft … diesmal.'}</div>
           ${victims.length ? `<div class="intro-roster">${victimCards}</div>` : ''}
+          ${victims.length ? `<div class="ban-epilog${alreadyPlayed ? ' show' : ''}">⛓ Keine Gnade: <b>${victims.map(p => p.name).join(', ')}</b> ${victims.length === 1 ? 'tritt' : 'treten'} heute in <b>${discName(ban.kind)}</b> an — ohne Ersatzspiel.</div>` : ''}
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(step, n)}
         </div>`;
@@ -2751,16 +2796,24 @@
             setTimeout(() => { if (card) { card.classList.remove('ban-destroying'); card.classList.add('ban-destroyed'); } }, 1200);
           }, 2000 + i * 1500);
         });
+        // Finale: die Zerstörten werden zwangsrekrutiert — sie MÜSSEN mitspielen
+        if (victims.length) {
+          setTimeout(() => {
+            box.querySelectorAll('.ban-victim').forEach(c => c.classList.add('ban-conscripted'));
+            const ep = box.querySelector('.ban-epilog'); if (ep) ep.classList.add('show');
+            document.body.classList.add('ban-quake'); setTimeout(() => document.body.classList.remove('ban-quake'), 450);
+          }, 2000 + victims.length * 1500 + 900);
+        }
       }
       box.style.display = 'block';
       return;
     } else {
-      const d = introDiscs[step - 1]; const k = d.kind;
+      const d = introDiscs[step - 2]; const k = d.kind;
       let rulesTxt = discRules(k);
       if (k === 'geoguessr' && d.rounds) rulesTxt = rulesTxt.replace(/\d+\s*Runden/, `${d.rounds} Runden`);
       box.innerHTML = `
         <div class="intro">
-          <div class="nd-label">Vorstellung · Spiel ${step}/${introDiscs.length}</div>
+          <div class="nd-label">Vorstellung · Spiel ${step - 1}/${introDiscs.length}</div>
           <div class="intro-slide" key="${k}-${introIdx}">
             <img class="intro-logo" src="logos/${k}.svg" alt="${discName(k)}" onerror="this.style.display='none'">
             <div class="intro-name">${discName(k)}</div>
@@ -3444,6 +3497,8 @@
   };
 
   // Saison-Tabellenführer aus finalisierten Abenden (Abendplatzierung → Saisonpunkte, 1 Streicher); null = noch keiner
+  // King of the Hill einmal beim Laden bestimmen (für Intro-Slides); aktualisiert sich beim Reload
+  setTimeout(() => { try { computeLeaderId().then(id => { kingOfHillId = id; }); } catch (e) {} }, 800);
   async function computeLeaderId() {
     const { data: evs } = await sb.from('events').select('id,status').eq('status', 'finalized');
     const events = evs || [];
