@@ -1,0 +1,40 @@
+# Supabase-Keepalive für Freitags Bash
+# ------------------------------------
+# Der Supabase-Free-Tier pausiert Projekte nach ~7 Tagen ohne API-Aktivität —
+# dann wirkt die Seite "leer" (alle Anfragen liefern 503), bis jemand das
+# Projekt im Dashboard manuell restored (so geschehen am 12.07.2026).
+#
+# Dieser Workflow schickt 2× pro Woche (Mo + Do) eine Mini-Anfrage an die
+# Datenbank und hält sie damit dauerhaft wach.
+#
+# Hinweise:
+# - Der verwendete Key ist der ANON-Key — der ist ohnehin öffentlich
+#   (steht in jeder HTML-Seite der Site), hier liegt also kein Geheimnis im Repo.
+# - GitHub deaktiviert Zeitplan-Workflows nach ~60 Tagen ohne Repo-Aktivität.
+#   Ihr deployt regelmäßig, damit passiert das praktisch nie — falls doch:
+#   im Repo unter "Actions" den Workflow wieder aktivieren.
+# - Manuell testen: Actions → "Supabase Keepalive" → "Run workflow".
+
+name: Supabase Keepalive
+
+on:
+  schedule:
+    - cron: '17 9 * * 1,4'   # Montag + Donnerstag, 09:17 UTC
+  workflow_dispatch:          # erlaubt manuelles Anstoßen zum Testen
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Datenbank anpingen (hält den Free-Tier wach)
+        env:
+          SUPABASE_URL: https://bvaxeqkfozegeejdimdp.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w
+        run: |
+          echo "Pinge Supabase..."
+          curl --silent --fail --show-error \
+            "$SUPABASE_URL/rest/v1/players?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            --output /dev/null
+          echo "OK — Datenbank ist wach."

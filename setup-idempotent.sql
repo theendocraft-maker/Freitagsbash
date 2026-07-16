@@ -128,3 +128,11 @@ alter table events add column if not exists endstand_stage int;
 -- Spielabend-Seite ein prominenter Button „📺 Mitschauen", der den Raum in einem neuen Tab öffnet.
 -- Realtime-Sync: Admin trägt ein, alle Zuschauer sehen den Button sofort.
 alter table events add column if not exists w2g_link text;
+
+-- ============ 12) Champions-Bann (Mechanik ab Abend 2) ============
+-- Der Sieger des letzten Bash bannt EIN Spiel des Abends: es darf nicht
+-- gevetoet werden. Bereits gesetzte Vetos auf dieses Spiel werden zerstört
+-- (die vetoes-Zeilen werden gelöscht; wer betroffen war, steht für die
+-- Zerstörungs-Animation in events.champion_ban.victims).
+-- Struktur: { "kind": "chess", "by": "<player_id>", "victims": ["<player_id>", ...], "at": "<iso>" }
+alter table events add column if not exists champion_ban jsonb;

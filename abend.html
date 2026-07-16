@@ -1559,20 +1559,19 @@
     }
   }
 
-  // === Meccha Chameleon Self-Tracking: Funde live antippen, Runde beenden ===
-  // Rundenpunkte: { playerId: punkte } — Hider nach Fundreihenfolge (Überlebende = Max),
-  // Seeker nach Fangquote (Punkte = Anzahl gefundener Hider).
+  // === Meccha Chameleon · INFECTIOUS: Funde live antippen, Gefundene jagen mit ===
+  // Rundenpunkte: 1. gefunden = 1, 2. = 2, … — Überlebende = Hider-Anzahl + Bonus.
+  // Start-Jäger kriegen 0 (jeder startet gleich oft als Jäger — Rotation im Admin).
+  const CHAM_SURVIVE_BONUS = 2;
   function chamRoundPtsLive(m, rows, playing) {
     const n = m.n;
     const seekers = (m.seekers || []).filter(id => playing.some(p => p.id === id));
     const hiders = playing.filter(p => !seekers.includes(p.id));
     const H = hiders.length;
     const foundOf = pid => { const r = (rows || []).find(x => x.player_id === pid); return (r && r.modes && r.modes[n] && r.modes[n].found) || 0; };
-    const foundCount = hiders.filter(p => foundOf(p.id) > 0).length;
-    const started = foundCount > 0 || !!m.closed;
     const pts = {};
-    hiders.forEach(p => { const f = foundOf(p.id); pts[p.id] = f ? f : (m.closed ? H : 0); });
-    seekers.forEach(pid => { pts[pid] = started ? foundCount : 0; });
+    hiders.forEach(p => { const f = foundOf(p.id); pts[p.id] = f ? f : (m.closed ? H + CHAM_SURVIVE_BONUS : 0); });
+    seekers.forEach(pid => { pts[pid] = 0; });
     return pts;
   }
 
@@ -1793,7 +1792,7 @@
         'Wähle „Join Room“ und gib den Raum-Code deiner Lobby ein — er steht live bei deiner Lobby.',
         'Crossplay ist an — PC, PlayStation & Xbox spielen zusammen. Bleibt für alle Spiele der Lobby gleich.'
       ] },
-    { kind:'chameleon', name:'Meccha Chameleon', short:'CHA', mode:'Hide & Seek · 3–4 Runden', rules:'Hide-and-Seek: Die Hider bemalen sich und verschmelzen mit der Map, die Seeker suchen sie. Pro Runde 2 Seeker per Los. Je später du gefunden wirst, desto mehr Punkte — Überlebende kriegen das Maximum, Seeker punkten nach Fangquote. Punkte über alle Runden summiert.',
+    { kind:'chameleon', name:'Meccha Chameleon', short:'CHA', mode:'Infectious 🦠', rules:'Hide-and-Seek im INFECTIOUS-Modus: Hider bemalen sich und verschmelzen mit der Map — wer gefunden wird, jagt mit! Start-Jäger per Los (ab 6 Spielern 2). Punkte: 1. gefunden = 1, 2. = 2, … — wer nie gefunden wird, kriegt Extrapunkte. Jeder startet gleich oft als Jäger; Punkte über alle Runden summiert.',
       join:[
         'Installiere „MECCHA CHAMELEON“ auf Steam (~6 €, nur PC) — am besten schon vor dem Abend.',
         'Der Host erstellt eine private Lobby — Servername/Passwort sagt er im Voice an.',
@@ -1962,6 +1961,7 @@
 
   // Trackt Zustandsübergänge zwischen zwei Renders, um die richtigen Toasts auszulösen
   let lastCurrentDiscId = null;       // für „Spiel startet"
+  let lastBanSeen = undefined;        // für „Champions-Bann"-Toast (undefined = erster Render, kein Toast)
   const lastDrawnByDisc = {};         // discId -> teams_drawn_at (für „Teams/Lobbies ausgelost")
 
   // === Brawlhalla Self-Tracking (feste Lobbies, Spiele selbst eintippen) ===
@@ -2161,10 +2161,10 @@
     if (showIntro && currentDisc) {
       const roster = (evParticipants && evParticipants.length) ? evParticipants : evPlayers;
       if (isDemo) {
-        buildIntroSlideshow(orderedDiscs, roster, { controls: true, vetoes });
+        buildIntroSlideshow(orderedDiscs, roster, { controls: true, vetoes, ban: liveEvent.champion_ban });
       } else {
         // Admin-gesteuert: zeigt genau den Slide, den der Admin gesetzt hat (intro_step). Kein Auto-Scroll.
-        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step, vetoes });
+        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step, vetoes, ban: liveEvent.champion_ban });
       }
     } else {
       clearInterval(introTimer); introTimer = null;
@@ -2529,6 +2529,12 @@
     }
     lastCurrentDiscId = currentDisc ? currentDisc.id : null;
     orderedDiscs.forEach(d => { lastDrawnByDisc[d.id] = d.teams_drawn_at || null; });
+    // Champions-Bann frisch gesetzt → Lower-Third
+    const banNow = liveEvent.champion_ban ? (liveEvent.champion_ban.at || liveEvent.champion_ban.kind) : null;
+    if (lastBanSeen !== undefined && banNow && lastBanSeen !== banNow) {
+      showLiveToast(`Champions-Bann: ${discName(liveEvent.champion_ban.kind)} ist unantastbar`, 't-win');
+    }
+    lastBanSeen = banNow;
 
     // „Letzte Chance"-Banner: nach Disziplin 4, BEVOR die erste Runde Fall Guys gelaufen ist.
     // Sobald irgendeine Modus-Platzierung gesetzt ist, ist die Lage entschiedener — Banner verschwindet,
@@ -2635,6 +2641,8 @@
   // Vorstellung: Slide 0 = Teilnehmer des Tages, Slide 1..N = Disziplinen.
   // Real: admin-gesteuert (events.intro_step), keine lokalen Buttons. Demo: lokal steuerbar (◀ ⏸ ▶).
   let introTimer = null, introIdx = 0, introPaused = false, introDiscs = [], introRoster = [], introCtl = false, introVetoes = [];
+  let introBan = null;                 // events.champion_ban des Live-Abends (Champions-Bann-Slide)
+  let banAnimPlayedFor = null;         // Zerstörungs-Animation nur einmal pro Bann abspielen
   function introCtrlHtml() {
     return `<div class="intro-ctrl">
       <button class="intro-btn" onclick="introNav(-1)" aria-label="Zurück">◀</button>
@@ -2648,10 +2656,11 @@
   function renderIntro() {
     const box = document.getElementById('liveNowDetail');
     if (!box) return;
-    // Slides: 0 = Teilnehmer, 1..N = Disziplinen, N+1 = Vetos
-    const n = introDiscs.length + 2;
+    // Slides: 0 = Teilnehmer, 1..N = Disziplinen, N+1 = Vetos, N+2 = Champions-Bann (nur wenn gesetzt)
+    const n = introDiscs.length + 2 + (introBan ? 1 : 0);
     const step = ((introIdx % n) + n) % n;
     const vetoStep = introDiscs.length + 1;
+    const banStep = introDiscs.length + 2;
     if (step === 0) {
       const ps = (introRoster && introRoster.length) ? introRoster : evPlayers;
       box.innerHTML = `
@@ -2690,6 +2699,61 @@
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(step, n)}
         </div>`;
+    } else if (introBan && step === banStep) {
+      // === Champions-Bann: der Sieger des letzten Bash bannt ein Spiel ===
+      const ban = introBan;
+      const champ = evPlayers.find(x => x.id === ban.by) || {};
+      const cCol = pColor(champ.id);
+      const cAv = champ.avatar_url ? `background-image:url(${champ.avatar_url});` : `background:${cCol};`;
+      const victims = (ban.victims || []).map(pid => evPlayers.find(x => x.id === pid) || { id: pid, name: '?' });
+      const alreadyPlayed = banAnimPlayedFor === (ban.at || ban.kind);
+      const victimCards = victims.map((p, i) => {
+        const col = pColor(p.id);
+        const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
+        return `<div class="ir-card ban-victim${alreadyPlayed ? ' ban-destroyed' : ''}" data-ban-i="${i}" style="--ir-c:${col}">
+            <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
+            <div class="ir-name">${p.name || '—'}</div>
+            <div class="ir-cry">🃏 vetoed <b>${discName(ban.kind)}</b></div>
+            <div class="ban-boom">💥</div>
+            <div class="ban-lost">VETO ZERSTÖRT</div>
+          </div>`;
+      }).join('');
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label" style="color:var(--alert)">Neue Mechanik · Champions-Bann</div>
+          <div class="intro-name">💥 Champions-Bann</div>
+          <div class="intro-mode">Der Sieger des letzten Bash bannt ein Spiel — es ist heute unantastbar.</div>
+          <div class="ban-stage">
+            <div class="ban-champ">
+              <div class="ir-av" style="${cAv}">${champ.avatar_url ? '' : ini(champ.name || '?')}</div>
+              <div class="ban-champ-name">👑 ${champ.name || '—'}</div>
+              <div class="ban-champ-sub">Sieger des letzten Bash — bannt:</div>
+            </div>
+            <div class="ban-target${alreadyPlayed ? ' stamped' : ''}">
+              <img class="intro-logo" src="logos/${ban.kind}.svg" alt="${discName(ban.kind)}" onerror="this.style.display='none'">
+              <div class="ban-target-name">${discName(ban.kind)}</div>
+              <div class="ban-stamp">GEBANNT</div>
+            </div>
+          </div>
+          <div class="intro-rules">${discName(ban.kind)} darf heute <b>nicht gevetoet werden</b>${victims.length ? ` — und wer es schon vetoed hatte, verliert sein Veto <b>ersatzlos</b>:` : ' — niemand hatte es vetoed, der Bann verpufft … diesmal.'}</div>
+          ${victims.length ? `<div class="intro-roster">${victimCards}</div>` : ''}
+          ${introCtl ? introCtrlHtml() : ''}
+          ${introDotsHtml(step, n)}
+        </div>`;
+      if (!alreadyPlayed) {
+        banAnimPlayedFor = (ban.at || ban.kind);
+        // Dramaturgie: erst der Bann-Stempel, dann werden die Vetos einzeln zerstört
+        setTimeout(() => { const t = box.querySelector('.ban-target'); if (t) t.classList.add('stamped'); }, 900);
+        victims.forEach((p, i) => {
+          setTimeout(() => {
+            const card = box.querySelector(`.ban-victim[data-ban-i="${i}"]`);
+            if (card) { card.classList.add('ban-destroying'); document.body.classList.add('ban-quake'); setTimeout(() => document.body.classList.remove('ban-quake'), 450); }
+            setTimeout(() => { if (card) { card.classList.remove('ban-destroying'); card.classList.add('ban-destroyed'); } }, 1200);
+          }, 2000 + i * 1500);
+        });
+      }
+      box.style.display = 'block';
+      return;
     } else {
       const d = introDiscs[step - 1]; const k = d.kind;
       let rulesTxt = discRules(k);
@@ -2713,6 +2777,7 @@
   function buildIntroSlideshow(discs, roster, opts) {
     introDiscs = discs; introRoster = roster || [];
     introVetoes = (opts && opts.vetoes) || [];
+    introBan = (opts && opts.ban) || null;
     introCtl = !!(opts && opts.controls);
     const autoLoop = !!(opts && opts.autoLoop);
     if (opts && typeof opts.step === 'number') {
@@ -3213,30 +3278,31 @@
           const foundOf = pid => { const r = myRows.find(x => x.player_id === pid); return (r && r.modes && r.modes[n] && r.modes[n].found) || 0; };
           const found = hiders.filter(p => foundOf(p.id) > 0).sort((a, b) => foundOf(a.id) - foundOf(b.id));
           const hidden = hiders.filter(p => !foundOf(p.id));
-          const seekerChips = seekers.map(pid => `<span class="brawl-chip on">🔍 ${nameOf(pid)}</span>`).join('');
-          const foundRows = found.map(p => `<div class="lob-row"><span class="lob-rk">${foundOf(p.id)}</span><div class="lob-rmid"><span class="lob-rname">${p.name}</span><span class="lob-rgames">gefunden · +${foundOf(p.id)}</span></div><span class="lob-rp">${foundOf(p.id)}</span></div>`).join('');
-          const hiddenRows = hidden.map(p => `<div class="lob-row${active.closed ? ' lead' : ''}"><span class="lob-rk">🛡</span><div class="lob-rmid"><span class="lob-rname">${p.name}</span><span class="lob-rgames">${active.closed ? `überlebt · +${H}` : 'noch versteckt'}</span></div><span class="lob-rp">${active.closed ? H : '…'}</span></div>`).join('');
+          const seekerChips = seekers.map(pid => `<span class="brawl-chip on">🔍 ${nameOf(pid)}</span>`)
+            .concat(found.map(p => `<span class="brawl-chip on" style="border-color:var(--alert-line);color:var(--alert)">🦠 ${p.name}</span>`)).join('');
+          const foundRows = found.map(p => `<div class="lob-row"><span class="lob-rk">${foundOf(p.id)}</span><div class="lob-rmid"><span class="lob-rname">${p.name}</span><span class="lob-rgames">gefunden · +${foundOf(p.id)} · jagt mit 🦠</span></div><span class="lob-rp">${foundOf(p.id)}</span></div>`).join('');
+          const hiddenRows = hidden.map(p => `<div class="lob-row${active.closed ? ' lead' : ''}"><span class="lob-rk">🛡</span><div class="lob-rmid"><span class="lob-rname">${p.name}</span><span class="lob-rgames">${active.closed ? `nie gefunden · +${H + CHAM_SURVIVE_BONUS}` : 'noch versteckt'}</span></div><span class="lob-rp">${active.closed ? H + CHAM_SURVIVE_BONUS : '…'}</span></div>`).join('');
           let entry = '';
           if (!isDemo && !active.closed) {
             const chips = hidden.map(p => `<button class="brawl-chip" onclick="chamFoundLive('${currentDisc.id}',${n},'${p.id}')">${p.name}</button>`).join('');
             entry = `<div class="brawl-entry">
-              <div class="brawl-hint">Hider gefunden? <b>Antippen</b> — in der Reihenfolge, in der sie gefunden werden.</div>
+              <div class="brawl-hint">Gefunden? <b>Antippen</b> (in Fund-Reihenfolge) — wer gefunden ist, <b>jagt sofort mit</b> 🦠.</div>
               ${hidden.length ? `<div class="brawl-chips">${chips}</div>` : ''}
               <div class="brawl-acts">
                 ${found.length ? `<button class="brawl-undo" onclick="chamUndoFindLive('${currentDisc.id}',${n})">↩ letzter Fund</button>` : ''}
-                <button class="brawl-go" onclick="chamCloseLive('${currentDisc.id}',${n})">🏁 Runde beenden${hidden.length ? ` — ${hidden.length}× überlebt (+${H})` : ''}</button>
+                <button class="brawl-go" onclick="chamCloseLive('${currentDisc.id}',${n})">🏁 Runde beenden${hidden.length ? ` — ${hidden.length}× überlebt (+${H + CHAM_SURVIVE_BONUS})` : ''}</button>
               </div>
             </div>`;
           } else if (isDemo) {
             entry = `<div class="brawl-hint">Hier wird live eingetippt, wer gefunden wurde — Überlebende kassieren das Maximum.</div>`;
           }
           const card = `<div class="lob-card">
-              <div class="lob-head"><span class="lh-n">🔍 Seeker dieser Runde</span><span class="lh-meta">${found.length}/${H} gefunden</span></div>
+              <div class="lob-head"><span class="lh-n">🔍 Die Jagd läuft</span><span class="lh-meta">${found.length}/${H} gefunden</span></div>
               <div class="brawl-chips" style="margin:0.3rem 0 0.6rem">${seekerChips}</div>
               <div class="lob-tally">${foundRows}${hiddenRows}</div>
               ${entry}
             </div>`;
-          modesListHtml += `<div class="nd-block"><div class="nd-label">Jagd · ${lblOf(active, mdefs.indexOf(active))}</div><p class="nd-sub">Je später du gefunden wirst, desto mehr Punkte — Überlebende kriegen +${H}, die Seeker so viele Punkte wie gefundene Hider.</p><div class="lob-grid">${card}</div></div>`;
+          modesListHtml += `<div class="nd-block"><div class="nd-label">Jagd · ${lblOf(active, mdefs.indexOf(active))}</div><p class="nd-sub">INFECTIOUS 🦠 — wer gefunden wird, jagt mit. Je später du fällst, desto mehr Punkte; wer nie gefunden wird, kriegt +${H + CHAM_SURVIVE_BONUS}. Start-Jäger punkten nicht (jeder startet gleich oft).</p><div class="lob-grid">${card}</div></div>`;
         }
       }
 
@@ -3439,7 +3505,8 @@
     const dsel = document.getElementById('vetoDisc');
     // Vetobar sind genau die Spiele im Line-up dieses Abends (Fallback: kompletter Pool)
     const { data: evDiscs } = await sb.from('disciplines').select('kind,position').eq('event_id', upcomingEvent.id).order('position');
-    const vetoPool = (evDiscs && evDiscs.length) ? evDiscs.map(d => d.kind) : VDISCS.map(d => d.kind);
+    let vetoPool = (evDiscs && evDiscs.length) ? evDiscs.map(d => d.kind) : VDISCS.map(d => d.kind);
+    if (upcomingEvent.champion_ban && upcomingEvent.champion_ban.kind) vetoPool = vetoPool.filter(k => k !== upcomingEvent.champion_ban.kind);
     const prevDv = dsel.value;
     dsel.innerHTML = '<option value="">— kein Veto —</option>' + vetoPool.map(k => `<option value="${k}">${discName(k)}</option>`).join('');
     if (prevDv && vetoPool.includes(prevDv)) dsel.value = prevDv;

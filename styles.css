@@ -700,3 +700,46 @@ body.admin-mode .site-header { top: 1.85rem; }
 .de-gf-champ { text-align: center; padding: 0.45rem; font-size: 0.78rem; color: #ffd34a; }
 .de-next { font-size: 0.8rem; color: var(--text-soft); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.65rem; margin-bottom: 0.6rem; }
 .de-next b { color: var(--primary); }
+
+/* === Champions-Bann — Bann-Slide + Veto-Zerstörung (abend.html Intro) === */
+.ban-stage { display: flex; align-items: center; justify-content: center; gap: 2rem; margin: 1rem 0 0.8rem; flex-wrap: wrap; }
+.ban-champ { text-align: center; }
+.ban-champ .ir-av { width: var(--av-lg); height: var(--av-lg); border-radius: 50%; background-size: cover; background-position: center; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #0b0d10; border: 2px solid #ffd34a; box-shadow: 0 0 24px -8px #ffd34a; }
+.ban-champ-name { font-family: var(--font-display); font-weight: 900; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 0.35rem; }
+.ban-champ-sub { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.ban-target { position: relative; text-align: center; padding: 0.9rem 1.4rem; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface-2); }
+.ban-target-name { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.ban-stamp {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 900; font-size: 2.2rem; letter-spacing: 0.14em;
+  color: var(--alert); border: 4px solid var(--alert); border-radius: 10px; margin: auto;
+  width: 78%; height: 58%; transform: rotate(-12deg) scale(3); opacity: 0;
+  background: rgba(255,61,110,0.08); pointer-events: none; text-shadow: 0 0 18px rgba(255,61,110,0.6);
+}
+.ban-target.stamped .ban-stamp { animation: banStamp 0.45s cubic-bezier(.2,1.6,.35,1) forwards; }
+.ban-target.stamped .intro-logo, .ban-target.stamped .ban-target-name { filter: grayscale(0.9) brightness(0.6); }
+@keyframes banStamp { 0% { opacity: 0; transform: rotate(-12deg) scale(3); } 60% { opacity: 1; transform: rotate(-12deg) scale(0.92); } 100% { opacity: 1; transform: rotate(-12deg) scale(1); } }
+
+.ban-victim { position: relative; overflow: visible; transition: filter 0.3s; }
+.ban-victim .ban-boom { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3.2rem; opacity: 0; pointer-events: none; }
+.ban-victim .ban-lost {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%) rotate(-8deg) scale(0);
+  text-align: center; font-family: var(--font-display); font-weight: 900; font-size: 1.05rem;
+  letter-spacing: 0.12em; color: var(--alert); text-shadow: 0 2px 10px rgba(0,0,0,0.7); pointer-events: none;
+}
+.ban-victim.ban-destroying { animation: banShake 1.2s ease both; border-color: var(--alert-line) !important; box-shadow: 0 0 30px -8px var(--alert); }
+.ban-victim.ban-destroying .ban-boom { animation: banBoom 1.2s ease both; }
+@keyframes banShake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-5px) rotate(-1deg); } 20% { transform: translateX(5px) rotate(1deg); }
+  30% { transform: translateX(-6px); } 40% { transform: translateX(6px); }
+  50% { transform: translateX(-7px) rotate(-2deg); } 60% { transform: translateX(7px) rotate(2deg); }
+  70% { transform: translateX(-5px); } 80% { transform: translateX(5px); } 90% { transform: translateX(-3px); }
+}
+@keyframes banBoom { 0% { opacity: 0; transform: scale(0.3); } 55% { opacity: 0; transform: scale(0.3); } 70% { opacity: 1; transform: scale(1.5); } 100% { opacity: 0.9; transform: scale(1); } }
+.ban-victim.ban-destroyed { filter: grayscale(1) brightness(0.55); }
+.ban-victim.ban-destroyed .ir-cry { text-decoration: line-through; text-decoration-color: rgba(255,61,110,0.7); }
+.ban-victim.ban-destroyed .ban-boom { opacity: 0.25; }
+.ban-victim.ban-destroyed .ban-lost { transform: translateY(-50%) rotate(-8deg) scale(1); transition: transform 0.3s cubic-bezier(.2,1.6,.35,1); }
+@keyframes banQuake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-4px,2px); } 50% { transform: translate(4px,-2px); } 75% { transform: translate(-2px,-2px); } }
+body.ban-quake { animation: banQuake 0.4s ease; }

@@ -645,6 +645,9 @@
         <span class="draw-label">🃏 Joker-Minispiel:</span>
         <button class="draw-btn" id="copterToggleBtn">aktivieren</button>
       </div>
+      <!-- Champions-Bann: Sieger des letzten Bash bannt ein Spiel (unvetobar, bestehende Vetos werden zerstört) -->
+      <div class="draw-control" id="banControl" style="margin-top:0.6rem;flex-wrap:wrap;align-items:center;gap:0.5rem"></div>
+      <div id="banHint" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);margin-top:0.3rem"></div>
       <div class="draw-control" style="margin-top:0.6rem;flex-wrap:wrap;align-items:center;gap:0.5rem">
         <span class="draw-label">📺 Watch2Gether-Raum:</span>
         <input id="w2gInput" type="url" placeholder="https://www.watch2gether.com/rooms/..." style="flex:1;min-width:220px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.5rem 0.7rem;font-family:var(--font-mono);font-size:0.86rem">
@@ -712,7 +715,10 @@
   ];
   // Standard-Line-up für neue Abende (im Entwurf frei änderbar)
   const DEFAULT_LINEUP = ['haxball', 'geoguessr', 'brawlhalla', 'chameleon', 'fallguys'];
-  const CHAM_SEEKERS = 2; // Standard: 2 Seeker pro Runde (per Los)
+  // Meccha Chameleon · Modus INFECTIOUS: Gefundene werden selbst zu Jägern.
+  // Ab 6 Spielern starten 2 Jäger, darunter 1. Start-Jäger punkten nicht (Rotation
+  // gleicht es aus) — deshalb MUSS am Ende jeder gleich oft als Jäger gestartet sein.
+  const CHAM_SURVIVE_BONUS = 2; // Überlebende: Hider-Maximum + Bonus (lohnend, nicht unfair)
 
   const HAXBALL_PHASES  = ['Teams', '2v2', '1v1-Finale']; // Trichter-Phasen (für Live-Anzeige)
   const SOLO_POINTS     = [10, 8, 6, 4, 3, 2, 1]; // Platz 1..7+, 7+ alle 1
@@ -962,11 +968,14 @@
         introSec.style.display = 'block';
         const step = currentEvent.intro_step;
         const vetoStep = currentDisciplines.length + 1;
+        const banStep = vetoStep + 1;   // Champions-Bann-Slide (nur wenn Bann gesetzt)
         const btns = [`<span class="draw-label">Zeigen:</span>`,
           `<button class="phase-btn ${step === 0 ? 'active' : ''}" onclick="setIntroStep(0)">👥 Teilnehmer</button>`]
           .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+1 ? 'active' : ''}" onclick="setIntroStep(${i+1})">${i+1} ${d.name}</button>`))
-          .concat([`<button class="phase-btn ${step === vetoStep ? 'active' : ''}" onclick="setIntroStep(${vetoStep})">🃏 Vetos</button>`]);
+          .concat([`<button class="phase-btn ${step === vetoStep ? 'active' : ''}" onclick="setIntroStep(${vetoStep})">🃏 Vetos</button>`])
+          .concat(currentEvent.champion_ban ? [`<button class="phase-btn ${step === banStep ? 'active' : ''}" onclick="setIntroStep(${banStep})" style="border-color:var(--alert-line)">💥 Champions-Bann</button>`] : []);
         $('introControl').innerHTML = btns.join('');
+        renderBanControl();
         const cb = $('copterToggleBtn');
         cb.textContent = currentEvent.copter_active ? '✓ aktiv — deaktivieren' : 'aktivieren';
         cb.classList.toggle('active', !!currentEvent.copter_active);
@@ -1240,7 +1249,7 @@
   const DURATION_HINT = {
     haxball:'~40–45 min (Double-Elimination-Baum, ~11 Matches bei 9–10 Spielern)', geoguessr:'~15 min (5 Runden)',
     brawlhalla:'~25 min (2–3 Lobby-Runden)', chess:'~20–25 min (Schweizer · 3 Runden bei 4 Spielern)',
-    chameleon:'~25 min (3–4 Runden à ~5 min)',
+    chameleon:'~25 min (Infectious · jeder startet 1× als Jäger)',
     fallguys:'~30–35 min (2–3 Modi)'
   };
   function renderDisciplineBody(d, def) {
@@ -2596,35 +2605,49 @@
   const chamRoundsOf = d => (Array.isArray(d.modes) ? d.modes : []).filter(m => m.type === 'cham');
   const chamFoundOf = (discId, pid, n) => fgModeOf(discId, pid, n).found || 0;
 
-  // Punkte einer Runde: { playerId: punkte } — offene Runde ohne Funde zählt noch nicht
+  // Punkte einer Runde (INFECTIOUS): 1. gefunden = 1, 2. = 2, … — Überlebende kriegen
+  // beim Runden-Ende Hider-Anzahl + Bonus. Start-Jäger kriegen 0 (Rotation gleicht aus).
   function chamRoundPts(d, playing, m) {
     const n = m.n;
     const seekers = (m.seekers || []).filter(id => playing.some(p => p.id === id));
     const hiders = playing.filter(p => !seekers.includes(p.id));
     const H = hiders.length;
-    const foundCount = hiders.filter(p => chamFoundOf(d.id, p.id, n) > 0).length;
-    const started = foundCount > 0 || !!m.closed;
     const pts = {};
     hiders.forEach(p => {
       const f = chamFoundOf(d.id, p.id, n);
-      pts[p.id] = f ? f : (m.closed ? H : 0); // Überlebende kriegen erst beim Runden-Ende das Maximum
+      pts[p.id] = f ? f : (m.closed ? H + CHAM_SURVIVE_BONUS : 0); // Überlebende erst beim Runden-Ende
     });
-    seekers.forEach(pid => { pts[pid] = started ? foundCount : 0; });
+    seekers.forEach(pid => { pts[pid] = 0; });
     return pts;
+  }
+  // Wie oft ist jeder als Jäger GESTARTET? (Fairness-Anzeige + Auslos-Rotation)
+  function chamSeekCounts(d, playing) {
+    const c = {}; playing.forEach(p => c[p.id] = 0);
+    chamRoundsOf(d).forEach(m => (m.seekers || []).forEach(pid => { if (c[pid] != null) c[pid]++; }));
+    return c;
   }
 
   function renderChameleonBody(d, participants) {
     const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
     const rounds = chamRoundsOf(d);
     const addBar = `<div class="draw-control"><span class="draw-label">+ Runde:</span><button class="draw-btn" onclick="addChamRound('${d.id}')">+ Runde</button></div>`;
+    const baseJ = playing.length >= 6 ? 2 : 1;
+    const roundsNeeded = baseJ === 2 ? Math.ceil(playing.length / 2) - (playing.length % 2 === 1 ? 1 : 0) : playing.length;
+    const seekCounts = chamSeekCounts(d, playing);
+    const counts = playing.map(p => seekCounts[p.id]);
+    const fair = counts.length && Math.min(...counts) === Math.max(...counts);
+    const fairLine = rounds.length
+      ? `<p class="section-desc" style="margin-top:0.4rem">⚖ Jäger-Starts: ${playing.map(p => `${p.name} ${seekCounts[p.id]}×`).join(' · ')} — ${fair ? '<b style="color:var(--primary)">fair, Rotation geht auf</b>' : '<b style="color:var(--alert)">noch ungleich — weiterspielen, bis jeder gleich oft gestartet ist!</b>'}</p>`
+      : '';
     const roundsHtml = rounds.length
       ? rounds.map((m, idx) => renderChamRound(d, m, idx, playing)).join('')
-      : '<div class="rank-empty">Noch keine Runde — empfohlen: 3–4 Runden à ~5 min. Pro Runde 2 Seeker auslosen, dann die Hider in der Reihenfolge antippen, in der sie gefunden werden.</div>';
+      : `<div class="rank-empty">Noch keine Runde — bei ${playing.length} Spielern gehen ${roundsNeeded} Runden auf (Auslosung regelt die Rest-Runde automatisch). Jäger auslosen, dann die Gefundenen in Reihenfolge antippen.</div>`;
     return `
       <div style="padding-top:1rem">
-        <p class="section-desc">Hide-and-Seek: Die Hider bemalen sich und verstecken sich, die Seeker suchen. <b>Je später du gefunden wirst, desto mehr Punkte</b> — wer überlebt, kriegt das Maximum. Die Seeker punkten nach Fangquote (alle gefunden = Maximum). Rotation: Die Auslosung bevorzugt Spieler, die noch nicht Seeker waren.</p>
+        <p class="section-desc">Modus <b>INFECTIOUS</b> 🦠: Wer gefunden wird, <b>jagt mit</b>. ${baseJ} Start-Jäger pro Runde (ab 6 Spielern 2). Punkte: 1. gefunden = 1, 2. = 2, … — <b>Überlebende kriegen Hider-Anzahl + ${CHAM_SURVIVE_BONUS}</b>. Start-Jäger punkten in ihrer Runde nicht — dafür MUSS am Ende jeder gleich oft als Jäger gestartet sein (die Auslosung rotiert automatisch fair).</p>
         ${addBar}
         ${roundsHtml}
+        ${fairLine}
         ${renderChamStandings(d, playing)}
       </div>`;
   }
@@ -2638,7 +2661,7 @@
         <span class="mode-title">Runde ${idx + 1}${m.closed ? ' · ✓ beendet' : (seekers.length ? ' · läuft' : '')}</span>
         <button class="mode-del" onclick="removeChamRound('${d.id}',${n})" title="Runde löschen">×</button>
       </div>`;
-    const draw = `<div class="draw-control"><span class="draw-label">🔍 Seeker:</span><button class="draw-btn" onclick="drawChamSeekers('${d.id}',${n})">${seekers.length ? 'neu auslosen' : `${CHAM_SEEKERS} Seeker auslosen`}</button><span style="color:var(--muted);font-size:.85rem">· oder unten antippen</span></div>`;
+    const draw = `<div class="draw-control"><span class="draw-label">🔍 Start-Jäger:</span><button class="draw-btn" onclick="drawChamSeekers('${d.id}',${n})">${seekers.length ? 'neu auslosen' : 'Jäger auslosen'}</button><span style="color:var(--muted);font-size:.85rem">· oder unten antippen · Gefundene jagen mit 🦠</span></div>`;
     const seekerChips = `<div class="rank-pool">${playing.map(p =>
       `<button class="rank-chip" style="${isSeeker(p.id) ? 'border-color:var(--accent);color:var(--accent)' : ''}" onclick="toggleChamSeeker('${d.id}',${n},'${p.id}')">${isSeeker(p.id) ? '🔍 ' : ''}${p.name}</button>`).join('')}</div>`;
 
@@ -2651,18 +2674,19 @@
       const hidden = hiders.filter(p => !chamFoundOf(d.id, p.id, n));
       const foundRows = found.map(p => {
         const f = chamFoundOf(d.id, p.id, n);
-        return `<div class="rank-row"><span class="rank-pos">${f}.</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:.8em">gefunden</span></span><span class="rank-pts">+${f}</span><button class="rank-x" onclick="chamUnfind('${d.id}',${n},'${p.id}')" title="Fund zurücknehmen">×</button></div>`;
+        return `<div class="rank-row"><span class="rank-pos">${f}.</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:.8em">gefunden → jagt mit 🦠</span></span><span class="rank-pts">+${f}</span><button class="rank-x" onclick="chamUnfind('${d.id}',${n},'${p.id}')" title="Fund zurücknehmen">×</button></div>`;
       }).join('');
       const hiddenChips = hidden.length && !m.closed
         ? `<div class="rank-pool-title">Noch versteckt — anklicken = gefunden (in Fund-Reihenfolge)</div><div class="rank-pool">${hidden.map(p => `<button class="rank-chip" onclick="chamFound('${d.id}',${n},'${p.id}')">${p.name}</button>`).join('')}</div>`
         : '';
       const survivors = m.closed && hidden.length
-        ? `<div class="rank-list">${hidden.map(p => `<div class="rank-row"><span class="rank-pos">🛡</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:.8em">überlebt</span></span><span class="rank-pts">+${H}</span></div>`).join('')}</div>`
+        ? `<div class="rank-list">${hidden.map(p => `<div class="rank-row"><span class="rank-pos">🛡</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:.8em">nie gefunden</span></span><span class="rank-pts">+${H + CHAM_SURVIVE_BONUS}</span></div>`).join('')}</div>`
         : '';
       const closeBtn = m.closed
         ? `<div class="draw-control"><button class="draw-btn" onclick="chamCloseRound('${d.id}',${n},false)">↺ Runde wieder öffnen</button></div>`
-        : `<div class="draw-control"><button class="draw-btn" onclick="chamCloseRound('${d.id}',${n},true)">🏁 Runde beenden${hidden.length ? ` — ${hidden.length} Überlebende kriegen +${H}` : ''}</button></div>`;
-      const seekerLine = `<div class="rank-pool-title">🔍 Seeker: ${seekers.map(pid => (playing.find(p => p.id === pid) || {}).name || '?').join(' & ')} — aktuell +${found.length} (gefundene Hider)</div>`;
+        : `<div class="draw-control"><button class="draw-btn" onclick="chamCloseRound('${d.id}',${n},true)">🏁 Runde beenden${hidden.length ? ` — ${hidden.length} Überlebende kriegen +${H + CHAM_SURVIVE_BONUS}` : ''}</button></div>`;
+      const hunters = seekers.map(pid => (playing.find(p => p.id === pid) || {}).name || '?').concat(found.map(p => p.name + ' 🦠'));
+      const seekerLine = `<div class="rank-pool-title">🔍 Jagen gerade: ${hunters.join(' · ')} — ${hidden.length} noch versteckt</div>`;
       huntHtml = `${seekerLine}<div class="rank-list">${foundRows || ''}</div>${survivors}${hiddenChips}${closeBtn}`;
     }
     return `<div class="mode-block">${head}${draw}${seekerChips}${huntHtml}</div>`;
@@ -2727,14 +2751,19 @@
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
     const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
     if (playing.length < 3) { toast('Zu wenige Spieler für eine Auslosung', 'error'); return; }
-    const count = Math.min(CHAM_SEEKERS, playing.length - 1);
-    // Rotation: wie oft war jeder in den anderen Runden schon Seeker?
+    const baseJ = playing.length >= 6 ? 2 : 1;   // ab 6 Spielern 2 Start-Jäger
+    // Rotation: wie oft ist jeder schon als Jäger gestartet? (andere Runden)
     const seekCount = {};
     playing.forEach(p => seekCount[p.id] = 0);
     chamRoundsOf(d).forEach(m => { if (m.n !== n) (m.seekers || []).forEach(pid => { if (seekCount[pid] != null) seekCount[pid]++; }); });
+    const minC = Math.min(...playing.map(p => seekCount[p.id]));
+    const pool = playing.filter(p => seekCount[p.id] === minC);
     const arr = playing.slice();
     for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
     arr.sort((a, b) => seekCount[a.id] - seekCount[b.id]); // stabile Sortierung nach Shuffle = Los unter Gleichen
+    // Rest-Runde: sind nur noch ≤3 Spieler „dran", starten die ALLE zusammen —
+    // so geht die Rotation bei jeder Spielerzahl in wenigen Runden exakt auf.
+    const count = (baseJ === 2 && pool.length <= 3) ? pool.length : Math.min(baseJ, playing.length - 1);
     const seekers = arr.slice(0, count).map(p => p.id);
     await setChamSeekers(discId, n, seekers);
     const ts = new Date().toISOString();
@@ -2742,7 +2771,7 @@
     d.teams_drawn_at = ts;
     await recomputeChameleon(discId);
     renderDisciplineBodyFor(discId); renderOverview();
-    toast(`${count} Seeker ausgelost`, 'ok');
+    toast(`${count} Jäger ausgelost`, 'ok');
   };
 
   window.toggleChamSeeker = async function(discId, n, pid) {
@@ -3171,6 +3200,72 @@
   });
 
   // Vorstellung durchschalten (Teilnehmer / Disziplinen) + Joker aktivieren
+  // ===== Champions-Bann =====
+  // Der Sieger des letzten Bash bannt EIN Spiel dieses Abends: es darf nicht
+  // gevetoet werden — bereits gesetzte Vetos auf dieses Spiel werden ZERSTÖRT
+  // (Zeilen gelöscht, kein Ersatzspiel; die Betroffenen stehen in
+  // events.champion_ban.victims für die Zerstörungs-Animation auf der Live-Seite).
+  function renderBanControl() {
+    const box = $('banControl'), hint = $('banHint');
+    if (!box) return;
+    const ban = currentEvent.champion_ban;
+    if (ban) {
+      const byName = (players.find(p => p.id === ban.by) || {}).name || '?';
+      const victims = (ban.victims || []).map(pid => (players.find(p => p.id === pid) || {}).name || '?');
+      box.innerHTML = `
+        <span class="draw-label">💥 Champions-Bann:</span>
+        <span style="font-size:0.88rem"><b>${byName}</b> bannt <b>${discLabel(ban.kind)}</b> — ${victims.length ? `zerstörte Vetos: <b>${victims.join(', ')}</b>` : 'keine Vetos betroffen (Bann verpufft)'}</span>
+        <a onclick="resetChampionBan()" style="color:var(--muted);cursor:pointer;font-size:0.8rem">↺ zurücksetzen</a>`;
+      if (hint) hint.textContent = 'Zum Enthüllen den 💥-Button oben in der Zeigen-Leiste drücken — die Live-Seite spielt die Zerstörungs-Animation.';
+    } else {
+      const champs = players.filter(p => currentParticipantIds.has(p.id));
+      box.innerHTML = `
+        <span class="draw-label">💥 Champions-Bann:</span>
+        <select id="banBy" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
+          <option value="">Sieger des letzten Bash…</option>
+          ${champs.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
+        <select id="banKind" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
+          <option value="">Spiel bannen…</option>
+          ${currentDisciplines.map(d => `<option value="${d.kind}">${d.name}</option>`).join('')}
+        </select>
+        <button class="draw-btn" onclick="setChampionBan()">💥 Bann aktivieren</button>`;
+      if (hint) hint.textContent = 'Bannt ein Spiel für alle: es kann nicht gevetoet werden — bestehende Vetos darauf werden zerstört (kein Ersatzspiel!).';
+    }
+  }
+
+  window.setChampionBan = async function() {
+    const by = $('banBy') && $('banBy').value;
+    const kind = $('banKind') && $('banKind').value;
+    if (!by || !kind) { toast('Champion und Spiel wählen', 'error'); return; }
+    const victims = Object.entries(currentVetoes).filter(([pid, k]) => k === kind).map(([pid]) => pid);
+    const names = victims.map(pid => (players.find(p => p.id === pid) || {}).name || '?');
+    const warn = victims.length
+      ? `${discLabel(kind)} bannen?\n\nDiese Vetos werden ZERSTÖRT (kein Ersatzspiel, nicht umkehrbar):\n${names.join(', ')}`
+      : `${discLabel(kind)} bannen?\n\nAktuell hat niemand dieses Spiel gevetoet — der Bann verpufft (bleibt aber als Schutz aktiv).`;
+    if (!confirm(warn)) return;
+    const ban = { kind, by, victims, at: new Date().toISOString() };
+    const { error } = await sb.from('events').update({ champion_ban: ban }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Bann speichern fehlgeschlagen — Spalte events.champion_ban fehlt? (SQL Abschnitt 12)', 'error'); return; }
+    if (victims.length) {
+      const { error: dErr } = await sb.from('vetoes').delete().eq('event_id', currentEvent.id).eq('discipline_kind', kind);
+      if (dErr) { console.error(dErr); toast('Vetos löschen fehlgeschlagen', 'error'); }
+      victims.forEach(pid => delete currentVetoes[pid]);
+    }
+    currentEvent.champion_ban = ban;
+    renderDetail();
+    toast(victims.length ? `💥 Bann aktiv — ${victims.length} Veto${victims.length === 1 ? '' : 's'} zerstört` : '💥 Bann aktiv', 'ok');
+  };
+
+  window.resetChampionBan = async function() {
+    if (!confirm('Bann zurücksetzen? Achtung: bereits zerstörte Vetos kommen NICHT zurück (die Spieler müssten neu vetoen).')) return;
+    const { error } = await sb.from('events').update({ champion_ban: null }).eq('id', currentEvent.id);
+    if (error) { console.error(error); toast('Zurücksetzen fehlgeschlagen', 'error'); return; }
+    currentEvent.champion_ban = null;
+    renderDetail();
+    toast('Bann zurückgesetzt', 'ok');
+  };
+
   window.setIntroStep = async function(step) {
     if (!currentEvent) return;
     const { error } = await sb.from('events').update({ intro_step: step }).eq('id', currentEvent.id);
