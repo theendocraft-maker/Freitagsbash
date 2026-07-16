@@ -545,7 +545,7 @@
   <div id="eventListView">
     <div class="eyebrow">Saison 1</div>
     <h1 class="page-title">Abende</h1>
-    <p class="page-desc">Pro Abend werden 5 Disziplinen gespielt. Beim Abschließen werden Saisonpunkte automatisch berechnet (mit Krone-Bürde und Streicher).</p>
+    <p class="page-desc">Pro Abend werden 5 Spiele aus dem Spielpool gespielt (Line-up im Setup wählbar). Beim Abschließen werden Saisonpunkte automatisch berechnet (mit Krone-Bürde und Streicher).</p>
 
     <div class="event-list-header">
       <div></div>
@@ -585,6 +585,10 @@
           <label>Stech-Spiel bei Gleichstand (nach Spiel 5)</label>
           <select id="setupTiebreak"></select>
         </div>
+      </div>
+      <div class="form-group" style="margin-top:0.5rem">
+        <label>🧩 Line-up des Abends <span id="lineupHint" style="font-weight:400;color:var(--muted)"></span></label>
+        <div id="lineupEditor"></div>
       </div>
       <div class="form-group" style="margin-top:0.5rem">
         <label>Teilnehmer <span id="participantsCount" style="font-weight:400;color:var(--muted)"></span></label>
@@ -696,13 +700,19 @@
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ===== Disziplin-Definitionen =====
+  // SPIELPOOL: alle verfügbaren Spiele. Pro Abend werden daraus im Line-up-Editor
+  // (Setup-Bereich, nur im Entwurf) die Disziplinen + Reihenfolge gewählt.
   const DISCIPLINES = [
-    { kind: 'haxball',   name: 'Haxball',                icon: '⚽', type: 'solo' },  // Start: niederschwellig im Browser, K.o.-Trichter
+    { kind: 'haxball',   name: 'Haxball',                icon: '⚽', type: 'solo' },  // niederschwellig im Browser, K.o.-Trichter
     { kind: 'geoguessr', name: 'GeoGuessr',              icon: '🌍', type: 'solo' },
     { kind: 'brawlhalla', name: 'Brawlhalla',            icon: '⚔️', type: 'solo' },  // FFA über mehrere Runden (Rundentracker)
     { kind: 'chess',     name: 'Chess.com Blitz',        icon: '♟️', type: 'solo' },
+    { kind: 'chameleon', name: 'Meccha Chameleon',       icon: '🦎', type: 'solo' },  // Hide-and-Seek: Fundreihenfolge + Seeker-Quote
     { kind: 'fallguys',  name: 'Fall Guys',              icon: '🫘', type: 'team' }   // Finale: Mini-Turnier
   ];
+  // Standard-Line-up für neue Abende (im Entwurf frei änderbar)
+  const DEFAULT_LINEUP = ['haxball', 'geoguessr', 'brawlhalla', 'chameleon', 'fallguys'];
+  const CHAM_SEEKERS = 2; // Standard: 2 Seeker pro Runde (per Los)
 
   const HAXBALL_PHASES  = ['Teams', '2v2', '1v1-Finale']; // Trichter-Phasen (für Live-Anzeige)
   const SOLO_POINTS     = [10, 8, 6, 4, 3, 2, 1]; // Platz 1..7+, 7+ alle 1
@@ -714,7 +724,7 @@
   let players = [];                  // alle registrierten Spieler
   let events = [];                   // alle Abende
   let currentEvent = null;           // aktuell geöffneter Abend
-  let currentDisciplines = [];       // 5 Disziplinen des aktuellen Abends
+  let currentDisciplines = [];       // Disziplinen (Line-up) des aktuellen Abends
   let currentResults = {};           // { disciplineId: { playerId: resultRow } }
   let currentVetoes = {};            // { playerId: discipline_kind } für den aktuellen Abend
   let currentParticipantIds = new Set();
@@ -832,10 +842,11 @@
       .select().single();
     if (error) { console.error(error); toast('Fehler beim Anlegen', 'error'); return; }
 
-    // 5 Disziplinen anlegen
-    const discRows = DISCIPLINES.map((d, i) => ({
-      event_id: newEv.id, kind: d.kind, name: d.name, position: i + 1
-    }));
+    // Disziplinen aus dem Standard-Line-up anlegen (im Entwurf per Line-up-Editor änderbar)
+    const discRows = DEFAULT_LINEUP.map((kind, i) => {
+      const d = DISCIPLINES.find(x => x.kind === kind);
+      return { event_id: newEv.id, kind, name: d.name, position: i + 1 };
+    });
     const { error: dErr } = await sb.from('disciplines').insert(discRows);
     if (dErr) { console.error(dErr); toast('Fehler bei Disziplinen', 'error'); return; }
 
@@ -998,10 +1009,16 @@
     hostSel.innerHTML = '<option value="">— niemand —</option>' +
       players.map(p => `<option value="${p.id}" ${currentEvent.host_player_id === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
 
-    // Stech-Spiel (Tiebreaker) — eines der 5 Spiele dieses Abends
+    // Stech-Spiel (Tiebreaker) — eines der Spiele dieses Abends (aus dem Line-up)
     const tbSel = $('setupTiebreak');
+    const tbPool = currentDisciplines.length
+      ? currentDisciplines.map(cd => DISCIPLINES.find(x => x.kind === cd.kind) || { kind: cd.kind, name: cd.name, icon: '🎮' })
+      : DISCIPLINES;
     tbSel.innerHTML = '<option value="">— noch nicht festgelegt —</option>' +
-      DISCIPLINES.map(d => `<option value="${d.kind}" ${currentEvent.tiebreaker === d.kind ? 'selected' : ''}>${d.icon} ${d.name}${d.kind === 'haxball' ? ' (1v1)' : ''}</option>`).join('');
+      tbPool.map(d => `<option value="${d.kind}" ${currentEvent.tiebreaker === d.kind ? 'selected' : ''}>${d.icon} ${d.name}${d.kind === 'haxball' ? ' (1v1)' : ''}</option>`).join('');
+
+    // Line-up-Editor (Spielpool)
+    renderLineupEditor();
 
     // Teilnehmer-Toggles
     const pg = $('participantsGrid');
@@ -1078,6 +1095,95 @@
     toast(`${roster.length} Teilnehmer gespeichert`, 'ok');
   }
 
+  // ===== Line-up-Editor (Spielpool) =====
+  // Pro Abend werden die Disziplinen + Reihenfolge aus dem Pool gewählt.
+  // Nur im Entwurf änderbar; Disziplinen mit Ergebnissen sind gesperrt.
+  function lineupHasResults(discId) {
+    return Object.keys(currentResults[discId] || {}).length > 0;
+  }
+
+  function renderLineupEditor() {
+    const wrap = $('lineupEditor'); if (!wrap) return;
+    const hint = $('lineupHint');
+    const editable = currentEvent.status === 'draft';
+    const defOf = kind => DISCIPLINES.find(x => x.kind === kind) || { kind, name: kind, icon: '🎮' };
+    if (hint) hint.textContent = editable
+      ? `· ${currentDisciplines.length} Spiele — Reihenfolge = Spielreihenfolge`
+      : '· gesperrt (Abend ist nicht mehr im Entwurf)';
+
+    const rows = currentDisciplines.map((d, i) => {
+      const def = defOf(d.kind);
+      const locked = lineupHasResults(d.id);
+      const btns = editable ? `
+        <button class="draw-btn" style="padding:0.15rem 0.5rem" ${i === 0 ? 'disabled' : ''} onclick="lineupMove('${d.id}',-1)" title="früher spielen">↑</button>
+        <button class="draw-btn" style="padding:0.15rem 0.5rem" ${i === currentDisciplines.length - 1 ? 'disabled' : ''} onclick="lineupMove('${d.id}',1)" title="später spielen">↓</button>
+        <button class="draw-btn" style="padding:0.15rem 0.5rem;color:var(--alert)" ${locked ? 'disabled title="Hat schon Ergebnisse — erst leeren"' : ''} onclick="lineupRemove('${d.id}')" title="aus dem Abend nehmen">×</button>` : '';
+      return `<div class="rank-row"><span class="rank-pos">${i + 1}.</span><span class="rank-name">${def.icon} ${def.name}${locked ? ' <span style="color:var(--muted);font-size:.8em">· hat Ergebnisse</span>' : ''}</span><span style="display:flex;gap:0.3rem">${btns}</span></div>`;
+    }).join('');
+
+    const inLineup = new Set(currentDisciplines.map(d => d.kind));
+    const poolChips = editable
+      ? DISCIPLINES.filter(d => !inLineup.has(d.kind))
+          .map(d => `<button class="rank-chip" onclick="lineupAdd('${d.kind}')">+ ${d.icon} ${d.name}</button>`).join('')
+      : '';
+    const poolHtml = poolChips
+      ? `<div class="rank-pool-title" style="margin-top:0.5rem">Im Pool — anklicken = ans Ende des Line-ups</div><div class="rank-pool">${poolChips}</div>`
+      : (editable ? `<div class="rank-pool-title" style="margin-top:0.5rem">Alle Pool-Spiele sind im Line-up.</div>` : '');
+
+    wrap.innerHTML = `<div class="rank-list">${rows || '<div class="rank-empty">Noch keine Disziplinen.</div>'}</div>${poolHtml}`;
+  }
+
+  async function renumberLineup() {
+    // Positionen lückenlos 1..n nach aktueller Reihenfolge schreiben
+    for (let i = 0; i < currentDisciplines.length; i++) {
+      const d = currentDisciplines[i];
+      if (d.position !== i + 1) {
+        await sb.from('disciplines').update({ position: i + 1 }).eq('id', d.id);
+        d.position = i + 1;
+      }
+    }
+  }
+
+  window.lineupAdd = async function(kind) {
+    if (!currentEvent || currentEvent.status !== 'draft') return;
+    if (currentDisciplines.some(d => d.kind === kind)) return;
+    const def = DISCIPLINES.find(x => x.kind === kind); if (!def) return;
+    const { data, error } = await sb.from('disciplines')
+      .insert({ event_id: currentEvent.id, kind, name: def.name, position: currentDisciplines.length + 1 })
+      .select().single();
+    if (error) { console.error(error); toast('Hinzufügen fehlgeschlagen', 'error'); return; }
+    currentDisciplines.push(data);
+    currentResults[data.id] = {};
+    renderDetail();
+    toast(`${def.name} ins Line-up aufgenommen`, 'ok');
+  };
+
+  window.lineupRemove = async function(discId) {
+    if (!currentEvent || currentEvent.status !== 'draft') return;
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    if (lineupHasResults(discId)) { toast('Disziplin hat schon Ergebnisse — erst leeren', 'error'); return; }
+    if (!confirm(`${d.name} aus diesem Abend nehmen?`)) return;
+    // Sicherheitshalber evtl. verwaiste Ergebnis-Zeilen mitlöschen
+    await sb.from('results').delete().eq('discipline_id', discId);
+    const { error } = await sb.from('disciplines').delete().eq('id', discId);
+    if (error) { console.error(error); toast('Entfernen fehlgeschlagen', 'error'); return; }
+    currentDisciplines = currentDisciplines.filter(x => x.id !== discId);
+    delete currentResults[discId];
+    await renumberLineup();
+    renderDetail();
+    toast(`${d.name} aus dem Line-up entfernt`, 'ok');
+  };
+
+  window.lineupMove = async function(discId, dir) {
+    if (!currentEvent || currentEvent.status !== 'draft') return;
+    const i = currentDisciplines.findIndex(x => x.id === discId); if (i < 0) return;
+    const j = i + dir;
+    if (j < 0 || j >= currentDisciplines.length) return;
+    [currentDisciplines[i], currentDisciplines[j]] = [currentDisciplines[j], currentDisciplines[i]];
+    await renumberLineup();
+    renderDetail();
+  };
+
   // ===== Disziplinen rendern =====
   function renderDisciplines() {
     const wrap = $('disciplinesStack');
@@ -1132,8 +1238,9 @@
   }
 
   const DURATION_HINT = {
-    haxball:'~40–45 min (inkl. Trichter)', geoguessr:'~15 min (5 Runden)',
+    haxball:'~40–45 min (Double-Elimination-Baum, ~11 Matches bei 9–10 Spielern)', geoguessr:'~15 min (5 Runden)',
     brawlhalla:'~25 min (2–3 Lobby-Runden)', chess:'~20–25 min (Schweizer · 3 Runden bei 4 Spielern)',
+    chameleon:'~25 min (3–4 Runden à ~5 min)',
     fallguys:'~30–35 min (2–3 Modi)'
   };
   function renderDisciplineBody(d, def) {
@@ -1145,6 +1252,7 @@
     if (d.kind === 'haxball')    return head + renderHaxballBody(d, participants);
     if (d.kind === 'fallguys')   return head + renderFallguysBody(d, participants);
     if (d.kind === 'brawlhalla') return head + renderBrawlhallaBody(d, participants);
+    if (d.kind === 'chameleon')  return head + renderChameleonBody(d, participants);
     if (def.type === 'solo')     return head + renderSoloBody(d, participants);
     if (def.type === 'team')     return head + renderTeamBody(d, participants);
     return head;
@@ -1172,8 +1280,278 @@
   };
 
   // --- Haxball: Phasen-Steuerung + Teams (Anzeige) + Endplatzierung (Klick-Reihenfolge) ---
+  // ===== Haxball: Double Elimination (v2) =====
+  // Jeder Spieler läuft EINZELN durchs Bracket; die 2v2-Teams werden vor jeder Runde neu
+  // ausgelost. 1. Niederlage → Loser Bracket, 2. Niederlage → raus. Bei 2–3 Spielern im
+  // Pool wird 1v1 gespielt → WB-Finale und Grand Final sind automatisch 1v1 (WB-Sieger
+  // startet mit 1:0). Gespeichert in disciplines.bracket = { v:2, players, live, gfw }.
+  // Der Runden-Plan ist aus der Spielerzahl deterministisch → wird nicht gespeichert.
+  function deShape(s) {
+    if (s <= 1)  return { nMatches: 0, byeP: 0, byeT: 0, adv: s };
+    if (s === 2) return { nMatches: 1, byeP: 0, byeT: 0, adv: 1, duel: true };
+    if (s === 3) return { nMatches: 1, byeP: 1, byeT: 0, adv: 2, duel: true };
+    const byeP = s % 2, t = (s - byeP) / 2, nMatches = Math.floor(t / 2), byeT = t % 2;
+    return { nMatches, byeP, byeT, adv: 2 * nMatches + 2 * byeT + byeP };
+  }
+  function dePlan(n) {
+    const p = []; let wb = n, lb = 0, wbR = 0, lbR = 0;
+    while (wb > 1) {
+      const sh = deShape(wb);
+      p.push({ bracket: 'wb', r: ++wbR, size: wb, ...sh });
+      lb += wb - sh.adv; wb = sh.adv;
+      if (lb >= 2) { const lsh = deShape(lb); p.push({ bracket: 'lb', r: ++lbR, size: lb, ...lsh }); lb = lsh.adv; }
+    }
+    while (lb > 1) { const lsh = deShape(lb); p.push({ bracket: 'lb', r: ++lbR, size: lb, ...lsh }); lb = lsh.adv; }
+    return p;
+  }
+  // Bracket-Zustand aus den gespeicherten Runden ableiten (Pools, Siege, Ausgeschiedene, GF)
+  function deReplay(br) {
+    const plan = dePlan((br.players || []).length);
+    let wb = (br.players || []).slice(), lb = [];
+    const elim = [], wins = {}, games = {}, byes = {};
+    let lastComplete = -1, open = false;
+    (br.live || []).forEach((e, i) => {
+      if (open) return;
+      (e.byeP || []).forEach(pid => byes[pid] = (byes[pid] || 0) + 1);
+      (e.byeT || []).forEach(ti => e.teams[ti].forEach(pid => byes[pid] = (byes[pid] || 0) + 1));
+      if (e.matches.some(m => !m.w)) { open = true; return; }
+      const pe = plan[e.pi];
+      const winners = [], losers = [];
+      e.matches.forEach(m => {
+        const wT = e.teams[m.w === 'a' ? m.a : m.b], lT = e.teams[m.w === 'a' ? m.b : m.a];
+        winners.push(...wT); losers.push(...lT);
+        wT.forEach(pid => wins[pid] = (wins[pid] || 0) + 1);
+        wT.concat(lT).forEach(pid => games[pid] = (games[pid] || 0) + 1);
+      });
+      (e.byeT || []).forEach(ti => winners.push(...e.teams[ti]));
+      winners.push(...(e.byeP || []));
+      if (pe.bracket === 'wb') { wb = winners; lb = lb.concat(losers); }
+      else { lb = winners; losers.forEach(pid => elim.push({ pid, r: pe.r })); }
+      lastComplete = i;
+    });
+    const allRounds = (br.live || []).length === plan.length && !open && plan.length > 0;
+    const gf = (allRounds && wb.length === 1 && lb.length === 1) ? { a: wb[0], b: lb[0] } : null;
+    return { plan, wb, lb, elim, wins, games, byes, open, allRounds, gf };
+  }
+  // Nächste Runde auslosen (Teams + Freilose + Paarungen) — null wenn noch nicht dran
+  function deMaterializeNext(br) {
+    const rep = deReplay(br);
+    const idx = (br.live || []).length;
+    if (rep.open || idx >= rep.plan.length) return null;
+    const pe = rep.plan[idx];
+    const pool = (pe.bracket === 'wb' ? rep.wb : rep.lb).slice();
+    const entry = { pi: idx, teams: [], byeP: [], byeT: [], matches: [] };
+    const shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    let rest = shuf(pool.slice());
+    if (pe.byeP) {  // Spieler-Freilos: wer am wenigsten Freilose hatte (Los unter Gleichen)
+      rest.sort((x, y) => (rep.byes[x] || 0) - (rep.byes[y] || 0));
+      entry.byeP.push(rest.shift());
+      shuf(rest);
+    }
+    if (pe.duel) {
+      entry.teams = [[rest[0]], [rest[1]]];
+      entry.matches.push({ a: 0, b: 1, w: null });
+    } else {
+      for (let i = 0; i < rest.length; i += 2) entry.teams.push([rest[i], rest[i + 1]]);
+      let ti = shuf(entry.teams.map((_, i) => i));
+      if (pe.byeT) {
+        ti.sort((x, y) => sumB(entry.teams[x]) - sumB(entry.teams[y]));
+        entry.byeT.push(ti.shift());
+        shuf(ti);
+      }
+      for (let i = 0; i < ti.length; i += 2) entry.matches.push({ a: ti[i], b: ti[i + 1], w: null });
+    }
+    return entry;
+    function sumB(team) { return team.reduce((s, pid) => s + (rep.byes[pid] || 0), 0); }
+  }
+  // Platzierung: je später raus, desto besser; Tiebreak Siege; Gleichstand = gleicher Platz
+  function deStandings(br) {
+    const rep = deReplay(br);
+    const rows = (br.players || []).map(pid => {
+      const e = rep.elim.find(x => x.pid === pid);
+      let band;
+      if (br.gfw === pid) band = 1e9;
+      else if (br.gfw && rep.gf && (rep.gf.a === pid || rep.gf.b === pid)) band = 1e8;
+      else if (!e) band = 1e7;   // noch im Rennen (oder GF offen)
+      else band = e.r;
+      return { pid, band, wins: rep.wins[pid] || 0, games: rep.games[pid] || 0, out: !!e };
+    });
+    rows.sort((a, b) => (b.band - a.band) || (b.wins - a.wins));
+    let place = 0, i = 0, lastKey = '';
+    rows.forEach(r => {
+      i++;
+      const key = r.band + '|' + r.wins;
+      if (key !== lastKey) place = i;
+      r.place = place; lastKey = key;
+    });
+    return { rows, rep };
+  }
+  const deBrOf = d => (d.bracket && d.bracket.v === 2) ? d.bracket : null;
+
+  async function saveDeBracket(d, br) {
+    const patch = { bracket: br, teams_drawn_at: new Date().toISOString() };
+    const { error } = await sb.from('disciplines').update(patch).eq('id', d.id);
+    if (error) { console.error(error); toast('Bracket speichern fehlgeschlagen', 'error'); return false; }
+    d.bracket = br; d.teams_drawn_at = patch.teams_drawn_at;
+    return true;
+  }
+
+  window.drawDeBracket = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    if (playing.length < 4) { toast('Mindestens 4 Spieler fürs Bracket', 'error'); return; }
+    const br = { v: 2, players: playing.map(p => p.id), live: [], gfw: null };
+    br.live.push(deMaterializeNext(br));
+    if (await saveDeBracket(d, br)) {
+      await recomputeHaxDe(discId);
+      renderDisciplineBodyFor(discId); renderOverview();
+      toast('Turnierbaum ausgelost 🎲', 'ok');
+    }
+  };
+  window.drawDeNextRound = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); const br = d && deBrOf(d); if (!br) return;
+    const entry = deMaterializeNext(br);
+    if (!entry) { toast('Aktuelle Runde ist noch offen', 'error'); return; }
+    const nb = Object.assign({}, br, { live: br.live.concat([entry]) });
+    if (await saveDeBracket(d, nb)) {
+      await recomputeHaxDe(discId);
+      renderDisciplineBodyFor(discId); renderOverview();
+      toast('Nächste Runde ausgelost 🎲', 'ok');
+    }
+  };
+  window.setDeWinner = async function(discId, li, mi, side) {
+    const d = currentDisciplines.find(x => x.id === discId); const br = d && deBrOf(d); if (!br) return;
+    if (li !== br.live.length - 1) { toast('Nur die aktuelle Runde ist änderbar — sonst „Runde verwerfen“', 'error'); return; }
+    const nb = JSON.parse(JSON.stringify(br));
+    const m = nb.live[li].matches[mi]; if (!m) return;
+    m.w = (m.w === side) ? null : side;
+    const { error } = await sb.from('disciplines').update({ bracket: nb }).eq('id', discId);
+    if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+    d.bracket = nb;
+    await recomputeHaxDe(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+    if (m.w) toast('Sieg eingetragen', 'ok');
+  };
+  window.setDeGfWinner = async function(discId, pid) {
+    const d = currentDisciplines.find(x => x.id === discId); const br = d && deBrOf(d); if (!br) return;
+    const nb = Object.assign({}, br, { gfw: br.gfw === pid ? null : pid });
+    const { error } = await sb.from('disciplines').update({ bracket: nb }).eq('id', discId);
+    if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+    d.bracket = nb;
+    await recomputeHaxDe(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+    if (nb.gfw) toast('🏆 Turniersieger eingetragen', 'ok');
+  };
+  window.undoDeRound = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); const br = d && deBrOf(d); if (!br || !br.live.length) return;
+    if (!confirm('Letzte Runde verwerfen? Ihre Auslosung und Ergebnisse gehen verloren.')) return;
+    const nb = Object.assign({}, br, { live: br.live.slice(0, -1), gfw: null });
+    if (await saveDeBracket(d, nb)) {
+      await recomputeHaxDe(discId);
+      renderDisciplineBodyFor(discId); renderOverview();
+      toast('Runde verworfen', 'ok');
+    }
+  };
+  window.resetDeBracket = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    if (!confirm('Kompletten Turnierbaum zurücksetzen? Alle Haxball-Ergebnisse dieses Abends gehen verloren.')) return;
+    const { error } = await sb.from('disciplines').update({ bracket: null }).eq('id', discId);
+    if (error) { console.error(error); toast('Zurücksetzen fehlgeschlagen', 'error'); return; }
+    d.bracket = null;
+    const playing = players.filter(p => currentParticipantIds.has(p.id));
+    for (const p of playing) {
+      const r = currentResults[d.id]?.[p.id];
+      if (r && (r.placement || r.points)) await upsertResultDirect(discId, p.id, { placement: null, points: 0 });
+    }
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+  async function recomputeHaxDe(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); const br = d && deBrOf(d); if (!br) return;
+    const { rows } = deStandings(br);
+    for (const r of rows) {
+      let placement = null;
+      if (r.band === 1e9) placement = 1;
+      else if (r.band === 1e8) placement = 2;
+      else if (r.out) placement = r.place;      // Ausgeschiedene sofort fest gewertet
+      await upsertResultDirect(discId, r.pid, { placement, points: placement ? soloPoints(placement) : 0 });
+    }
+  }
+
+  function renderHaxballDeBody(d) {
+    const br = deBrOf(d);
+    const nm = pid => (players.find(p => p.id === pid) || {}).name || '?';
+    if (!br) {
+      return `
+        <div style="padding-top:1rem">
+          <p class="section-desc"><b>Double Elimination:</b> Jeder läuft einzeln durchs Bracket, die 2v2-Teams werden <b>vor jeder Runde neu ausgelost</b>. 1. Niederlage → Loser Bracket, 2. Niederlage → raus. Am Ende sind WB-Finale und Grand Final 1v1 (WB-Sieger startet 1:0). Veto-Spieler werden nicht mit ausgelost.</p>
+          <div class="draw-control"><button class="draw-btn" onclick="drawDeBracket('${d.id}')">🎲 Turnierbaum auslosen</button></div>
+        </div>`;
+    }
+    const { rows, rep } = deStandings(br);
+    // Spiel-Nummern über alle Runden
+    let no = 0; const nums = br.live.map(e => e.matches.map(() => ++no));
+    const teamNm = (e, ti) => e.teams[ti].map(nm).join(' & ');
+    const roundHtml = (pe, i) => {
+      const e = br.live[i];
+      const head = `<div class="mode-head"><span class="mode-title">${pe.bracket.toUpperCase()} · Runde ${pe.r}${pe.duel ? ' · 1v1' : ''}</span></div>`;
+      if (!e) return `<div class="mode-block" style="opacity:.55">${head}<p class="section-desc">${pe.size} Spieler · ${pe.nMatches} ${pe.nMatches === 1 ? 'Match' : 'Matches'}${pe.byeP ? ' · 1 Freilos' : ''}${pe.byeT ? ' · 1 Team-Freilos' : ''} — Teams werden vor der Runde gelost.</p></div>`;
+      const isCur = i === br.live.length - 1;
+      const games = e.matches.map((m, mi) => `
+        <div class="match-game"><span class="mg-label">Spiel ${nums[i][mi]}</span>
+          <button class="mg-btn ${m.w === 'a' ? 'win' : ''}" onclick="setDeWinner('${d.id}',${i},${mi},'a')">${teamNm(e, m.a)}</button>
+          <button class="mg-btn ${m.w === 'b' ? 'win' : ''}" onclick="setDeWinner('${d.id}',${i},${mi},'b')">${teamNm(e, m.b)}</button>
+        </div>`).join('');
+      const byes = e.byeP.map(pid => `<p class="section-desc">🎫 Freilos: <b>${nm(pid)}</b></p>`).join('')
+        + e.byeT.map(ti => `<p class="section-desc">🎫 Freilos-Team: <b>${teamNm(e, ti)}</b></p>`).join('');
+      return `<div class="mode-block"${isCur ? '' : ' style="opacity:.78"'}>${head}${games}${byes}</div>`;
+    };
+    const wbHtml = rep.plan.map((pe, i) => pe.bracket === 'wb' ? roundHtml(pe, i) : '').join('');
+    const lbHtml = rep.plan.map((pe, i) => pe.bracket === 'lb' ? roundHtml(pe, i) : '').join('');
+    // Steuerzeile: nächste Runde / Grand Final
+    let control = '';
+    const curOpen = rep.open;
+    if (!curOpen && br.live.length < rep.plan.length) {
+      const nx = rep.plan[br.live.length];
+      control = `<div class="draw-control"><button class="draw-btn" onclick="drawDeNextRound('${d.id}')">🎲 ${nx.bracket.toUpperCase()} Runde ${nx.r} auslosen</button></div>`;
+    }
+    let gfHtml = '';
+    if (rep.gf) {
+      gfHtml = `
+        <div class="mode-block" style="border-color:rgba(255,211,74,.4)">
+          <div class="mode-head"><span class="mode-title">🏆 Grand Final · 1v1 — ${nm(rep.gf.a)} startet 1:0</span></div>
+          <div class="match-game"><span class="mg-label">Finale</span>
+            <button class="mg-btn ${br.gfw === rep.gf.a ? 'win' : ''}" onclick="setDeGfWinner('${d.id}','${rep.gf.a}')">${nm(rep.gf.a)} (1:0)</button>
+            <button class="mg-btn ${br.gfw === rep.gf.b ? 'win' : ''}" onclick="setDeGfWinner('${d.id}','${rep.gf.b}')">${nm(rep.gf.b)}</button>
+          </div>
+        </div>`;
+    }
+    const standRows = rows.map(r => {
+      const status = r.band === 1e9 ? '🏆 Turniersieger' : r.band === 1e8 ? 'Finale verloren' : !r.out ? 'noch im Rennen' : `LB-Runde ${r.band} raus`;
+      const placement = (r.band === 1e9) ? 1 : (r.band === 1e8) ? 2 : (r.out ? r.place : null);
+      return `<div class="rank-row"><span class="rank-pos">${placement ? placement + '.' : '–'}</span><span class="rank-name">${nm(r.pid)} <span style="color:var(--muted);font-size:.78em">· ${status} · ${r.games} Sp / ${r.wins} S</span></span><span class="rank-pts">${placement ? '+' + soloPoints(placement) : '·'}</span></div>`;
+    }).join('');
+    const undo = br.live.length ? `<a onclick="undoDeRound('${d.id}')" style="color:var(--alert);cursor:pointer;font-size:.85rem">↩ Letzte Runde verwerfen</a>` : '';
+    const reset = ` · <a onclick="resetDeBracket('${d.id}')" style="color:var(--muted);cursor:pointer;font-size:.85rem">↺ Alles neu auslosen</a>`;
+    return `
+      <div style="padding-top:1rem">
+        <p class="section-desc">Sieger-Team antippen. Nach jeder Runde: <b>nächste Runde auslosen</b> (Reveal läuft live). Nur die aktuelle Runde ist änderbar. ${undo}${reset}</p>
+        <div class="haxball-step-title">Winner Bracket</div>${wbHtml}
+        <div class="haxball-step-title">Loser Bracket — die zweite Chance</div>${lbHtml || '<p class="section-desc">Füllt sich mit den Verlierern aus Runde 1.</p>'}
+        ${gfHtml}${control}
+        <div class="haxball-step-title">Wertung (fließt in den Abend)</div>
+        <div class="rank-list">${standRows}</div>
+      </div>`;
+  }
+
   function renderHaxballBody(d, participants) {
     const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
+    // NEU (v2): Double-Elimination-Turnierbaum. Alte Abende mit Trichter-Daten
+    // (bracket.games / phase / results.team / modes.hax) laufen weiter im Legacy-Pfad.
+    const hasLegacyData = (d.bracket && d.bracket.v !== 2 && (d.bracket.games || d.bracket.gpp))
+      || !!d.phase
+      || playing.some(p => { const r = currentResults[d.id]?.[p.id]; return r && (r.team || (r.modes && r.modes.hax)); });
+    if (deBrOf(d) || !hasLegacyData) return renderHaxballDeBody(d);
+    // ---- Legacy: Trichter (alte Abende) ----
     // Aktiv = noch im Trichter (nicht ausgeschieden). Ausgeschiedene haben modes.hax gesetzt.
     const isElim = p => { const r = currentResults[d.id]?.[p.id]; return !!(r && r.modes && r.modes.hax); };
     const active = playing.filter(p => !isElim(p));
@@ -2210,6 +2588,225 @@
     }
   }
 
+  // ===== Meccha Chameleon: Fundreihenfolge + Seeker-Quote =====
+  // Pro Runde werden 2 Seeker ausgelost (Rotation: wer am seltensten Seeker war).
+  // Hider: je später gefunden, desto mehr Punkte (1. gefunden = 1 … Überlebende = Anzahl Hider).
+  // Seeker: Punkte = Anzahl gefundener Hider (alle gefunden = Maximum).
+  // Rundenpunkte werden summiert → Gesamtplatzierung → soloPoints (10/8/6/4/3/2/1).
+  const chamRoundsOf = d => (Array.isArray(d.modes) ? d.modes : []).filter(m => m.type === 'cham');
+  const chamFoundOf = (discId, pid, n) => fgModeOf(discId, pid, n).found || 0;
+
+  // Punkte einer Runde: { playerId: punkte } — offene Runde ohne Funde zählt noch nicht
+  function chamRoundPts(d, playing, m) {
+    const n = m.n;
+    const seekers = (m.seekers || []).filter(id => playing.some(p => p.id === id));
+    const hiders = playing.filter(p => !seekers.includes(p.id));
+    const H = hiders.length;
+    const foundCount = hiders.filter(p => chamFoundOf(d.id, p.id, n) > 0).length;
+    const started = foundCount > 0 || !!m.closed;
+    const pts = {};
+    hiders.forEach(p => {
+      const f = chamFoundOf(d.id, p.id, n);
+      pts[p.id] = f ? f : (m.closed ? H : 0); // Überlebende kriegen erst beim Runden-Ende das Maximum
+    });
+    seekers.forEach(pid => { pts[pid] = started ? foundCount : 0; });
+    return pts;
+  }
+
+  function renderChameleonBody(d, participants) {
+    const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
+    const rounds = chamRoundsOf(d);
+    const addBar = `<div class="draw-control"><span class="draw-label">+ Runde:</span><button class="draw-btn" onclick="addChamRound('${d.id}')">+ Runde</button></div>`;
+    const roundsHtml = rounds.length
+      ? rounds.map((m, idx) => renderChamRound(d, m, idx, playing)).join('')
+      : '<div class="rank-empty">Noch keine Runde — empfohlen: 3–4 Runden à ~5 min. Pro Runde 2 Seeker auslosen, dann die Hider in der Reihenfolge antippen, in der sie gefunden werden.</div>';
+    return `
+      <div style="padding-top:1rem">
+        <p class="section-desc">Hide-and-Seek: Die Hider bemalen sich und verstecken sich, die Seeker suchen. <b>Je später du gefunden wirst, desto mehr Punkte</b> — wer überlebt, kriegt das Maximum. Die Seeker punkten nach Fangquote (alle gefunden = Maximum). Rotation: Die Auslosung bevorzugt Spieler, die noch nicht Seeker waren.</p>
+        ${addBar}
+        ${roundsHtml}
+        ${renderChamStandings(d, playing)}
+      </div>`;
+  }
+
+  function renderChamRound(d, m, idx, playing) {
+    const n = m.n;
+    const seekers = (m.seekers || []).filter(id => playing.some(p => p.id === id));
+    const isSeeker = pid => seekers.includes(pid);
+    const head = `
+      <div class="mode-head">
+        <span class="mode-title">Runde ${idx + 1}${m.closed ? ' · ✓ beendet' : (seekers.length ? ' · läuft' : '')}</span>
+        <button class="mode-del" onclick="removeChamRound('${d.id}',${n})" title="Runde löschen">×</button>
+      </div>`;
+    const draw = `<div class="draw-control"><span class="draw-label">🔍 Seeker:</span><button class="draw-btn" onclick="drawChamSeekers('${d.id}',${n})">${seekers.length ? 'neu auslosen' : `${CHAM_SEEKERS} Seeker auslosen`}</button><span style="color:var(--muted);font-size:.85rem">· oder unten antippen</span></div>`;
+    const seekerChips = `<div class="rank-pool">${playing.map(p =>
+      `<button class="rank-chip" style="${isSeeker(p.id) ? 'border-color:var(--accent);color:var(--accent)' : ''}" onclick="toggleChamSeeker('${d.id}',${n},'${p.id}')">${isSeeker(p.id) ? '🔍 ' : ''}${p.name}</button>`).join('')}</div>`;
+
+    let huntHtml = '';
+    if (seekers.length) {
+      const hiders = playing.filter(p => !isSeeker(p.id));
+      const H = hiders.length;
+      const found = hiders.filter(p => chamFoundOf(d.id, p.id, n) > 0)
+        .sort((a, b) => chamFoundOf(d.id, a.id, n) - chamFoundOf(d.id, b.id, n));
+      const hidden = hiders.filter(p => !chamFoundOf(d.id, p.id, n));
+      const foundRows = found.map(p => {
+        const f = chamFoundOf(d.id, p.id, n);
+        return `<div class="rank-row"><span class="rank-pos">${f}.</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:.8em">gefunden</span></span><span class="rank-pts">+${f}</span><button class="rank-x" onclick="chamUnfind('${d.id}',${n},'${p.id}')" title="Fund zurücknehmen">×</button></div>`;
+      }).join('');
+      const hiddenChips = hidden.length && !m.closed
+        ? `<div class="rank-pool-title">Noch versteckt — anklicken = gefunden (in Fund-Reihenfolge)</div><div class="rank-pool">${hidden.map(p => `<button class="rank-chip" onclick="chamFound('${d.id}',${n},'${p.id}')">${p.name}</button>`).join('')}</div>`
+        : '';
+      const survivors = m.closed && hidden.length
+        ? `<div class="rank-list">${hidden.map(p => `<div class="rank-row"><span class="rank-pos">🛡</span><span class="rank-name">${p.name} <span style="color:var(--muted);font-size:.8em">überlebt</span></span><span class="rank-pts">+${H}</span></div>`).join('')}</div>`
+        : '';
+      const closeBtn = m.closed
+        ? `<div class="draw-control"><button class="draw-btn" onclick="chamCloseRound('${d.id}',${n},false)">↺ Runde wieder öffnen</button></div>`
+        : `<div class="draw-control"><button class="draw-btn" onclick="chamCloseRound('${d.id}',${n},true)">🏁 Runde beenden${hidden.length ? ` — ${hidden.length} Überlebende kriegen +${H}` : ''}</button></div>`;
+      const seekerLine = `<div class="rank-pool-title">🔍 Seeker: ${seekers.map(pid => (playing.find(p => p.id === pid) || {}).name || '?').join(' & ')} — aktuell +${found.length} (gefundene Hider)</div>`;
+      huntHtml = `${seekerLine}<div class="rank-list">${foundRows || ''}</div>${survivors}${hiddenChips}${closeBtn}`;
+    }
+    return `<div class="mode-block">${head}${draw}${seekerChips}${huntHtml}</div>`;
+  }
+
+  function renderChamStandings(d, playing) {
+    const rounds = chamRoundsOf(d);
+    if (!rounds.length) return '';
+    const rows = playing.map(p => {
+      const per = rounds.map(m => (chamRoundPts(d, playing, m)[p.id] || 0));
+      const total = per.reduce((a, b) => a + b, 0);
+      return { p, per, total };
+    });
+    rows.sort((a, b) => b.total - a.total);
+    let rank = 0, last = -1;
+    rows.forEach((r, i) => { if (r.total !== last) rank = i + 1; r.rank = r.total > 0 ? rank : '–'; last = r.total; });
+    const head = `<th style="text-align:left">Spieler</th>${rounds.map((m, i) => `<th>R${i + 1}</th>`).join('')}<th>Σ</th><th>Platz</th>`;
+    const body = rows.map(r => `<tr><td style="text-align:left">${r.p.name}</td>${r.per.map(pt => `<td>${pt || '–'}</td>`).join('')}<td><b>${r.total}</b></td><td>${r.rank}</td></tr>`).join('');
+    return `<div class="haxball-step-title">Gesamtwertung (fließt in den Abend)</div><table class="fg-standings"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  }
+
+  window.addChamRound = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).slice();
+    const nextN = modes.reduce((mx, m) => Math.max(mx, m.n), 0) + 1;
+    modes.push({ n: nextN, type: 'cham', seekers: [] });
+    const { error } = await sb.from('disciplines').update({ modes }).eq('id', discId);
+    if (error) { console.error(error); toast('Runde hinzufügen fehlgeschlagen', 'error'); return; }
+    d.modes = modes;
+    renderDisciplineBodyFor(discId);
+    toast('Runde hinzugefügt', 'ok');
+  };
+
+  window.removeChamRound = async function(discId, n) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    if (!confirm('Diese Runde löschen? Die Ergebnisse dieser Runde gehen verloren.')) return;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).filter(m => m.n !== n);
+    await sb.from('disciplines').update({ modes }).eq('id', discId);
+    d.modes = modes;
+    const playing = players.filter(p => currentParticipantIds.has(p.id));
+    for (const p of playing) {
+      const cur = currentResults[discId]?.[p.id];
+      if (cur && cur.modes && cur.modes[n] != null) { const m2 = Object.assign({}, cur.modes); delete m2[n]; await upsertResultDirect(discId, p.id, { modes: m2 }); }
+    }
+    await recomputeChameleon(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  async function setChamSeekers(discId, n, seekers) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).map(m => m.n === n ? Object.assign({}, m, { seekers }) : m);
+    const { error } = await sb.from('disciplines').update({ modes }).eq('id', discId);
+    if (error) { console.error(error); toast('Seeker speichern fehlgeschlagen', 'error'); return; }
+    d.modes = modes;
+    // Seeker können nicht gleichzeitig gefunden sein — alte Fund-Einträge löschen
+    for (const pid of seekers) {
+      if (chamFoundOf(discId, pid, n)) await setModeData(discId, pid, n, { found: null });
+    }
+  }
+
+  window.drawChamSeekers = async function(discId, n) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    if (playing.length < 3) { toast('Zu wenige Spieler für eine Auslosung', 'error'); return; }
+    const count = Math.min(CHAM_SEEKERS, playing.length - 1);
+    // Rotation: wie oft war jeder in den anderen Runden schon Seeker?
+    const seekCount = {};
+    playing.forEach(p => seekCount[p.id] = 0);
+    chamRoundsOf(d).forEach(m => { if (m.n !== n) (m.seekers || []).forEach(pid => { if (seekCount[pid] != null) seekCount[pid]++; }); });
+    const arr = playing.slice();
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+    arr.sort((a, b) => seekCount[a.id] - seekCount[b.id]); // stabile Sortierung nach Shuffle = Los unter Gleichen
+    const seekers = arr.slice(0, count).map(p => p.id);
+    await setChamSeekers(discId, n, seekers);
+    const ts = new Date().toISOString();
+    await sb.from('disciplines').update({ teams_drawn_at: ts }).eq('id', discId);
+    d.teams_drawn_at = ts;
+    await recomputeChameleon(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+    toast(`${count} Seeker ausgelost`, 'ok');
+  };
+
+  window.toggleChamSeeker = async function(discId, n, pid) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const m = chamRoundsOf(d).find(x => x.n === n); if (!m) return;
+    const cur = (m.seekers || []).slice();
+    const i = cur.indexOf(pid);
+    if (i >= 0) cur.splice(i, 1); else cur.push(pid);
+    await setChamSeekers(discId, n, cur);
+    await recomputeChameleon(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.chamFound = async function(discId, n, pid) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const next = Math.max(0, ...playing.map(p => chamFoundOf(discId, p.id, n))) + 1;
+    await setModeData(discId, pid, n, { found: next });
+    await recomputeChameleon(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.chamUnfind = async function(discId, n, pid) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const removed = chamFoundOf(discId, pid, n); if (!removed) return;
+    await setModeData(discId, pid, n, { found: null });
+    // Lücke schließen: alle späteren Funde rücken eins vor
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    for (const p of playing) {
+      const f = chamFoundOf(discId, p.id, n);
+      if (f > removed) await setModeData(discId, p.id, n, { found: f - 1 });
+    }
+    await recomputeChameleon(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.chamCloseRound = async function(discId, n, closed) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const modes = (Array.isArray(d.modes) ? d.modes : []).map(m => m.n === n ? Object.assign({}, m, { closed: !!closed }) : m);
+    const { error } = await sb.from('disciplines').update({ modes }).eq('id', discId);
+    if (error) { console.error(error); toast('Runden-Status fehlgeschlagen', 'error'); return; }
+    d.modes = modes;
+    await recomputeChameleon(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+    toast(closed ? 'Runde beendet — Überlebende gewertet' : 'Runde wieder geöffnet', 'ok');
+  };
+
+  async function recomputeChameleon(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const rounds = chamRoundsOf(d);
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const totals = playing.map(p => {
+      let pts = 0;
+      rounds.forEach(m => { pts += (chamRoundPts(d, playing, m)[p.id] || 0); });
+      return { p, pts };
+    });
+    totals.sort((a, b) => b.pts - a.pts);
+    let rank = 0, last = -1;
+    for (let i = 0; i < totals.length; i++) { if (totals[i].pts !== last) rank = i + 1; totals[i].rank = rank; last = totals[i].pts; }
+    for (const t of totals) {
+      await upsertResultDirect(discId, t.p.id, { placement: t.pts > 0 ? t.rank : null, points: t.pts > 0 ? soloPoints(t.rank) : 0 });
+    }
+  }
+
   // ===== Discipline expand/collapse =====
   window.toggleDiscipline = function(id) {
     const card = document.querySelector(`.discipline-card[data-disc="${id}"]`);
@@ -2357,7 +2954,7 @@
     }).join('');
     return `
       <div style="padding-top:1rem">
-        <p class="section-desc">Joker-Minispiel „Fly the Copter": trag den <b>Highscore</b> jedes Veto-Spielers ein. Höchster Score = Platz 1; die Punkte (10·8·6·…) zählen für die vetote Disziplin. Wird nebenbei am Handy gespielt — Score per Screen-Share oder Foto beweisen.</p>
+        <p class="section-desc">Joker-Minispiel „Dino Runner 🦖" (chromedino.com): trag den <b>Highscore</b> jedes Veto-Spielers ein. Höchster Score = Platz 1; die Punkte (10·8·6·…) zählen für die vetote Disziplin. Wird nebenbei am Handy gespielt — Score per Screen-Share oder Foto beweisen.</p>
         ${rows}
       </div>`;
   }

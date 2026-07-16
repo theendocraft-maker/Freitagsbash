@@ -113,7 +113,7 @@
   ];
   const grad = i => { const c = COLORS[i % COLORS.length]; return `linear-gradient(135deg,${c[0]},${c[1]})`; };
   const ini = s => (s||'?').slice(0,2).toUpperCase();
-  const DISC_NAME = { geoguessr:'GeoGuessr', haxball:'Haxball', chess:'Chess Blitz', brawlhalla:'Brawlhalla', fallguys:'Fall Guys' };
+  const DISC_NAME = { geoguessr:'GeoGuessr', haxball:'Haxball', chess:'Chess Blitz', brawlhalla:'Brawlhalla', chameleon:'Meccha Chameleon', fallguys:'Fall Guys' };
   const dName = k => DISC_NAME[k] || k;
   const fmtDate = d => new Date(d).toLocaleDateString('de-DE', { day:'2-digit', month:'long', year:'numeric' });
 

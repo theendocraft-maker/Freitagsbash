@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freitags Bash · Loot oder Boom 💣</title>
+<link rel="stylesheet" href="styles.css">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+  /* Page-local — Joker-Minispiel */
+  body { background: var(--bg); }
+  main.wrap { max-width: 620px; margin: 0 auto; padding: 1.6rem 1rem 4rem; }
+  .vg-back { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
+  .vg-back:hover { color: var(--primary); }
+  .vg-head { margin: 0.8rem 0 0.3rem; font-family: var(--font-display); font-weight: 900; font-size: 2.5rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text); line-height: 1; }
+  .vg-head .boom { color: var(--alert); }
+  .vg-tag { display: inline-block; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cool); border: 1px solid var(--cool-soft); background: var(--cool-soft); border-radius: 999px; padding: 3px 10px; margin-bottom: 0.6rem; }
+  .vg-sub { color: var(--muted); font-size: 0.9rem; line-height: 1.55; }
+  .vg-sub b { color: var(--text-soft); }
+
+  .vg-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem; margin-top: 1.1rem; }
+  .vg-label { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  select, .vg-btn { font-family: var(--font-body, inherit); font-size: 0.95rem; }
+  select { width: 100%; background: var(--bg-2); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 0.65rem 0.8rem; }
+  .vg-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; font-weight: 700; background: var(--primary); color: #0b0d10; border: none; border-radius: 999px; padding: 0.7rem 1.5rem; cursor: pointer; transition: transform .1s; }
+  .vg-btn:active { transform: scale(0.97); }
+  .vg-btn.ghost { background: var(--bg-2); color: var(--text); border: 1px solid var(--border-strong); }
+  .vg-btn.bank { background: var(--cool); }
+  .vg-btn:disabled { opacity: 0.45; cursor: default; }
+
+  /* HUD */
+  .hud { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-bottom: 0.9rem; }
+  .hud-box { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.55rem 0.7rem; text-align: center; }
+  .hud-box .h-l { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .hud-box .h-v { font-family: var(--font-display); font-weight: 900; font-size: 1.7rem; line-height: 1.1; color: var(--text); }
+  .hud-box.pot .h-v { color: var(--primary); }
+  .hud-box.total .h-v { color: var(--cool); }
+
+  /* Kisten */
+  .crates { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.55rem; }
+  .crate { aspect-ratio: 1; font-size: 1.7rem; display: flex; align-items: center; justify-content: center; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius); cursor: pointer; transition: transform .1s, border-color .15s; user-select: none; position: relative; }
+  .crate:not(.open):hover { border-color: var(--primary-line); transform: translateY(-2px); }
+  .crate:not(.open):active { transform: scale(0.94); }
+  .crate.open { cursor: default; background: var(--bg-2); }
+  .crate.loot { border-color: var(--primary-line); }
+  .crate.loot .val { font-family: var(--font-display); font-weight: 900; font-size: 1.25rem; color: var(--primary); animation: pop .35s ease; }
+  .crate.jackpot { border-color: #ffd34a; box-shadow: 0 0 18px -6px #ffd34a; }
+  .crate.jackpot .val { color: #ffd34a; }
+  .crate.boom { border-color: var(--alert-line); background: var(--alert-soft); animation: shake .45s ease; }
+  .crate.dud { opacity: 0.45; }
+  @keyframes pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+  body.quake { animation: shake .45s ease; }
+
+  .vg-acts { display: flex; gap: 0.6rem; margin-top: 0.9rem; flex-wrap: wrap; justify-content: center; }
+  .vg-msg { text-align: center; font-size: 0.92rem; color: var(--text-soft); min-height: 1.4em; margin-top: 0.8rem; }
+  .vg-msg.boom { color: var(--alert); font-weight: 700; }
+  .vg-msg.bank { color: var(--cool); font-weight: 700; }
+
+  /* Endscreen / Standings */
+  .final-score { text-align: center; padding: 0.6rem 0 0.2rem; }
+  .final-score .fs-v { font-family: var(--font-display); font-weight: 900; font-size: 4rem; color: var(--primary); line-height: 1; }
+  .final-score .fs-l { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .save-state { text-align: center; font-size: 0.85rem; margin-top: 0.5rem; color: var(--muted); }
+  .save-state.ok { color: var(--primary); }
+  .vg-row { display: grid; grid-template-columns: 2rem 1fr auto; gap: 0.5rem; align-items: center; padding: 0.45rem 0.55rem; border-radius: var(--radius-sm); font-size: 0.9rem; }
+  .vg-row:nth-child(odd) { background: var(--bg-2); }
+  .vg-row .r-pos { font-family: var(--font-display); font-weight: 900; color: var(--muted); text-align: center; }
+  .vg-row.me .r-pos, .vg-row.me .r-name { color: var(--primary); }
+  .vg-row .r-pts { font-family: var(--font-display); font-weight: 900; font-size: 1.15rem; color: var(--text); }
+  .runbar { display: flex; gap: 0.35rem; justify-content: center; margin-bottom: 0.7rem; }
+  .runpill { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--muted); }
+  .runpill.cur { border-color: var(--primary-line); color: var(--primary); }
+  .runpill.done { color: var(--text-soft); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <a class="vg-back" href="abend.html">← zurück zum Spielabend</a>
+  <div style="margin-top:0.8rem"><span class="vg-tag" id="modeTag">Lade…</span></div>
+  <h1 class="vg-head">Loot oder <span class="boom">Boom</span> 💣</h1>
+  <p class="vg-sub"><b>Das Joker-Minispiel für Veto-Spieler.</b> 3 Runden. Pro Runde 12 Kisten, davon <b>3 mit Bombe</b>. Öffne so viele Kisten, wie du dich traust — jede Kiste bringt Punkte in deinen Runden-Pot. <b>💰 Sichern</b> bankt den Pot, <b>💥 Boom</b> vernichtet ihn. Die Summe aller 3 Runden ist dein Score.</p>
+
+  <!-- Schritt 1: Name -->
+  <div class="vg-card" id="setupCard">
+    <div class="vg-label">Wer spielt?</div>
+    <select id="playerSel"><option value="">Lade…</option></select>
+    <div class="vg-acts">
+      <button class="vg-btn" id="startBtn" onclick="startGame()" disabled>▶ Los geht’s</button>
+    </div>
+    <div class="vg-msg" id="setupMsg"></div>
+  </div>
+
+  <!-- Spiel -->
+  <div class="vg-card" id="gameCard" style="display:none">
+    <div class="runbar" id="runbar"></div>
+    <div class="hud">
+      <div class="hud-box"><div class="h-l">Runde</div><div class="h-v" id="hudRun">1/3</div></div>
+      <div class="hud-box pot"><div class="h-l">Pot (Risiko)</div><div class="h-v" id="hudPot">0</div></div>
+      <div class="hud-box total"><div class="h-l">Gesichert</div><div class="h-v" id="hudTotal">0</div></div>
+    </div>
+    <div class="crates" id="crates"></div>
+    <div class="vg-acts">
+      <button class="vg-btn bank" id="bankBtn" onclick="bank()" disabled>💰 Sichern</button>
+    </div>
+    <div class="vg-msg" id="gameMsg">3 Bomben sind versteckt. Trau dich.</div>
+  </div>
+
+  <!-- Ende / Stand -->
+  <div class="vg-card" id="endCard" style="display:none">
+    <div class="final-score"><div class="fs-v" id="finalScore">0</div><div class="fs-l">Dein Score</div></div>
+    <div class="save-state" id="saveState"></div>
+    <div class="vg-label" style="margin-top:1rem">Joker-Wertung heute</div>
+    <div id="board"></div>
+    <div class="vg-acts"><button class="vg-btn ghost" id="againBtn" onclick="resetToSetup()">↺ Nochmal (Training)</button></div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL      = 'https://bvaxeqkfozegeejdimdp.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const SOLO_PTS = [10,8,6,4,3,2,1];
+
+  // Spiel-Parameter
+  const RUNS = 3, CRATES = 12, BOMBS = 3;
+  const LOOT = [10, 10, 20, 20, 30, 40, 50, 75, 150];  // 9 Werte + 3 Bomben = 12 Kisten; 150 = Jackpot
+
+  let liveEvent = null, players = [], vetoes = [], kindId = {};
+  let me = null, training = true, alreadyPlayed = false;
+  let run = 0, pot = 0, total = 0, crates = [], openedInRun = 0, runActive = false, banked = [];
+
+  const $ = id => document.getElementById(id);
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pName = pid => (players.find(p => p.id === pid) || {}).name || '—';
+
+  async function init() {
+    try {
+      const { data: pl } = await sb.from('players').select('*').order('created_at');
+      players = pl || [];
+      const { data: evs } = await sb.from('events').select('*').eq('status', 'live').limit(1);
+      liveEvent = (evs && evs[0]) || null;
+      if (liveEvent) {
+        const { data: vts } = await sb.from('vetoes').select('*').eq('event_id', liveEvent.id);
+        vetoes = vts || [];
+        const { data: discs } = await sb.from('disciplines').select('id,kind').eq('event_id', liveEvent.id);
+        (discs || []).forEach(d => kindId[d.kind] = d.id);
+      }
+    } catch (e) { console.error(e); }
+    const sel = $('playerSel');
+    if (liveEvent && vetoes.length) {
+      training = false;
+      $('modeTag').textContent = '🃏 Joker läuft · Score zählt';
+      sel.innerHTML = '<option value="">— wähle deinen Namen —</option>'
+        + vetoes.map(v => `<option value="${v.player_id}">${pName(v.player_id)}</option>`).join('')
+        + '<option value="__train">🏋 Nur Training (ohne Wertung)</option>';
+    } else {
+      training = true;
+      $('modeTag').textContent = '🏋 Trainingsmodus · ohne Wertung';
+      sel.innerHTML = '<option value="__train">Training — einfach losspielen</option>';
+      $('startBtn').disabled = false;
+      $('setupMsg').textContent = liveEvent ? 'Noch kein Veto gesetzt — du kannst trotzdem üben.' : 'Gerade läuft kein Abend — Training zählt nicht.';
+    }
+    sel.onchange = async () => {
+      const v = sel.value;
+      $('startBtn').disabled = !v;
+      $('setupMsg').textContent = ''; $('setupMsg').className = 'vg-msg';
+      alreadyPlayed = false;
+      if (v && v !== '__train') {
+        // Hat der Spieler schon einen gewerteten Versuch?
+        const vv = vetoes.find(x => x.player_id === v);
+        const did = vv && kindId[vv.discipline_kind];
+        if (did) {
+          const { data: ex } = await sb.from('results').select('*').eq('discipline_id', did).eq('player_id', v).maybeSingle();
+          if (ex && ex.modes && ex.modes.copter != null) {
+            alreadyPlayed = true;
+            $('setupMsg').textContent = `Dein Versuch steht schon: ${ex.modes.copter} Punkte. Ein Versuch zählt — weiterspielen geht nur als Training.`;
+          }
+        }
+      }
+    };
+  }
+
+  window.startGame = function() {
+    const v = $('playerSel').value;
+    if (!v) return;
+    me = (v === '__train' || alreadyPlayed) ? null : v;   // null = Training / zählt nicht
+    run = 0; total = 0; banked = [];
+    $('setupCard').style.display = 'none';
+    $('endCard').style.display = 'none';
+    $('gameCard').style.display = 'block';
+    nextRun();
+  };
+
+  function nextRun() {
+    run++;
+    pot = 0; openedInRun = 0; runActive = true;
+    // Kisten mischen: 3 Bomben + 9 Loot-Werte
+    const contents = shuffle(LOOT.map(v => ({ boom: false, v })).concat(Array(BOMBS).fill(0).map(() => ({ boom: true }))));
+    crates = contents.map(c => ({ ...c, open: false }));
+    renderGame('Runde ' + run + ' — 3 Bomben sind versteckt. Trau dich.');
+  }
+
+  window.openCrate = function(i) {
+    if (!runActive) return;
+    const c = crates[i];
+    if (c.open) return;
+    c.open = true; openedInRun++;
+    if (c.boom) {
+      runActive = false;
+      const lost = pot; pot = 0;
+      document.body.classList.add('quake');
+      setTimeout(() => document.body.classList.remove('quake'), 500);
+      revealAll();
+      renderGame(lost > 0 ? `💥 BOOM! ${lost} Punkte futsch.` : '💥 BOOM! Direkt in die Bombe.', 'boom');
+      setTimeout(endRun, 1600);
+    } else {
+      pot += c.v;
+      renderGame(c.v >= 150 ? `💎 JACKPOT! +${c.v}` : `+${c.v} im Pot. Weiter oder sichern?`);
+    }
+  };
+
+  window.bank = function() {
+    if (!runActive || pot <= 0) return;
+    runActive = false;
+    total += pot;
+    revealAll();
+    renderGame(`💰 ${pot} Punkte gesichert!`, 'bank');
+    setTimeout(endRun, 1400);
+  };
+
+  function endRun() {
+    banked.push(total - banked.reduce((a, b) => a + b, 0));
+    if (run < RUNS) nextRun();
+    else finish();
+  }
+
+  function revealAll() { crates.forEach(c => { c.revealed = true; }); }
+
+  function renderGame(msg, cls) {
+    $('hudRun').textContent = run + '/' + RUNS;
+    $('hudPot').textContent = pot;
+    $('hudTotal').textContent = total;
+    $('runbar').innerHTML = Array(RUNS).fill(0).map((_, i) =>
+      `<span class="runpill${i + 1 === run ? ' cur' : (i + 1 < run ? ' done' : '')}">R${i + 1}${i + 1 < run ? ' · ' + (banked[i] || 0) : ''}</span>`).join('');
+    $('crates').innerHTML = crates.map((c, i) => {
+      if (c.open) {
+        if (c.boom) return `<div class="crate open boom">💥</div>`;
+        return `<div class="crate open loot${c.v >= 150 ? ' jackpot' : ''}"><span class="val">+${c.v}</span></div>`;
+      }
+      if (c.revealed) {
+        // Runde vorbei: zeigen, was drin gewesen wäre
+        return `<div class="crate open dud">${c.boom ? '💣' : '<span style="font-size:0.85rem;color:var(--muted)">' + c.v + '</span>'}</div>`;
+      }
+      return `<div class="crate" onclick="openCrate(${i})">📦</div>`;
+    }).join('');
+    $('bankBtn').disabled = !runActive || pot <= 0;
+    const m = $('gameMsg'); m.textContent = msg || ''; m.className = 'vg-msg' + (cls ? ' ' + cls : '');
+  }
+
+  async function finish() {
+    $('gameCard').style.display = 'none';
+    $('endCard').style.display = 'block';
+    $('finalScore').textContent = total;
+    const ss = $('saveState');
+    if (me) {
+      ss.textContent = 'Speichere…';
+      const ok = await saveScore(me, total);
+      ss.textContent = ok ? '✓ Score gespeichert — zählt für die Joker-Wertung' : '⚠ Speichern fehlgeschlagen — sag dem Host deinen Score';
+      ss.className = 'save-state' + (ok ? ' ok' : '');
+    } else {
+      ss.textContent = training ? 'Training — Score wird nicht gewertet.' : 'Nicht gewertet (Training oder Versuch stand schon).';
+      ss.className = 'save-state';
+    }
+    await renderBoard();
+  }
+
+  // Score in results.modes.copter der vetoeten Disziplin speichern + Joker-Ranking neu berechnen
+  // (gleiche Logik wie die Hand-Eingabe auf abend.html)
+  async function saveScore(pid, score) {
+    try {
+      const v = vetoes.find(x => x.player_id === pid); if (!v) return false;
+      const did = kindId[v.discipline_kind]; if (!did) return false;
+      const { data: ex } = await sb.from('results').select('*').eq('discipline_id', did).eq('player_id', pid).maybeSingle();
+      if (ex && ex.modes && ex.modes.copter != null) return false;  // Versuch stand schon — nicht überschreiben
+      const modes = Object.assign({}, (ex && ex.modes) || {}, { copter: score });
+      if (ex) await sb.from('results').update({ modes }).eq('id', ex.id);
+      else await sb.from('results').insert({ discipline_id: did, player_id: pid, modes });
+      // Ranking + Punkte aller Veto-Spieler
+      const rowsBy = [];
+      for (const vv of vetoes) {
+        const d2 = kindId[vv.discipline_kind]; if (!d2) continue;
+        const { data: r2 } = await sb.from('results').select('*').eq('discipline_id', d2).eq('player_id', vv.player_id).maybeSingle();
+        rowsBy.push({ pid: vv.player_id, id: r2 && r2.id, score: (r2 && r2.modes && r2.modes.copter != null) ? r2.modes.copter : null });
+      }
+      const have = rowsBy.filter(x => x.score != null).sort((a, b) => b.score - a.score);
+      let rank = 0, last = null;
+      have.forEach((x, i) => { if (x.score !== last) rank = i + 1; x.rank = rank; last = x.score; });
+      for (const x of rowsBy) {
+        if (!x.id) continue;
+        const placement = (x.score != null) ? have.find(h => h.pid === x.pid).rank : null;
+        await sb.from('results').update({ placement, points: placement ? SOLO_PTS[Math.min(placement, SOLO_PTS.length) - 1] : 0 }).eq('id', x.id);
+      }
+      return true;
+    } catch (e) { console.error(e); return false; }
+  }
+
+  async function renderBoard() {
+    const board = $('board');
+    if (!liveEvent || !vetoes.length) { board.innerHTML = '<div class="vg-sub">Kein Abend live — hier erscheint am Spielabend die Joker-Wertung.</div>'; return; }
+    const rows = [];
+    for (const v of vetoes) {
+      const did = kindId[v.discipline_kind]; if (!did) continue;
+      try {
+        const { data: r } = await sb.from('results').select('*').eq('discipline_id', did).eq('player_id', v.player_id).maybeSingle();
+        rows.push({ pid: v.player_id, score: (r && r.modes && r.modes.copter != null) ? r.modes.copter : null });
+      } catch (e) { console.error(e); }
+    }
+    rows.sort((a, b) => (b.score || -1) - (a.score || -1));
+    board.innerHTML = rows.map((r, i) =>
+      `<div class="vg-row${r.pid === me ? ' me' : ''}"><span class="r-pos">${i + 1}.</span><span class="r-name">${pName(r.pid)}</span><span class="r-pts">${r.score != null ? r.score : '–'}</span></div>`).join('')
+      || '<div class="vg-sub">Noch keine Scores.</div>';
+  }
+
+  window.resetToSetup = function() {
+    $('endCard').style.display = 'none';
+    $('setupCard').style.display = 'block';
+    $('playerSel').value = '__train';
+    $('startBtn').disabled = false;
+    $('setupMsg').textContent = 'Training — zählt nicht für die Wertung.';
+  };
+
+  init();
+</script>
+</body>
+</html>

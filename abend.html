@@ -1438,8 +1438,8 @@
   const SUPABASE_URL      = 'https://bvaxeqkfozegeejdimdp.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YXhlcWtmb3plZ2VlamRpbWRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDc3NjcsImV4cCI6MjA5NDQyMzc2N30.ZvnAyL6f1ZBxlU6Nhz4NERFanetXvutbzBiugGtNK_w';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  // Joker-Minispiel „Fly the Copter" — Link bei Bedarf hier anpassen
-  const COPTER_URL = 'https://www.spiele123.com/spiel/fly-the-copter';
+  // Joker-Minispiel „Dino Runner" (Chrome-Dino als Webversion) — Link bei Bedarf hier anpassen
+  const COPTER_URL = 'https://chromedino.com/';
   let copterVetoes = [], copterKindId = {};
   const SOLO_PTS = [10,8,6,4,3,2,1];
   const SEASON_PTS_BY_RANK = [25, 18, 15, 12, 10, 8, 6, 4]; // Platz 1..8+
@@ -1559,6 +1559,202 @@
     }
   }
 
+  // === Meccha Chameleon Self-Tracking: Funde live antippen, Runde beenden ===
+  // Rundenpunkte: { playerId: punkte } — Hider nach Fundreihenfolge (Überlebende = Max),
+  // Seeker nach Fangquote (Punkte = Anzahl gefundener Hider).
+  function chamRoundPtsLive(m, rows, playing) {
+    const n = m.n;
+    const seekers = (m.seekers || []).filter(id => playing.some(p => p.id === id));
+    const hiders = playing.filter(p => !seekers.includes(p.id));
+    const H = hiders.length;
+    const foundOf = pid => { const r = (rows || []).find(x => x.player_id === pid); return (r && r.modes && r.modes[n] && r.modes[n].found) || 0; };
+    const foundCount = hiders.filter(p => foundOf(p.id) > 0).length;
+    const started = foundCount > 0 || !!m.closed;
+    const pts = {};
+    hiders.forEach(p => { const f = foundOf(p.id); pts[p.id] = f ? f : (m.closed ? H : 0); });
+    seekers.forEach(pid => { pts[pid] = started ? foundCount : 0; });
+    return pts;
+  }
+
+  window.chamFoundLive = async function(discId, n, pid) {
+    try {
+      const { data: rows } = await sb.from('results').select('*').eq('discipline_id', discId);
+      const maxF = Math.max(0, ...(rows || []).map(r => (r.modes && r.modes[n] && r.modes[n].found) || 0));
+      const ex = (rows || []).find(r => r.player_id === pid);
+      const modes = Object.assign({}, (ex && ex.modes) || {});
+      const cur = Object.assign({}, modes[n] || {});
+      cur.found = maxF + 1; modes[n] = cur;
+      if (ex) await sb.from('results').update({ modes }).eq('id', ex.id);
+      else await sb.from('results').insert({ discipline_id: discId, player_id: pid, modes });
+      await recomputeChamLive(discId);
+    } catch (e) { console.error(e); }
+    refreshEvents();
+  };
+
+  window.chamUndoFindLive = async function(discId, n) {
+    try {
+      const { data: rows } = await sb.from('results').select('*').eq('discipline_id', discId);
+      let best = null, bf = 0;
+      (rows || []).forEach(r => { const f = (r.modes && r.modes[n] && r.modes[n].found) || 0; if (f > bf) { bf = f; best = r; } });
+      if (best) {
+        const modes = Object.assign({}, best.modes);
+        const cur = Object.assign({}, modes[n]); delete cur.found; modes[n] = cur;
+        await sb.from('results').update({ modes }).eq('id', best.id);
+        await recomputeChamLive(discId);
+      }
+    } catch (e) { console.error(e); }
+    refreshEvents();
+  };
+
+  window.chamCloseLive = async function(discId, n) {
+    try {
+      const { data: disc } = await sb.from('disciplines').select('*').eq('id', discId).maybeSingle();
+      const modes = (disc && Array.isArray(disc.modes) ? disc.modes : []).map(m => m.n === n ? Object.assign({}, m, { closed: true }) : m);
+      await sb.from('disciplines').update({ modes }).eq('id', discId);
+      await recomputeChamLive(discId);
+    } catch (e) { console.error(e); }
+    refreshEvents();
+  };
+
+  async function recomputeChamLive(discId) {
+    const { data: disc } = await sb.from('disciplines').select('*').eq('id', discId).maybeSingle();
+    if (!disc) return;
+    const rounds = (Array.isArray(disc.modes) ? disc.modes : []).filter(m => m.type === 'cham');
+    const { data: rows } = await sb.from('results').select('*').eq('discipline_id', discId);
+    let vetoBy = liveVetoBy;
+    if (liveEvent) {
+      const { data: v } = await sb.from('vetoes').select('*').eq('event_id', liveEvent.id);
+      vetoBy = {}; (v || []).forEach(x => vetoBy[x.player_id] = x.discipline_kind);
+    }
+    const playing = (evParticipants && evParticipants.length ? evParticipants : evPlayers).filter(p => vetoBy[p.id] !== disc.kind);
+    const perRound = rounds.map(m => chamRoundPtsLive(m, rows || [], playing));
+    const totals = playing.map(p => ({ p, pts: perRound.reduce((s, ptsMap) => s + (ptsMap[p.id] || 0), 0) }));
+    totals.sort((a, b) => b.pts - a.pts);
+    let rank = 0, last = -1;
+    totals.forEach((t, i) => { if (t.pts !== last) rank = i + 1; t.rank = rank; last = t.pts; });
+    for (const t of totals) {
+      const ex = (rows || []).find(r => r.player_id === t.p.id);
+      const placement = t.pts > 0 ? t.rank : null;
+      const points = placement ? SOLO_PTS[Math.min(placement, SOLO_PTS.length) - 1] : 0;
+      if (ex) await sb.from('results').update({ placement, points }).eq('id', ex.id);
+      else if (placement) await sb.from('results').insert({ discipline_id: discId, player_id: t.p.id, placement, points });
+    }
+  }
+
+  // === Haxball Double Elimination (v2) — Ableitung des Bracket-Zustands (read-only Anzeige) ===
+  // Gleiche Logik wie in admin.html: Plan ist aus der Spielerzahl deterministisch,
+  // gespeichert werden nur die ausgelosten Runden (disciplines.bracket = {v:2, players, live, gfw}).
+  function deShape(s) {
+    if (s <= 1)  return { nMatches: 0, byeP: 0, byeT: 0, adv: s };
+    if (s === 2) return { nMatches: 1, byeP: 0, byeT: 0, adv: 1, duel: true };
+    if (s === 3) return { nMatches: 1, byeP: 1, byeT: 0, adv: 2, duel: true };
+    const byeP = s % 2, t = (s - byeP) / 2, nMatches = Math.floor(t / 2), byeT = t % 2;
+    return { nMatches, byeP, byeT, adv: 2 * nMatches + 2 * byeT + byeP };
+  }
+  function dePlan(n) {
+    const p = []; let wb = n, lb = 0, wbR = 0, lbR = 0;
+    while (wb > 1) {
+      const sh = deShape(wb);
+      p.push({ bracket: 'wb', r: ++wbR, size: wb, ...sh });
+      lb += wb - sh.adv; wb = sh.adv;
+      if (lb >= 2) { const lsh = deShape(lb); p.push({ bracket: 'lb', r: ++lbR, size: lb, ...lsh }); lb = lsh.adv; }
+    }
+    while (lb > 1) { const lsh = deShape(lb); p.push({ bracket: 'lb', r: ++lbR, size: lb, ...lsh }); lb = lsh.adv; }
+    return p;
+  }
+  function deReplay(br) {
+    const plan = dePlan((br.players || []).length);
+    let wb = (br.players || []).slice(), lb = [];
+    const elim = [], wins = {}, games = {};
+    let open = false;
+    (br.live || []).forEach(e => {
+      if (open) return;
+      if (e.matches.some(m => !m.w)) { open = true; return; }
+      const pe = plan[e.pi];
+      const winners = [], losers = [];
+      e.matches.forEach(m => {
+        const wT = e.teams[m.w === 'a' ? m.a : m.b], lT = e.teams[m.w === 'a' ? m.b : m.a];
+        winners.push(...wT); losers.push(...lT);
+        wT.forEach(pid => wins[pid] = (wins[pid] || 0) + 1);
+        wT.concat(lT).forEach(pid => games[pid] = (games[pid] || 0) + 1);
+      });
+      (e.byeT || []).forEach(ti => winners.push(...e.teams[ti]));
+      winners.push(...(e.byeP || []));
+      if (pe.bracket === 'wb') { wb = winners; lb = lb.concat(losers); }
+      else { lb = winners; losers.forEach(pid => elim.push({ pid, r: pe.r })); }
+    });
+    const allRounds = (br.live || []).length === plan.length && !open && plan.length > 0;
+    const gf = (allRounds && wb.length === 1 && lb.length === 1) ? { a: wb[0], b: lb[0] } : null;
+    return { plan, wb, lb, elim, wins, games, open, gf };
+  }
+  // Live-Turnierbaum: WB-Reihe, LB-Reihe, Grand Final rechts daneben
+  function buildDeTreeHtml(disc, animate) {
+    const nameOf = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
+    const br = disc.bracket;
+    const rep = deReplay(br);
+    let no = 0; const nums = (br.live || []).map(e => e.matches.map(() => ++no));
+    const teamNm = (e, ti) => e.teams[ti].map(nameOf).join(' & ');
+    const curLi = (br.live || []).length - 1;
+    const slot = (e, m, side, decided) => {
+      const won = m.w === side, lost = m.w && m.w !== side;
+      const dots = `<span class="de-dots">${e.teams[side === 'a' ? m.a : m.b].map(pid => `<span class="de-dot" style="background:${pColor(pid)}"></span>`).join('')}</span>`;
+      return `<div class="de-slot${won ? ' win' : ''}${lost ? ' lose' : ''}">${dots}<span class="de-nm">${teamNm(e, side === 'a' ? m.a : m.b)}</span></div>`;
+    };
+    const roundCol = (pe, i) => {
+      const e = (br.live || [])[i];
+      let inner;
+      if (e) {
+        inner = e.matches.map((m, mi) => `<div class="de-match${!m.w && i === curLi ? ' next' : ''}${animate && i === curLi ? ' de-pop' : ''}"><span class="de-no">Spiel ${nums[i][mi]}</span>${slot(e, m, 'a')}${slot(e, m, 'b')}</div>`).join('');
+        (e.byeP || []).forEach(pid => inner += `<div class="de-bye">🎫 Freilos: <b>${nameOf(pid)}</b></div>`);
+        (e.byeT || []).forEach(ti => inner += `<div class="de-bye">🎫 Freilos-Team: <b>${teamNm(e, ti)}</b></div>`);
+      } else {
+        inner = `<div class="de-ghost"><b>${pe.size} Spieler</b> · ${pe.nMatches} ${pe.nMatches === 1 ? 'Match' : 'Matches'}${pe.duel ? ' (1v1)' : ''}<br>Teams werden vor der Runde gelost 🎲</div>`;
+      }
+      return `<div class="de-round"><div class="de-round-h">${pe.bracket.toUpperCase()} · R${pe.r}${pe.duel ? ' · 1v1' : ''}</div><div class="de-rmatches">${inner}</div></div>`;
+    };
+    const wbCols = rep.plan.map((pe, i) => pe.bracket === 'wb' ? roundCol(pe, i) : '').join('');
+    const lbCols = rep.plan.map((pe, i) => pe.bracket === 'lb' ? roundCol(pe, i) : '').join('');
+    let gfHtml;
+    if (rep.gf) {
+      const gslot = pid => {
+        const won = br.gfw === pid, lost = br.gfw && br.gfw !== pid;
+        const adv = pid === rep.gf.a ? '<span class="de-adv">startet 1:0</span>' : '';
+        return `<div class="de-slot${won ? ' win' : ''}${lost ? ' lose' : ''}"><span class="de-dots"><span class="de-dot" style="background:${pColor(pid)}"></span></span><span class="de-nm">${nameOf(pid)}</span>${adv}</div>`;
+      };
+      gfHtml = `<div class="de-gf-card${br.gfw ? '' : ' next'}"><div class="de-gf-head">Grand Final</div><div class="de-gf-sub">1v1 · WB-Sieger startet 1:0</div>${gslot(rep.gf.a)}${gslot(rep.gf.b)}${br.gfw ? `<div class="de-gf-champ">🏆 ${nameOf(br.gfw)} holt Haxball!</div>` : ''}</div>`;
+    } else {
+      gfHtml = `<div class="de-ghost" style="padding:0.8rem"><b>1v1</b> — letzter WB-Spieler vs letzter LB-Spieler<br>WB-Sieger startet 1:0</div>`;
+    }
+    // Als Nächstes
+    let nextHtml = '';
+    const curE = (br.live || [])[curLi];
+    const openM = curE && curE.matches.find(m => !m.w);
+    if (openM) {
+      const pe = rep.plan[curE.pi];
+      nextHtml = `<div class="de-next">⏭ <b>Spiel ${nums[curLi][curE.matches.indexOf(openM)]}</b> · ${pe.bracket === 'wb' ? 'Winner' : 'Loser'} Bracket R${pe.r}: ${teamNm(curE, openM.a)} vs ${teamNm(curE, openM.b)}</div>`;
+    } else if (rep.gf && !br.gfw) {
+      nextHtml = `<div class="de-next">⏭ <b>Grand Final</b>: ${nameOf(rep.gf.a)} (startet 1:0) vs ${nameOf(rep.gf.b)}</div>`;
+    } else if (!rep.open && (br.live || []).length < rep.plan.length) {
+      const nx = rep.plan[(br.live || []).length];
+      nextHtml = `<div class="de-next">🎲 Gleich wird ausgelost: ${nx.bracket.toUpperCase()} Runde ${nx.r}</div>`;
+    }
+    return `
+      <div class="nd-block">
+        <div class="nd-label">Turnierbaum · Double Elimination${animate ? ' · frisch ausgelost 🎲' : ''}</div>
+        <p class="nd-sub">Teams werden vor jeder Runde neu gelost. 1. Niederlage → Loser Bracket, 2. Niederlage → raus.</p>
+        ${nextHtml}
+        <div class="de-wrap">
+          <div class="de-main">
+            <div class="de-bk wb">Winner Bracket</div>
+            <div class="de-rounds">${wbCols}</div>
+            <div class="de-bk lb">Loser Bracket</div>
+            <div class="de-rounds">${lbCols}</div>
+          </div>
+          <div class="de-gf">${gfHtml}</div>
+        </div>
+      </div>`;
+  }
+
   const COLORS = [
     ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
     ['#ffd34a','#ff7a4a'], ['#6cf2a0','#d4ff3a'], ['#ff7ce0','#7df0ff'],
@@ -1579,7 +1775,7 @@
         'Melde dich an oder erstelle einen kostenlosen GeoGuessr-Account.',
         'Spiel die 5 Runden — dein Ergebnis landet automatisch im Challenge-Ranking.'
       ] },
-    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'K.O.-Trichter', rules:'Teams per Los → die Besten ziehen weiter ins 2v2 → 1v1-Finale. Teams-Phase: 3 Tore / 3 min · Halbfinale & Finale: 5 Tore / 5 min. Je weiter du kommst, desto mehr Punkte.', phases:['Teams','2v2','1v1-Finale'],
+    { kind:'haxball',   name:'Haxball',     short:'HAX', mode:'Double Elimination', rules:'Turnierbaum mit zweiter Chance: 2v2-Teams werden vor jeder Runde neu ausgelost. 1. Niederlage → Loser Bracket, 2. Niederlage → raus. WB-Finale & Grand Final sind 1v1 (WB-Sieger startet 1:0). Runden: 3 Tore / 3 min · Finals: 5 Tore / 5 min.', phases:['Teams','2v2','1v1-Finale'],
       join:[
         'Geh auf haxball.com und öffne den Raum-Link vom Host (im Spiel: Menü → Raum-URL kopieren).',
         'Gib einen Nickname ein — nur normale Tastatur-Zeichen, keine Emojis.',
@@ -1596,6 +1792,12 @@
         'Hauptmenü → „Online“ → „Custom Online“.',
         'Wähle „Join Room“ und gib den Raum-Code deiner Lobby ein — er steht live bei deiner Lobby.',
         'Crossplay ist an — PC, PlayStation & Xbox spielen zusammen. Bleibt für alle Spiele der Lobby gleich.'
+      ] },
+    { kind:'chameleon', name:'Meccha Chameleon', short:'CHA', mode:'Hide & Seek · 3–4 Runden', rules:'Hide-and-Seek: Die Hider bemalen sich und verschmelzen mit der Map, die Seeker suchen sie. Pro Runde 2 Seeker per Los. Je später du gefunden wirst, desto mehr Punkte — Überlebende kriegen das Maximum, Seeker punkten nach Fangquote. Punkte über alle Runden summiert.',
+      join:[
+        'Installiere „MECCHA CHAMELEON“ auf Steam (~6 €, nur PC) — am besten schon vor dem Abend.',
+        'Der Host erstellt eine private Lobby — Servername/Passwort sagt er im Voice an.',
+        'Tritt der Lobby des Hosts bei und warte, bis die Runde startet.'
       ] },
     { kind:'fallguys',  name:'Fall Guys',   short:'FAL', mode:'Mini-Turnier', rules:'2–3 Modi (solo oder Team), Punkte über alle Modi summiert. Beste Gesamtleistung gewinnt.',
       join:[
@@ -1642,7 +1844,8 @@
       fallguys:   'DEMO-7788'
     };
     const hp = HAX_PHASE_DATA[demoHaxPhase] || HAX_PHASE_DATA['Teams'];
-    const disciplines = VDISCS.map((d,i) => ({
+    // Demo bleibt beim klassischen Line-up (PLAY_ORDER) — Positionen entsprechend
+    const disciplines = PLAY_ORDER.map(k => VDISCS.find(v => v.kind === k)).map((d,i) => ({
       id:`d${i+1}`, event_id:'e1', kind:d.kind, name:d.name, position:i+1,
       phase: d.kind === 'haxball' ? demoHaxPhase : null,
       join_link: DEMO_JOIN[d.kind] || null,
@@ -1709,6 +1912,7 @@
   }
 
   let evPlayers = [], liveEvent = null, upcomingEvent = null, evVetoes = [], evParticipants = [];
+  let liveVetoBy = {}; // player_id → vetotes discipline_kind des Live-Abends (für buildNowDetail)
   let lastSnapshot = {}; // pid -> { rank, total }
   let demoFirstRender = true;
 
@@ -1836,14 +2040,19 @@
   async function renderLiveFromData(dList, results, vetoes) {
     document.getElementById('live').style.display = 'block';
 
-    // Spiel-Reihenfolge des Abends: Haxball als niederschwelliger Start, Fall Guys als Finale
-    const orderedDiscs = PLAY_ORDER.map(kind => {
-      const vd = VDISCS.find(v => v.kind === kind) || { kind, name: kind };
-      const found = dList.find(d => d.kind === kind);
-      return found || { id: `missing-${kind}`, kind, name: vd.name };
-    });
+    // Spiel-Reihenfolge des Abends: kommt aus dem Line-up des Events (disciplines.position).
+    // Fallback für alte Abende ohne Position: die klassische PLAY_ORDER.
+    const havePos = dList.some(d => d.position != null);
+    const orderedDiscs = havePos
+      ? dList.slice().sort((a, b) => (a.position || 99) - (b.position || 99))
+      : PLAY_ORDER.map(kind => {
+          const vd = VDISCS.find(v => v.kind === kind) || { kind, name: kind };
+          const found = dList.find(d => d.kind === kind);
+          return found || { id: `missing-${kind}`, kind, name: vd.name };
+        });
 
     const vetoBy = {}; vetoes.forEach(v => vetoBy[v.player_id] = v.discipline_kind);
+    liveVetoBy = vetoBy;
 
     // Per-player aggregates
     const byPid = {};
@@ -2235,7 +2444,7 @@
       else { w2gEl.removeAttribute('href'); w2gEl.style.display = 'none'; }
     }
 
-    // Joker-Minispiel „Fly the Copter": Link + aktueller Stand der Veto-Spieler (parallel, klein)
+    // Joker-Minispiel „Dino Runner": Link + aktueller Stand der Veto-Spieler (parallel, klein)
     const copterEl = document.getElementById('liveCopter');
     if (copterEl) {
       const copterOn = isDemo || (liveEvent && liveEvent.copter_active);
@@ -2259,7 +2468,7 @@
           ? `<div class="copter-rows">${cRows.map((r,i) => `<div class="copter-row"><span class="cr-pos">${i+1}.</span><span class="cr-name">${pName(r.pid)}</span><span class="cr-pts">${r.score || '–'}</span></div>`).join('')}</div>`
           : `<div class="copter-sub" style="margin-top:0.4rem">Noch kein Veto gesetzt — sobald jemand eine Disziplin vetoed, erscheint hier die Score-Eingabe. Spielen kann trotzdem schon jeder.</div>`;
         copterEl.innerHTML = `
-          <div class="copter-head"><span class="copter-title">🃏 Joker-Minispiel · Fly the Copter</span><a class="copter-link" href="${COPTER_URL}" target="_blank" rel="noopener">Spielen →</a></div>
+          <div class="copter-head"><span class="copter-title">🃏 Joker-Minispiel · Dino Runner 🦖</span><a class="copter-link" href="${COPTER_URL}" target="_blank" rel="noopener">Spielen →</a></div>
           <div class="copter-sub">Veto-Spieler zocken nebenbei am Handy — wer den höchsten Score hält, gewinnt. Score selbst eintragen, per Screen-Share oder Foto beweisen.</div>
           ${board}
           ${entry}`;
@@ -2314,7 +2523,7 @@
       orderedDiscs.forEach(d => {
         const da = d.teams_drawn_at || null;
         if (da && lastDrawnByDisc[d.id] !== undefined && lastDrawnByDisc[d.id] !== da) {
-          showLiveToast(d.kind === 'brawlhalla' ? 'Neue Lobbies ausgelost' : `Teams stehen — ${discName(d.kind)}`, 't-draw');
+          showLiveToast(d.kind === 'brawlhalla' ? 'Neue Lobbies ausgelost' : d.kind === 'chameleon' ? 'Seeker ausgelost — die Jagd beginnt' : `Teams stehen — ${discName(d.kind)}`, 't-draw');
         }
       });
     }
@@ -2469,7 +2678,7 @@
         return `<div class="ir-card" style="--ir-c:${col}">
             <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
             <div class="ir-name">${p.name || '—'}</div>
-            <div class="ir-cry">🃏 vetoed <b>${discName(kind)}</b><br><small style="color:var(--cool)">spielt Fly the Copter</small></div>
+            <div class="ir-cry">🃏 vetoed <b>${discName(kind)}</b><br><small style="color:var(--cool)">spielt Dino Runner 🦖</small></div>
           </div>`;
       }).join('') : `<div class="ir-card" style="grid-column:1/-1;--ir-c:var(--muted)"><div class="ir-name">Niemand vetoed heute</div><div class="ir-cry">Alle spielen alle Disziplinen mit.</div></div>`;
       box.innerHTML = `
@@ -2577,7 +2786,7 @@
         const ceWinName = ceWinPlayer ? ceWinPlayer.name : '—';
         copterEndHtml = `
           <div class="copter-endstand">
-            <div class="ce-eyebrow">🃏 Joker-Minispiel · Fly the Copter</div>
+            <div class="ce-eyebrow">🃏 Joker-Minispiel · Dino Runner 🦖</div>
             <div class="ce-headline"><span class="ce-h-pre">Sieger</span> <b style="color:var(--cool)">${ceWinName}</b> <span class="ce-h-pts">${ceWinner.score}</span></div>
             <div class="ce-rows">
               ${copterRows.map((r, i) => {
@@ -2875,6 +3084,12 @@
       }
     }
 
+    // Haxball v2: Double-Elimination-Baum ersetzt die Team-/Trichter-Anzeige
+    // (alte Abende + Demo behalten den Trichter-Pfad oben)
+    if (kind === 'haxball' && currentDisc.bracket && currentDisc.bracket.v === 2) {
+      teamsHtml = buildDeTreeHtml(currentDisc, animateTeams);
+    }
+
     // --- Aktuelle Punkte in DIESEM Spiel ---
     let gamePtsHtml = '';
     const scored = myRows.filter(r => (parseFloat(r.points) || 0) > 0 || r.placement);
@@ -2898,8 +3113,8 @@
     let modeTblHtml = '', modesListHtml = '';
     const mdefs = Array.isArray(currentDisc.modes) ? currentDisc.modes : [];
     if (mdefs.length) {
-      const px = (kind === 'brawlhalla') ? 'R' : 'M';
-      const term = (kind === 'brawlhalla') ? 'Runde' : 'Modus';
+      const px = (kind === 'brawlhalla' || kind === 'chameleon') ? 'R' : 'M';
+      const term = (kind === 'brawlhalla' || kind === 'chameleon') ? 'Runde' : 'Modus';
       const lblOf = (m, i) => m.label || (term + ' ' + (i+1));
       // Status je Modus: fertig (Platzierung gesetzt) / läuft (Teams stehen) / kommt
       const modeStatus = m => {
@@ -2909,6 +3124,14 @@
           if (!hasLobby) return 'next';
           const laterAssigned = mdefs.some(mm => mm.type === 'brawl' && mm.n > m.n && myRows.some(r => r.modes && r.modes[mm.n] && r.modes[mm.n].lobby));
           return laterAssigned ? 'done' : 'live';
+        }
+        if (m.type === 'cham') {
+          if (m.closed) return 'done';
+          const started = (m.seekers || []).length > 0 || rs.some(x => x.found);
+          if (!started) return 'next';
+          // Wenn eine spätere Runde schon Seeker hat, gilt diese als durch
+          const laterStarted = mdefs.some(mm => mm.type === 'cham' && mm.n > m.n && ((mm.seekers || []).length > 0 || mm.closed));
+          return laterStarted ? 'done' : 'live';
         }
         if (rs.some(x => x.placement)) return 'done';
         if (rs.some(x => x.team || x.lobby)) return 'live';
@@ -2921,7 +3144,7 @@
         const st = modeStatus(m);
         const cls = st === 'done' ? 'done' : (st === 'live' || (!hasLive && i === firstNext) ? 'now' : '');
         const word = st === 'done' ? '✓ fertig' : (cls === 'now' ? '● läuft' : 'kommt');
-        const badge = (kind === 'brawlhalla') ? '' : ` · ${m.type === 'team' ? 'Team' : 'Solo'}`;
+        const badge = (kind === 'brawlhalla' || kind === 'chameleon') ? '' : ` · ${m.type === 'team' ? 'Team' : 'Solo'}`;
         return `<span class="nd-mode-chip ${cls}"><b>${i+1}</b> ${lblOf(m,i)}${badge} <span class="mc-st">${word}</span></span>`;
       }).join('')}</div></div>`;
 
@@ -2977,23 +3200,74 @@
         }
       }
 
+      // --- Meccha Chameleon: aktive Runde — Seeker, Fundreihenfolge, Self-Tracking ---
+      if (kind === 'chameleon') {
+        let active = mdefs.find(m => m.type === 'cham' && modeStatus(m) === 'live');
+        if (!active && firstNext >= 0 && mdefs[firstNext] && mdefs[firstNext].type === 'cham') active = mdefs[firstNext];
+        if (active && (active.seekers || []).length) {
+          const n = active.n;
+          const playingC = (evParticipants && evParticipants.length ? evParticipants : evPlayers).filter(p => liveVetoBy[p.id] !== 'chameleon');
+          const seekers = (active.seekers || []).filter(id => playingC.some(p => p.id === id));
+          const hiders = playingC.filter(p => !seekers.includes(p.id));
+          const H = hiders.length;
+          const foundOf = pid => { const r = myRows.find(x => x.player_id === pid); return (r && r.modes && r.modes[n] && r.modes[n].found) || 0; };
+          const found = hiders.filter(p => foundOf(p.id) > 0).sort((a, b) => foundOf(a.id) - foundOf(b.id));
+          const hidden = hiders.filter(p => !foundOf(p.id));
+          const seekerChips = seekers.map(pid => `<span class="brawl-chip on">🔍 ${nameOf(pid)}</span>`).join('');
+          const foundRows = found.map(p => `<div class="lob-row"><span class="lob-rk">${foundOf(p.id)}</span><div class="lob-rmid"><span class="lob-rname">${p.name}</span><span class="lob-rgames">gefunden · +${foundOf(p.id)}</span></div><span class="lob-rp">${foundOf(p.id)}</span></div>`).join('');
+          const hiddenRows = hidden.map(p => `<div class="lob-row${active.closed ? ' lead' : ''}"><span class="lob-rk">🛡</span><div class="lob-rmid"><span class="lob-rname">${p.name}</span><span class="lob-rgames">${active.closed ? `überlebt · +${H}` : 'noch versteckt'}</span></div><span class="lob-rp">${active.closed ? H : '…'}</span></div>`).join('');
+          let entry = '';
+          if (!isDemo && !active.closed) {
+            const chips = hidden.map(p => `<button class="brawl-chip" onclick="chamFoundLive('${currentDisc.id}',${n},'${p.id}')">${p.name}</button>`).join('');
+            entry = `<div class="brawl-entry">
+              <div class="brawl-hint">Hider gefunden? <b>Antippen</b> — in der Reihenfolge, in der sie gefunden werden.</div>
+              ${hidden.length ? `<div class="brawl-chips">${chips}</div>` : ''}
+              <div class="brawl-acts">
+                ${found.length ? `<button class="brawl-undo" onclick="chamUndoFindLive('${currentDisc.id}',${n})">↩ letzter Fund</button>` : ''}
+                <button class="brawl-go" onclick="chamCloseLive('${currentDisc.id}',${n})">🏁 Runde beenden${hidden.length ? ` — ${hidden.length}× überlebt (+${H})` : ''}</button>
+              </div>
+            </div>`;
+          } else if (isDemo) {
+            entry = `<div class="brawl-hint">Hier wird live eingetippt, wer gefunden wurde — Überlebende kassieren das Maximum.</div>`;
+          }
+          const card = `<div class="lob-card">
+              <div class="lob-head"><span class="lh-n">🔍 Seeker dieser Runde</span><span class="lh-meta">${found.length}/${H} gefunden</span></div>
+              <div class="brawl-chips" style="margin:0.3rem 0 0.6rem">${seekerChips}</div>
+              <div class="lob-tally">${foundRows}${hiddenRows}</div>
+              ${entry}
+            </div>`;
+          modesListHtml += `<div class="nd-block"><div class="nd-label">Jagd · ${lblOf(active, mdefs.indexOf(active))}</div><p class="nd-sub">Je später du gefunden wirst, desto mehr Punkte — Überlebende kriegen +${H}, die Seeker so viele Punkte wie gefundene Hider.</p><div class="lob-grid">${card}</div></div>`;
+        }
+      }
+
       const SP = [10,8,6,4,3,2,1], sp = r => (r && r >= 1) ? SP[Math.min(r, SP.length)-1] : 0;
       const TP = [10,8,6,4], tp = r => (r && r >= 1) ? TP[Math.min(r, TP.length)-1] : 0;
-      const rws = myRows.filter(r => r.modes).map(r => {
-        const per = mdefs.map(m => {
-          const md = r.modes[m.n] || {};
-          if (m.type === 'brawl') return brawlPts(brawlGamesOf(r, m.n));
-          return (m.type === 'team') ? tp(md.placement) : sp(md.placement);
-        });
-        return { pid: r.player_id, per, tot: per.reduce((a,b) => a+b, 0) };
-      }).filter(r => r.tot > 0);
+      let rws;
+      if (kind === 'chameleon') {
+        // Chameleon: Rundenpunkte aus Fundreihenfolge/Seeker-Quote — auch für Spieler ohne eigene Ergebnis-Zeile (Überlebende, Seeker)
+        const playingC = (evParticipants && evParticipants.length ? evParticipants : evPlayers).filter(p => liveVetoBy[p.id] !== 'chameleon');
+        const perRound = mdefs.map(m => m.type === 'cham' ? chamRoundPtsLive(m, myRows, playingC) : {});
+        rws = playingC.map(p => {
+          const per = perRound.map(ptsMap => ptsMap[p.id] || 0);
+          return { pid: p.id, per, tot: per.reduce((a,b) => a+b, 0) };
+        }).filter(r => r.tot > 0);
+      } else {
+        rws = myRows.filter(r => r.modes).map(r => {
+          const per = mdefs.map(m => {
+            const md = r.modes[m.n] || {};
+            if (m.type === 'brawl') return brawlPts(brawlGamesOf(r, m.n));
+            return (m.type === 'team') ? tp(md.placement) : sp(md.placement);
+          });
+          return { pid: r.player_id, per, tot: per.reduce((a,b) => a+b, 0) };
+        }).filter(r => r.tot > 0);
+      }
       if (rws.length) {
         rws.sort((a,b) => b.tot - a.tot);
         let rank = 0, last = -1;
         rws.forEach((r,i) => { if (r.tot !== last) rank = i + 1; r.rank = rank; last = r.tot; });
         // Bundesliga-Stil wie die Haxball-/Brawlhalla-Tabelle (Avatar · Farbpunkt · Tier-Highlight)
-        const modeLabel = kind === 'brawlhalla' ? 'Runde' : 'Modus';
-        const modeMode = kind === 'brawlhalla' ? 'sb-brawlmode' : 'sb-falmode';
+        const modeLabel = (kind === 'brawlhalla' || kind === 'chameleon') ? 'Runde' : 'Modus';
+        const modeMode = (kind === 'brawlhalla' || kind === 'chameleon') ? 'sb-brawlmode' : 'sb-falmode';
         const head = `<tr>
             <th class="rank-col">#</th>
             <th class="player-col">Spieler</th>
@@ -3163,9 +3437,12 @@
       else { note.style.display = 'none'; }
     }
     const dsel = document.getElementById('vetoDisc');
-    if (dsel.options.length === 0) {
-      dsel.innerHTML = '<option value="">— kein Veto —</option>' + VDISCS.map(d => `<option value="${d.kind}">${d.name}</option>`).join('');
-    }
+    // Vetobar sind genau die Spiele im Line-up dieses Abends (Fallback: kompletter Pool)
+    const { data: evDiscs } = await sb.from('disciplines').select('kind,position').eq('event_id', upcomingEvent.id).order('position');
+    const vetoPool = (evDiscs && evDiscs.length) ? evDiscs.map(d => d.kind) : VDISCS.map(d => d.kind);
+    const prevDv = dsel.value;
+    dsel.innerHTML = '<option value="">— kein Veto —</option>' + vetoPool.map(k => `<option value="${k}">${discName(k)}</option>`).join('');
+    if (prevDv && vetoPool.includes(prevDv)) dsel.value = prevDv;
     const selV = evVetoes.find(v => v.player_id === psel.value);
     dsel.value = selV ? selV.discipline_kind : '';
     const list = document.getElementById('vetoList');

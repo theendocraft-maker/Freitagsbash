@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haxball · Double-Elimination — Mockup v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f; --bg-2: #101018; --surface: #14141c;
+    --border: #ffffff14; --border-strong: #ffffff2a;
+    --text: #f2f2f7; --soft: #b9b9c8; --muted: #8a8a9e;
+    --primary: #d4ff3a; --primary-soft: #d4ff3a1a; --primary-line: #d4ff3a55;
+    --red: #ff5c5c; --cyan: #7df0ff; --gold: #ffd34a;
+    --fd: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --fb: "DM Sans", sans-serif; --fm: "DM Mono", monospace;
+    --r: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--fb); padding: 2rem 1.5rem 4rem; }
+  .wrap { max-width: 1360px; margin: 0 auto; }
+  h1 { font-family: var(--fd); font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; font-size: 2.4rem; }
+  h1 .acc { color: var(--primary); }
+  .sub { color: var(--muted); font-size: 0.95rem; margin-top: 0.3rem; max-width: 900px; line-height: 1.55; }
+  .sub b { color: var(--soft); }
+  .mock-badge { display:inline-block; font-family: var(--fm); font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); border: 1px solid #7df0ff44; border-radius: 999px; padding: 3px 10px; margin-bottom: 0.8rem; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: center; margin: 1.6rem 0 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.9rem 1.1rem; }
+  .controls label { font-family: var(--fm); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .controls input[type=range] { accent-color: var(--primary); width: 180px; }
+  .count { font-family: var(--fd); font-weight: 900; font-size: 1.5rem; color: var(--primary); min-width: 2.2rem; text-align: center; }
+  button { font-family: var(--fb); font-weight: 600; font-size: 0.85rem; background: var(--bg-2); color: var(--text); border: 1px solid var(--border-strong); border-radius: 999px; padding: 0.5rem 1rem; cursor: pointer; transition: border-color .15s, transform .1s; }
+  button:hover { border-color: var(--primary-line); }
+  button:active { transform: scale(0.97); }
+  button.go { background: var(--primary); color: #0b0d10; border-color: var(--primary); }
+  .mode-pill { font-family: var(--fm); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 1px solid #ffd34a44; padding: 4px 10px; border-radius: 999px; }
+
+  .layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.2rem; align-items: start; }
+  @media (max-width: 1050px) { .layout { grid-template-columns: 1fr; } }
+
+  /* Brackets links, Grand Final rechts daneben */
+  .board { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 1.1rem; }
+  .board-flex { display: flex; gap: 1.1rem; align-items: stretch; }
+  .brackets { flex: 1; min-width: 0; overflow-x: auto; }
+  .gf-col { width: 225px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.6rem; border-left: 1px dashed var(--border-strong); padding-left: 1.1rem; }
+
+  .bk-title { font-family: var(--fm); font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin: 0.4rem 0 0.6rem; display:flex; align-items:center; gap:0.5rem; }
+  .bk-title.wb::before { content:''; width:8px; height:8px; border-radius:50%; background: var(--primary); }
+  .bk-title.lb::before { content:''; width:8px; height:8px; border-radius:50%; background: var(--red); }
+  .bk-title.gf::before { content:''; width:8px; height:8px; border-radius:50%; background: var(--gold); }
+  .rounds { display: flex; gap: 0.9rem; align-items: stretch; padding-bottom: 0.4rem; }
+  .round { min-width: 185px; max-width: 210px; display: flex; flex-direction: column; }
+  .round-h { font-family: var(--fm); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; text-align: center; }
+  .round-h b { color: var(--soft); }
+  .rmatches { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 0.6rem; }
+
+  .match { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; position: relative; }
+  .match .mnum { position: absolute; top: 4px; right: 8px; font-family: var(--fm); font-size: 0.58rem; color: var(--muted); letter-spacing: 0.08em; }
+  .match.next { border-color: var(--primary-line); box-shadow: 0 0 0 1px var(--primary-line), 0 8px 26px -14px var(--primary); }
+  .match.next .mnum { color: var(--primary); }
+  .slot { display: flex; align-items: center; gap: 0.5rem; padding: 0.48rem 0.6rem; font-size: 0.82rem; border-bottom: 1px solid var(--border); min-height: 2.3rem; }
+  .slot:last-child { border-bottom: none; }
+  .slot .tname { font-weight: 600; line-height: 1.25; }
+  .slot.pending { color: var(--muted); font-size: 0.74rem; font-style: italic; }
+  .slot.win { background: var(--primary-soft); }
+  .slot.win .tname { color: var(--primary); }
+  .slot.win::after { content: '✓'; margin-left: auto; color: var(--primary); font-weight: 700; }
+  .slot.lose { opacity: 0.55; }
+  .slot.lose .tname { text-decoration: line-through; text-decoration-color: #ff5c5c88; }
+  .slot.clickable { cursor: pointer; }
+  .slot.clickable:hover { background: #ffffff0a; }
+  .pdots { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .tdot { width: 8px; height: 8px; border-radius: 50%; }
+  .adv { font-family: var(--fm); font-size: 0.6rem; color: var(--gold); border: 1px dashed #ffd34a55; border-radius: 6px; padding: 1px 6px; margin-left: auto; white-space: nowrap; }
+  .slot.win .adv, .slot.lose .adv { display: none; }
+  .byechip { font-size: 0.72rem; color: var(--muted); border: 1px dashed var(--border-strong); border-radius: 8px; padding: 0.35rem 0.55rem; margin-top: 0.15rem; }
+  .byechip b { color: var(--soft); }
+  .ghost { border: 1px dashed var(--border-strong); border-radius: 10px; padding: 0.6rem; color: var(--muted); font-size: 0.72rem; line-height: 1.5; text-align: center; background: transparent; }
+  .ghost b { color: var(--soft); }
+
+  .gf-card { background: var(--surface); border: 1px solid #ffd34a44; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 34px -18px var(--gold); }
+  .gf-head { font-family: var(--fd); font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; font-size: 1.05rem; color: var(--gold); padding: 0.5rem 0.7rem 0.2rem; }
+  .gf-sub { font-family: var(--fm); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 0 0.7rem 0.5rem; }
+  .gf-champ { text-align:center; padding: 0.55rem; font-size: 0.85rem; color: var(--gold); }
+
+  .aside { display: flex; flex-direction: column; gap: 1.2rem; position: sticky; top: 1rem; }
+  .panel { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); padding: 1rem 1.1rem; }
+  .panel h3 { font-family: var(--fd); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; font-size: 1.15rem; margin-bottom: 0.6rem; }
+  .nextinfo { font-size: 0.85rem; color: var(--soft); line-height: 1.5; }
+  .nextinfo b { color: var(--primary); }
+  .st-row { display: grid; grid-template-columns: 2rem 1fr auto auto auto; gap: 0.45rem; align-items: center; padding: 0.38rem 0.45rem; border-radius: 8px; font-size: 0.84rem; }
+  .st-row.t1 { background: linear-gradient(90deg, #ffd34a22, transparent); }
+  .st-row.t2, .st-row.t3 { background: #ffffff07; }
+  .st-rank { font-family: var(--fd); font-weight: 900; font-size: 1.05rem; color: var(--muted); text-align: center; }
+  .st-row.t1 .st-rank { color: var(--gold); }
+  .st-name { font-weight: 600; }
+  .st-sub { font-size: 0.64rem; color: var(--muted); display: block; font-weight: 400; }
+  .st-pts { font-family: var(--fd); font-weight: 900; font-size: 1.1rem; color: var(--primary); min-width: 1.4rem; text-align: right; }
+  .st-wl { font-family: var(--fm); font-size: 0.66rem; color: var(--muted); }
+  .legend { font-size: 0.78rem; color: var(--muted); line-height: 1.65; }
+  .legend b { color: var(--soft); }
+  .legend .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="mock-badge">Mockup v2 · Teams jede Runde neu · noch nicht live</span>
+  <h1>Haxball · <span class="acc">Double Elimination</span></h1>
+  <p class="sub"><b>Jeder Spieler läuft einzeln durchs Bracket</b> — die 2v2-Teams werden <b>vor jeder Runde neu ausgelost</b>. Verliert ein Team, fallen beide Spieler ins Loser Bracket; wer dort verliert, ist raus. Am Ende bleiben automatisch Einzelspieler übrig: WB-Finale und <b style="color:var(--gold)">Grand Final sind 1v1</b> (WB-Sieger startet 1:0). Der komplette Baum steht ab der Auslosung fest — nur die Team-Zusammensetzungen werden Runde für Runde gezogen.</p>
+
+  <div class="controls">
+    <label>Spieler</label>
+    <input type="range" id="cnt" min="4" max="12" value="9" oninput="onCount()">
+    <span class="count" id="cntLbl">9</span>
+    <span class="mode-pill" id="modePill"></span>
+    <button class="go" onclick="draw()">🎲 Auslosen</button>
+    <button onclick="autoSim()">▶ Auto-simulieren</button>
+    <button onclick="draw(true)">↺ Ergebnisse löschen</button>
+  </div>
+
+  <div class="layout">
+    <div class="board">
+      <div class="board-flex">
+        <div class="brackets">
+          <div class="bk-title wb">Winner Bracket — verlieren = Absturz ins Loser Bracket</div>
+          <div class="rounds" id="wbRounds"></div>
+          <div class="bk-title lb" style="margin-top:1rem">Loser Bracket — die zweite Chance, verlieren = raus</div>
+          <div class="rounds" id="lbRounds"></div>
+        </div>
+        <div class="gf-col">
+          <div class="bk-title gf">Grand Final · 1v1</div>
+          <div id="gfBox"></div>
+        </div>
+      </div>
+    </div>
+    <div class="aside">
+      <div class="panel">
+        <h3>⏭ Als Nächstes</h3>
+        <div class="nextinfo" id="nextInfo">—</div>
+      </div>
+      <div class="panel">
+        <h3>📊 Platzierung → Punkte</h3>
+        <div id="standings"></div>
+      </div>
+      <div class="panel">
+        <h3>ℹ️ Regeln</h3>
+        <div class="legend">
+          <span class="dot" style="background:var(--primary)"></span><b>Jede Runde neue Teams</b> — per Los aus allen, die in der Runde noch drin sind.<br>
+          <span class="dot" style="background:var(--red)"></span><b>Zwei Leben:</b> 1. Niederlage → Loser Bracket, 2. Niederlage → raus.<br>
+          <span class="dot" style="background:var(--gold)"></span><b>Grand Final 1v1:</b> letzter WB-Spieler vs letzter LB-Spieler, WB-Spieler startet 1:0.<br>
+          <b>Ungerade Zahlen:</b> Freilos (Spieler oder Team) — wer es kriegt, wird gelost, seltener bevorzugt.<br>
+          <b>Platzierung:</b> je später raus, desto besser; Tiebreak = Siege. Punkte 10/8/6/4/3/2/1 — individuell, kein Team-Schicksal.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const NAMES = ['Cleverbot','Jabba','Sparky','Ryze','Pixie','Tank','Nova','Krebs','Milo','Zora','Flint','Echo'];
+  const PCOL = ['#d4ff3a','#7df0ff','#ff7ce0','#ff7a4a','#b39cff','#ffd34a','#5cff8f','#ff5c5c','#8fd3ff','#ffb35c','#c0ff5c','#ff8fb3'];
+  const SOLO = [10,8,6,4,3,2,1];
+  const soloPts = r => SOLO[Math.min(r, SOLO.length) - 1] || 0;
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  let players = [];   // {id,name,color}
+  let plan = [];      // fixes Gerüst: {bracket:'wb'|'lb'|'gf', r, size, nMatches, byeP, byeT}
+  let live = [];      // materialisierte Runden: {planIdx, teams:[[pid,..]], byePlayers:[pid], byeTeams:[teamIdx], matches:[{a,b,winner:null|'a'|'b', no}], newlyDropped? }
+  let gfState = null; // {a:pid, b:pid, winner:pid|null}
+  let wbAlive = [], lbAlive = [], elim = [];  // elim: {pid, lbRound}
+  let wins = {}, games = {}, byes = {};
+  let matchNo = 0;
+
+  const byId = id => players.find(p => p.id === id);
+
+  // Rundengrößen-Arithmetik (deterministisch → kompletter Baum steht bei der Auslosung)
+  function roundShape(s) {
+    if (s <= 1)  return { nMatches: 0, byeP: 0, byeT: 0, adv: s };
+    if (s === 2) return { nMatches: 1, byeP: 0, byeT: 0, adv: 1, duel: true };
+    if (s === 3) return { nMatches: 1, byeP: 1, byeT: 0, adv: 2, duel: true };
+    const byeP = s % 2, t = (s - byeP) / 2, nMatches = Math.floor(t / 2), byeT = t % 2;
+    return { nMatches, byeP, byeT, adv: 2 * nMatches + 2 * byeT + byeP };
+  }
+  function computePlan(N) {
+    const p = []; let wb = N, lb = 0, wbR = 0, lbR = 0;
+    while (wb > 1) {
+      const sh = roundShape(wb);
+      p.push({ bracket: 'wb', r: ++wbR, size: wb, ...sh });
+      lb += wb - sh.adv; wb = sh.adv;
+      if (lb >= 2) { const lsh = roundShape(lb); p.push({ bracket: 'lb', r: ++lbR, size: lb, ...lsh }); lb = lsh.adv; }
+    }
+    while (lb > 1) { const lsh = roundShape(lb); p.push({ bracket: 'lb', r: ++lbR, size: lb, ...lsh }); lb = lsh.adv; }
+    return p;
+  }
+
+  // ===== Runde materialisieren: Pool → Freilose + Teams + Matches auslosen =====
+  function materialize(planIdx) {
+    const pe = plan[planIdx];
+    const pool = (pe.bracket === 'wb') ? wbAlive.slice() : lbAlive.slice();
+    const entry = { planIdx, teams: [], byePlayers: [], byeTeams: [], matches: [] };
+    let rest = shuffle(pool.slice());
+    // Spieler-Freilos: seltener Bevorzugte zuerst
+    if (pe.byeP) {
+      rest.sort((a, b) => (byes[a] || 0) - (byes[b] || 0));
+      const bp = rest.shift(); entry.byePlayers.push(bp); byes[bp] = (byes[bp] || 0) + 1;
+      shuffle(rest);
+    }
+    if (pe.duel) {
+      entry.teams = [[rest[0]], [rest[1]]];
+      entry.matches.push({ a: 0, b: 1, winner: null, no: ++matchNo });
+    } else {
+      for (let i = 0; i < rest.length; i += 2) entry.teams.push([rest[i], rest[i + 1]]);
+      let tIdx = shuffle(entry.teams.map((_, i) => i));
+      if (pe.byeT) {
+        // Team-Freilos: Team mit den wenigsten Freilosen insgesamt
+        tIdx.sort((x, y) => sumByes(entry.teams[x]) - sumByes(entry.teams[y]));
+        const bt = tIdx.shift(); entry.byeTeams.push(bt);
+        entry.teams[bt].forEach(pid => byes[pid] = (byes[pid] || 0) + 1);
+        shuffle(tIdx);
+      }
+      for (let i = 0; i < tIdx.length; i += 2) entry.matches.push({ a: tIdx[i], b: tIdx[i + 1], winner: null, no: ++matchNo });
+    }
+    live.push(entry);
+  }
+  const sumByes = team => team.reduce((s, pid) => s + (byes[pid] || 0), 0);
+
+  // Nach kompletter Runde: Sieger/Verlierer verrechnen und nächste Runde ziehen
+  function settleAndAdvance() {
+    while (true) {
+      const cur = live[live.length - 1];
+      if (!cur) break;
+      if (cur.settled) { /* weiter unten prüfen ob nächste dran ist */ }
+      else {
+        if (cur.matches.some(m => !m.winner)) break;   // Runde läuft noch
+        const pe = plan[cur.planIdx];
+        const winners = [], losers = [];
+        cur.matches.forEach(m => {
+          const wT = cur.teams[m.winner === 'a' ? m.a : m.b], lT = cur.teams[m.winner === 'a' ? m.b : m.a];
+          winners.push(...wT); losers.push(...lT);
+          wT.forEach(pid => wins[pid] = (wins[pid] || 0) + 1);
+          [...wT, ...lT].forEach(pid => games[pid] = (games[pid] || 0) + 1);
+        });
+        cur.byeTeams.forEach(ti => winners.push(...cur.teams[ti]));
+        winners.push(...cur.byePlayers);
+        if (pe.bracket === 'wb') { wbAlive = winners; lbAlive = lbAlive.concat(losers); }
+        else { lbAlive = winners; losers.forEach(pid => elim.push({ pid, lbRound: pe.r })); }
+        cur.settled = true;
+      }
+      const nextIdx = cur.planIdx + 1;
+      if (nextIdx >= plan.length) {
+        // alle Bracket-Runden durch → Grand Final (1v1) aufsetzen
+        if (!gfState && wbAlive.length === 1 && lbAlive.length === 1) gfState = { a: wbAlive[0], b: lbAlive[0], winner: null };
+        break;
+      }
+      materialize(nextIdx);
+      // frisch materialisierte Runde könnte theoretisch 0 Matches haben → Schleife regelt das
+      if (live[live.length - 1].matches.length > 0) break;
+    }
+  }
+
+  // ===== Steuerung =====
+  window.draw = function(keepCount) {
+    const n = parseInt(document.getElementById('cnt').value);
+    players = shuffle(NAMES.slice(0, n)).map((p, i) => ({ id: 'p' + i, name: p, color: PCOL[i % PCOL.length] }));
+    plan = computePlan(n);
+    live = []; gfState = null; elim = [];
+    wbAlive = players.map(p => p.id); lbAlive = [];
+    wins = {}; games = {}; byes = {}; matchNo = 0;
+    materialize(0);
+    render();
+  };
+  window.pick = function(li, mi, side) {
+    const entry = live[li]; if (!entry || entry.settled) return;
+    const m = entry.matches[mi]; if (!m) return;
+    m.winner = (m.winner === side) ? null : side;
+    settleAndAdvance(); render();
+  };
+  window.pickGf = function(pid) {
+    if (!gfState) return;
+    gfState.winner = (gfState.winner === pid) ? null : pid;
+    render();
+  };
+  window.autoSim = function() {
+    const step = () => {
+      const cur = live[live.length - 1];
+      const open = cur && !cur.settled ? cur.matches.find(m => !m.winner) : null;
+      if (open) { pick(live.length - 1, cur.matches.indexOf(open), Math.random() < 0.5 ? 'a' : 'b'); setTimeout(step, 420); return; }
+      if (gfState && !gfState.winner) { pickGf(Math.random() < 0.62 ? gfState.a : gfState.b); }
+      render();
+    };
+    step();
+  };
+  window.onCount = function() { document.getElementById('cntLbl').textContent = document.getElementById('cnt').value; updatePill(); };
+  function updatePill() {
+    const n = parseInt(document.getElementById('cnt').value);
+    const p = computePlan(n);
+    const total = p.reduce((s, r) => s + (r.nMatches || 0), 0) + 1;
+    document.getElementById('modePill').textContent = `${total} Matches gesamt`;
+  }
+
+  // ===== Platzierung =====
+  function standings() {
+    const rows = players.map(p => {
+      const e = elim.find(x => x.pid === p.id);
+      let band;                                   // größer = besser
+      if (gfState && gfState.winner === p.id) band = 1e9;
+      else if (gfState && gfState.winner && (gfState.a === p.id || gfState.b === p.id)) band = 1e8;
+      else if (!e) band = 1e7;                    // noch im Rennen (bzw. im GF ohne Ergebnis)
+      else band = e.lbRound;
+      return { p, band, wins: wins[p.id] || 0, games: games[p.id] || 0, out: !!e };
+    });
+    rows.sort((a, b) => (b.band - a.band) || (b.wins - a.wins));
+    let place = 0, i = 0, lastKey = '';
+    rows.forEach(r => {
+      i++;
+      const key = r.band + '|' + r.wins;
+      if (key !== lastKey) place = i;
+      r.place = place; lastKey = key;
+    });
+    return rows;
+  }
+
+  // ===== Rendering =====
+  function teamHtml(entry, m, side, li, mi) {
+    const team = entry.teams[side === 'a' ? m.a : m.b];
+    const won = m.winner === side, lost = m.winner && m.winner !== side;
+    const clickable = !entry.settled;
+    const dots = `<span class="pdots">${team.map(pid => `<span class="tdot" style="background:${byId(pid).color}"></span>`).join('')}</span>`;
+    const names = team.map(pid => byId(pid).name).join(' · ');
+    const cls = 'slot' + (won ? ' win' : '') + (lost ? ' lose' : '') + (clickable ? ' clickable' : '');
+    const on = clickable ? ` onclick="pick(${li},${mi},'${side}')" title="Als Sieger eintragen"` : '';
+    return `<div class="${cls}"${on}>${dots}<span class="tname">${names}</span></div>`;
+  }
+  function render() {
+    const wbHtml = [], lbHtml = [];
+    plan.forEach((pe, pi) => {
+      if (pe.bracket === 'gf') return;
+      const entry = live.find(e => e.planIdx === pi);
+      let inner;
+      const isCur = entry && !entry.settled;
+      if (entry) {
+        inner = entry.matches.map((m, mi) =>
+          `<div class="match${isCur && !m.winner ? ' next' : ''}"><span class="mnum">Spiel ${m.no}</span>${teamHtml(entry, m, 'a', live.indexOf(entry), mi)}${teamHtml(entry, m, 'b', live.indexOf(entry), mi)}</div>`
+        ).join('');
+        entry.byePlayers.forEach(pid => inner += `<div class="byechip">🎫 Freilos: <b>${byId(pid).name}</b></div>`);
+        entry.byeTeams.forEach(ti => inner += `<div class="byechip">🎫 Freilos-Team: <b>${entry.teams[ti].map(pid => byId(pid).name).join(' · ')}</b></div>`);
+      } else {
+        inner = `<div class="ghost"><b>${pe.size} Spieler</b> · ${pe.nMatches} ${pe.nMatches === 1 ? 'Match' : 'Matches'}${pe.duel ? ' (1v1)' : ''}${pe.byeP ? ' · 1 Freilos' : ''}${pe.byeT ? ' · 1 Team-Freilos' : ''}<br>Teams werden vor der Runde gelost 🎲</div>`;
+      }
+      const h = `<div class="round"><div class="round-h">${pe.bracket.toUpperCase()} · Runde ${pe.r}${pe.duel ? ' · <b>1v1</b>' : ''}</div><div class="rmatches">${inner}</div></div>`;
+      (pe.bracket === 'wb' ? wbHtml : lbHtml).push(h);
+    });
+    document.getElementById('wbRounds').innerHTML = wbHtml.join('');
+    document.getElementById('lbRounds').innerHTML = lbHtml.join('');
+
+    // Grand Final rechts
+    const gfBox = document.getElementById('gfBox');
+    if (gfState) {
+      const slot = pid => {
+        const won = gfState.winner === pid, lost = gfState.winner && gfState.winner !== pid;
+        const adv = pid === gfState.a ? '<span class="adv">startet 1:0</span>' : '';
+        return `<div class="slot clickable${won ? ' win' : ''}${lost ? ' lose' : ''}" onclick="pickGf('${pid}')"><span class="pdots"><span class="tdot" style="background:${byId(pid).color}"></span></span><span class="tname">${byId(pid).name}</span>${adv}</div>`;
+      };
+      gfBox.innerHTML = `<div class="gf-card${gfState.winner ? '' : ' match next'}" style="border-radius:12px"><div class="gf-head">Grand Final</div><div class="gf-sub">1v1 · WB-Sieger startet 1:0</div>${slot(gfState.a)}${slot(gfState.b)}${gfState.winner ? `<div class="gf-champ">🏆 <b>${byId(gfState.winner).name}</b> holt Haxball!</div>` : ''}</div>`;
+    } else {
+      gfBox.innerHTML = `<div class="ghost" style="padding:1rem"><b>1v1</b> · letzter WB-Spieler vs letzter LB-Spieler<br>WB-Sieger startet 1:0</div>`;
+    }
+
+    // Als Nächstes
+    const ni = document.getElementById('nextInfo');
+    const cur = live[live.length - 1];
+    const open = cur && !cur.settled ? cur.matches.find(m => !m.winner) : null;
+    if (open) {
+      const pe = plan[cur.planIdx];
+      const nm = t => cur.teams[t].map(pid => byId(pid).name).join(' & ');
+      ni.innerHTML = `<b>Spiel ${open.no}</b> · ${pe.bracket === 'wb' ? 'Winner' : 'Loser'} Bracket · Runde ${pe.r}<br>${nm(open.a)} vs ${nm(open.b)}<br><span style="color:var(--muted);font-size:.78rem">Klick im Baum auf das Sieger-Team.</span>`;
+    } else if (gfState && !gfState.winner) {
+      ni.innerHTML = `<b>Grand Final</b> · 1v1<br>${byId(gfState.a).name} (startet 1:0) vs ${byId(gfState.b).name}`;
+    } else if (gfState && gfState.winner) {
+      ni.innerHTML = `🏆 <b>${byId(gfState.winner).name}</b> gewinnt das Turnier!`;
+    } else {
+      ni.textContent = 'Erst auslosen 🎲';
+    }
+
+    // Standings
+    const done = gfState && gfState.winner;
+    document.getElementById('standings').innerHTML = standings().map(r => {
+      const status = r.band === 1e9 ? 'Turniersieger' : r.band === 1e8 ? 'Finale verloren' : !r.out ? 'noch im Rennen' : `LB-Runde ${r.band} raus`;
+      return `<div class="st-row t${r.place <= 3 ? r.place : ''}">
+        <span class="st-rank">${r.place}</span>
+        <span class="st-name" style="color:${r.out ? 'var(--soft)' : 'var(--text)'}">${r.p.name}<span class="st-sub">${status}</span></span>
+        <span class="st-wl">${r.games || 0}Sp</span>
+        <span class="st-wl">${r.wins || 0}S</span>
+        <span class="st-pts">${done || r.out ? soloPts(r.place) : '·'}</span>
+      </div>`;
+    }).join('') + `<div style="font-size:.7rem;color:var(--muted);margin-top:.5rem">Sp = gespielte Matches · S = Siege (Tiebreak) · Punkte individuell</div>`;
+    updatePill();
+  }
+
+  draw();
+</script>
+</body>
+</html>
