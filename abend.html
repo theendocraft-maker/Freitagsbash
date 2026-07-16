@@ -2532,7 +2532,7 @@
     // Champions-Bann frisch gesetzt → Lower-Third
     const banNow = liveEvent.champion_ban ? (liveEvent.champion_ban.at || liveEvent.champion_ban.kind) : null;
     if (lastBanSeen !== undefined && banNow && lastBanSeen !== banNow) {
-      showLiveToast(`Champions-Bann: ${discName(liveEvent.champion_ban.kind)} ist unantastbar`, 't-win');
+      showLiveToast(`Entbannung: ${discName(liveEvent.champion_ban.kind)} ist unantastbar — alle spielen mit`, 't-win');
     }
     lastBanSeen = banNow;
 
@@ -2725,7 +2725,7 @@
         <div class="intro-vinfo">
           <div class="vinfo-card">
             <div class="vinfo-ico">${king ? `<span class="ir-av" style="${kingAv};width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background-size:cover">${king.avatar_url ? '' : ini(king.name || '?')}</span>` : '👑'}</div>
-            <div><b>👑 King of the Hill${king ? `: ${king.name}` : ''}</b><br><span>Wer die Saison anführt, hat <b>kein Veto</b> — die Krone ist eine Bürde.</span></div>
+            <div><b>👑 King of the Hill${king ? `: ${king.name}` : ''}</b><br><span>Wer die Saison anführt, hat <b>kein Veto</b> — die Krone ist eine Bürde. <i style="color:var(--muted)">…zumindest dachte er das. 😏</i></span></div>
           </div>
           <div class="vinfo-card">
             <div class="vinfo-ico">🦖</div>
@@ -2743,13 +2743,18 @@
           ${introDotsHtml(step, n)}
         </div>`;
     } else if (introBan && step === banStep) {
-      // === Champions-Bann: der Sieger des letzten Bash bannt ein Spiel ===
+      // === Die Entbannung — Kino-Sequenz in 4 Akten ===
+      // Akt 1: der King of the Hill wird zelebriert (Krone = Bürde, kein Veto)
+      // Akt 2: die verborgene Macht wird enthüllt (er darf ein Spiel ENTBANNEN)
+      // Akt 3: das Spiel erscheint, der ENTBANNT-Stempel knallt
+      // Akt 4: die betroffenen Vetos werden zerstört + Zwangsrekrutierung
       const ban = introBan;
       const champ = evPlayers.find(x => x.id === ban.by) || {};
       const cCol = pColor(champ.id);
       const cAv = champ.avatar_url ? `background-image:url(${champ.avatar_url});` : `background:${cCol};`;
       const victims = (ban.victims || []).map(pid => evPlayers.find(x => x.id === pid) || { id: pid, name: '?' });
       const alreadyPlayed = banAnimPlayedFor === (ban.at || ban.kind);
+      const S = alreadyPlayed ? ' show' : '';
       const victimCards = victims.map((p, i) => {
         const col = pColor(p.id);
         const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
@@ -2764,45 +2769,51 @@
       }).join('');
       box.innerHTML = `
         <div class="intro">
-          <div class="nd-label" style="color:var(--alert)">Neue Mechanik · Champions-Bann</div>
-          <div class="intro-name">💥 Champions-Bann</div>
-          <div class="intro-mode">Der King of the Hill bannt ein Spiel — jedes Event aufs Neue. Es ist heute unantastbar.</div>
-          <div class="ban-stage">
-            <div class="ban-champ">
-              <div class="ir-av" style="${cAv}">${champ.avatar_url ? '' : ini(champ.name || '?')}</div>
-              <div class="ban-champ-name">👑 ${champ.name || '—'}</div>
-              <div class="ban-champ-sub">King of the Hill — bannt:</div>
-            </div>
+          <div class="nd-label" style="color:var(--alert)">Champions-Privileg · Die Entbannung</div>
+          <div class="ban-act ban-act-king${S}">
+            <div class="ir-av ban-king-av" style="${cAv}">${champ.avatar_url ? '' : ini(champ.name || '?')}</div>
+            <div class="intro-name">👑 King of the Hill</div>
+            <div class="intro-mode"><b>${champ.name || '—'}</b> führt die Saison an. Kein Veto — die Krone ist eine Bürde…</div>
+          </div>
+          <div class="ban-act ban-act-power${S}">
+            <div class="ban-power-line">…doch die Krone hat eine <b>verborgene Macht</b>: Einmal pro Abend darf der King ein Spiel <b>ENTBANNEN</b> — der Veto-Schutz fällt, alle spielen mit.</div>
+          </div>
+          <div class="ban-act ban-act-target${S}">
             <div class="ban-target${alreadyPlayed ? ' stamped' : ''}">
               <img class="intro-logo" src="logos/${ban.kind}.svg" alt="${discName(ban.kind)}" onerror="this.style.display='none'">
               <div class="ban-target-name">${discName(ban.kind)}</div>
-              <div class="ban-stamp">GEBANNT</div>
+              <div class="ban-stamp">ENTBANNT</div>
             </div>
+            <div class="intro-rules">${discName(ban.kind)} darf heute <b>nicht gevetoet werden</b>${victims.length ? ` — und wer es vetoed hatte, verliert sein Veto <b>ersatzlos</b>:` : ' — niemand hatte es vetoed, die Macht verpufft … diesmal.'}</div>
           </div>
-          <div class="intro-rules">${discName(ban.kind)} darf heute <b>nicht gevetoet werden</b>${victims.length ? ` — und wer es schon vetoed hatte, verliert sein Veto <b>ersatzlos</b>:` : ' — niemand hatte es vetoed, der Bann verpufft … diesmal.'}</div>
-          ${victims.length ? `<div class="intro-roster">${victimCards}</div>` : ''}
-          ${victims.length ? `<div class="ban-epilog${alreadyPlayed ? ' show' : ''}">⛓ Keine Gnade: <b>${victims.map(p => p.name).join(', ')}</b> ${victims.length === 1 ? 'tritt' : 'treten'} heute in <b>${discName(ban.kind)}</b> an — ohne Ersatzspiel.</div>` : ''}
+          <div class="ban-act ban-act-victims${S}">
+            ${victims.length ? `<div class="intro-roster">${victimCards}</div>` : ''}
+            ${victims.length ? `<div class="ban-epilog${alreadyPlayed ? ' show' : ''}">⛓ Keine Gnade: <b>${victims.map(p => p.name).join(', ')}</b> ${victims.length === 1 ? 'tritt' : 'treten'} heute in <b>${discName(ban.kind)}</b> an — ohne Ersatzspiel.</div>` : ''}
+          </div>
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(step, n)}
         </div>`;
       if (!alreadyPlayed) {
         banAnimPlayedFor = (ban.at || ban.kind);
-        // Dramaturgie: erst der Bann-Stempel, dann werden die Vetos einzeln zerstört
-        setTimeout(() => { const t = box.querySelector('.ban-target'); if (t) t.classList.add('stamped'); }, 900);
+        const show = (sel, t) => setTimeout(() => { const el = box.querySelector(sel); if (el) el.classList.add('show'); }, t);
+        show('.ban-act-king', 150);          // Akt 1: der King
+        show('.ban-act-power', 2800);        // Akt 2: die verborgene Macht
+        show('.ban-act-target', 4600);       // Akt 3: das Spiel …
+        setTimeout(() => { const t = box.querySelector('.ban-target'); if (t) t.classList.add('stamped'); }, 5600);  // … Stempel!
+        show('.ban-act-victims', 6800);      // Akt 4: die Opfer
         victims.forEach((p, i) => {
           setTimeout(() => {
             const card = box.querySelector(`.ban-victim[data-ban-i="${i}"]`);
             if (card) { card.classList.add('ban-destroying'); document.body.classList.add('ban-quake'); setTimeout(() => document.body.classList.remove('ban-quake'), 450); }
             setTimeout(() => { if (card) { card.classList.remove('ban-destroying'); card.classList.add('ban-destroyed'); } }, 1200);
-          }, 2000 + i * 1500);
+          }, 7400 + i * 1500);
         });
-        // Finale: die Zerstörten werden zwangsrekrutiert — sie MÜSSEN mitspielen
         if (victims.length) {
           setTimeout(() => {
             box.querySelectorAll('.ban-victim').forEach(c => c.classList.add('ban-conscripted'));
             const ep = box.querySelector('.ban-epilog'); if (ep) ep.classList.add('show');
             document.body.classList.add('ban-quake'); setTimeout(() => document.body.classList.remove('ban-quake'), 450);
-          }, 2000 + victims.length * 1500 + 900);
+          }, 7400 + victims.length * 1500 + 900);
         }
       }
       box.style.display = 'block';

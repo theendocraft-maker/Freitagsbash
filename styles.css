@@ -805,3 +805,14 @@ body.ban-quake { animation: banQuake 0.4s ease; }
 .cl-warn .cl-label { color: var(--text); }
 .cl-todo .cl-ico { border: 1px dashed var(--border-strong); color: var(--muted); }
 .cl-info .cl-ico { background: var(--cool-soft); color: var(--cool); border: 1px solid rgba(125,240,255,0.3); }
+
+/* Entbannung — Kino-Akte */
+.ban-act { opacity: 0; transform: translateY(16px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.ban-act.show { opacity: 1; transform: none; }
+.ban-act-king { text-align: center; padding-top: 0.6rem; }
+.ban-king-av { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 0.6rem; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.6rem; color: #0b0d10; background-size: cover; background-position: center; border: 3px solid #ffd34a; box-shadow: 0 0 34px -6px #ffd34a; }
+.ban-power-line { text-align: center; max-width: 640px; margin: 0.9rem auto 0; font-size: 0.98rem; color: var(--text-soft); background: linear-gradient(135deg, rgba(255,211,74,0.08), transparent 70%); border: 1px dashed rgba(255,211,74,0.4); border-radius: var(--radius); padding: 0.7rem 1rem; }
+.ban-power-line b { color: #ffd34a; }
+.ban-act-target { text-align: center; margin-top: 0.9rem; }
+.ban-act-target .ban-target { display: inline-block; }
+.ban-act-target .intro-rules { margin-top: 0.7rem; }

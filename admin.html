@@ -78,8 +78,16 @@
 
   /* Main */
   main.admin-main {
-    max-width: 1200px; margin: 0 auto;
+    max-width: 1560px; margin: 0 auto;
     padding: 2.5rem 1.5rem 6rem;
+  }
+  /* Zweispaltiges Detail-Layout: Inhalt links, Checkliste als klebende Leiste rechts */
+  .detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 1.4rem; align-items: start; }
+  .detail-aside { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin; }
+  .detail-aside .cl-aside { margin-bottom: 0; }
+  @media (max-width: 1150px) {
+    .detail-layout { grid-template-columns: 1fr; }
+    .detail-aside { position: static; max-height: none; order: -1; }
   }
 
   /* Page title */
@@ -569,15 +577,8 @@
       </div>
     </div>
 
-    <!-- Abend-Checkliste: führt auch Erstbediener durch den kompletten Abend -->
-    <div class="section" id="checklistSection">
-      <div class="section-title" style="display:flex;align-items:center;gap:0.6rem">📋 Abend-Checkliste
-        <span id="clProgress" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);font-weight:400"></span>
-        <button class="draw-btn" id="clToggle" style="margin-left:auto;padding:0.2rem 0.7rem" onclick="toggleChecklist()">einklappen</button>
-      </div>
-      <p class="section-desc">Der rote Faden durch den Abend — auch für alle, die das Tool zum ersten Mal bedienen. Häkchen setzen sich automatisch, sobald der Schritt im Tool erledigt ist.</p>
-      <div id="checklistBody"></div>
-    </div>
+    <div class="detail-layout">
+    <div class="detail-main">
 
     <!-- Setup -->
     <div class="section">
@@ -587,9 +588,13 @@
           <label>Datum</label>
           <input type="date" id="setupDate">
         </div>
-        <div class="form-group">
-          <label>Veranstalter (für Abend 1: Krone)</label>
+        <div class="form-group" id="hostGroup">
+          <label>Veranstalter (nur Abend 1: trägt die Krone)</label>
           <select id="setupHost"></select>
+        </div>
+        <div class="form-group" id="kingGroup" style="display:none">
+          <label>👑 King of the Hill (automatisch: Saison-Führung)</label>
+          <div id="kingLine" style="padding:0.55rem 0.2rem;font-weight:600"></div>
         </div>
         <div class="form-group">
           <label>Stech-Spiel bei Gleichstand (nach Spiel 5)</label>
@@ -698,7 +703,20 @@
     <div style="margin-top:2rem; text-align:right">
       <button class="btn-danger" id="deleteEventBtn">🗑️ Diesen Abend löschen</button>
     </div>
-  </div>
+  
+    </div><!-- /detail-main -->
+    <aside class="detail-aside">
+      <!-- Abend-Checkliste: klebt als Leiste neben dem Inhalt — immer im Blick, kein Scrollen -->
+      <div class="section cl-aside" id="checklistSection">
+        <div class="section-title" style="display:flex;align-items:center;gap:0.5rem;font-size:1.05rem">📋 Checkliste
+          <span id="clProgress" style="font-family:var(--font-mono);font-size:0.66rem;color:var(--muted);font-weight:400"></span>
+          <button class="draw-btn" id="clToggle" style="margin-left:auto;padding:0.15rem 0.6rem;font-size:0.75rem" onclick="toggleChecklist()">einklappen</button>
+        </div>
+        <div id="checklistBody"></div>
+      </div>
+    </aside>
+    </div><!-- /detail-layout -->
+</div>
 
 </main>
 
@@ -881,6 +899,10 @@
       .select('*').eq('event_id', id).order('position');
     currentDisciplines = dData || [];
 
+    // King of the Hill nebenbei bestimmen (erst null, Re-Render sobald berechnet)
+    kingOfHillId = null;
+    computeKingOfHill().then(id2 => { kingOfHillId = id2; if (currentEvent && currentEvent.id === id) renderDetail(); });
+
     // Ergebnisse laden
     const dIds = currentDisciplines.map(d => d.id);
     currentResults = {};
@@ -1026,6 +1048,16 @@
     }
 
     $('setupDate').value = currentEvent.event_date;
+    // Veranstalter nur bei Abend 1 relevant (Krone) — später übernimmt der King of the Hill
+    const isFirstEv = (events.findIndex(e => e.id === currentEvent.id) === 0)
+      || events.filter(e => e.id !== currentEvent.id && e.status === 'finalized').length === 0;
+    const hg = $('hostGroup'), kg = $('kingGroup');
+    if (hg) hg.style.display = isFirstEv ? '' : 'none';
+    if (kg) {
+      kg.style.display = isFirstEv ? 'none' : '';
+      const kName = kingOfHillId ? ((players.find(p => p.id === kingOfHillId) || {}).name || '?') : '… wird berechnet';
+      $('kingLine').innerHTML = `👑 <b>${kName}</b> <span style="color:var(--muted);font-weight:400;font-size:0.85em">— trägt die Krone-Bürde (×0,8), hat kein Veto, spricht die Entbannung aus</span>`;
+    }
     const hostSel = $('setupHost');
     hostSel.innerHTML = '<option value="">— niemand —</option>' +
       players.map(p => `<option value="${p.id}" ${currentEvent.host_player_id === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
@@ -1209,6 +1241,41 @@
     await renumberLineup();
     renderDetail();
   };
+
+  // ===== King of the Hill (automatisch) =====
+  // Ranghöchster Spieler der Saison (finalisierte Abende, inkl. Streicher) — er trägt die
+  // Krone-Bürde, darf nicht vetoen und spricht die Entbannung (Champions-Bann) aus.
+  // Gleiche vereinfachte Rechnung wie computeLeaderId auf abend.html.
+  let kingOfHillId = null;
+  async function computeKingOfHill() {
+    try {
+      const { data: evs } = await sb.from('events').select('id,status').eq('status', 'finalized');
+      const fin = evs || [];
+      if (!fin.length) return null;
+      const evIds = fin.map(e => e.id);
+      const { data: discs } = await sb.from('disciplines').select('id,event_id').in('event_id', evIds);
+      const dIds = (discs || []).map(d => d.id);
+      if (!dIds.length) return null;
+      const { data: res } = await sb.from('results').select('discipline_id,player_id,points').in('discipline_id', dIds);
+      const SP = SEASON_PTS_BY_RANK;
+      const perPlayer = {};
+      fin.forEach(ev => {
+        const evDiscIds = (discs || []).filter(d => d.event_id === ev.id).map(d => d.id);
+        const sums = {};
+        (res || []).forEach(r => { if (evDiscIds.includes(r.discipline_id)) sums[r.player_id] = (sums[r.player_id] || 0) + (parseFloat(r.points) || 0); });
+        const ranked = Object.keys(sums).sort((a, b) => sums[b] - sums[a]);
+        let rank = 0, last = -1;
+        ranked.forEach((pid, i) => { if (sums[pid] !== last) rank = i + 1; last = sums[pid]; (perPlayer[pid] = perPlayer[pid] || []).push(SP[Math.min(rank, SP.length) - 1]); });
+      });
+      let best = null, bestPts = -1;
+      Object.entries(perPlayer).forEach(([pid, arr]) => {
+        const a = arr.slice(); if (a.length > 1) { a.sort((x, y) => x - y); a.shift(); }   // Streicher
+        const tot = a.reduce((sm, v) => sm + v, 0);
+        if (tot > bestPts) { bestPts = tot; best = pid; }
+      });
+      return best;
+    } catch (e) { console.error(e); return null; }
+  }
 
   // ===== Abend-Checkliste =====
   // Führt auch Erstbediener durch den kompletten Abend. Reine Anzeige — liest nur
@@ -3347,24 +3414,29 @@
         <a onclick="resetChampionBan()" style="color:var(--muted);cursor:pointer;font-size:0.8rem">↺ zurücksetzen</a>`;
       if (hint) hint.textContent = 'Zum Enthüllen den 💥-Button oben in der Zeigen-Leiste drücken — die Live-Seite spielt die Zerstörungs-Animation.';
     } else {
-      const champs = players.filter(p => currentParticipantIds.has(p.id));
+      const vetoN = kind => Object.values(currentVetoes).filter(k => k === kind).length;
+      const kingName = kingOfHillId ? ((players.find(p => p.id === kingOfHillId) || {}).name || '?') : null;
+      // King steht automatisch fest (Saison-Führung); Fallback-Dropdown nur, falls (noch) nicht berechenbar
+      const kingHtml = kingName
+        ? `<span style="font-weight:600">👑 ${kingName}</span> <span style="color:var(--muted);font-size:0.85rem">entbannt:</span>`
+        : `<select id="banBy" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
+            <option value="">King of the Hill…</option>
+            ${players.filter(p => currentParticipantIds.has(p.id)).map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+          </select>`;
       box.innerHTML = `
-        <span class="draw-label">💥 Champions-Bann:</span>
-        <select id="banBy" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
-          <option value="">King of the Hill…</option>
-          ${champs.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-        </select>
+        <span class="draw-label">💥 Entbannung:</span>
+        ${kingHtml}
         <select id="banKind" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
-          <option value="">Spiel bannen…</option>
-          ${currentDisciplines.map(d => `<option value="${d.kind}">${d.name}</option>`).join('')}
+          <option value="">Spiel wählen…</option>
+          ${currentDisciplines.map(d => `<option value="${d.kind}">${d.name}${vetoN(d.kind) ? ` (${vetoN(d.kind)} Veto${vetoN(d.kind) === 1 ? '' : 's'} 💥)` : ''}</option>`).join('')}
         </select>
-        <button class="draw-btn" onclick="setChampionBan()">💥 Bann aktivieren</button>`;
-      if (hint) hint.textContent = 'Der King of the Hill bannt bei JEDEM Event ein Spiel: es kann nicht gevetoet werden — bestehende Vetos darauf werden zerstört, die Betroffenen müssen mitspielen (kein Ersatzspiel!).';
+        <button class="draw-btn" onclick="setChampionBan()">💥 Entbannung aktivieren</button>`;
+      if (hint) hint.textContent = 'Die verborgene Macht der Krone: Der King of the Hill entbannt bei JEDEM Event ein Spiel — es kann nicht (mehr) gevetoet werden, bestehende Vetos darauf werden zerstört, die Betroffenen müssen mitspielen (kein Ersatzspiel!).';
     }
   }
 
   window.setChampionBan = async function() {
-    const by = $('banBy') && $('banBy').value;
+    const by = kingOfHillId || ($('banBy') && $('banBy').value);
     const kind = $('banKind') && $('banKind').value;
     if (!by || !kind) { toast('King of the Hill und Spiel wählen', 'error'); return; }
     // WICHTIG: Vetos frisch aus der DB laden — currentVetoes kann veraltet sein,
