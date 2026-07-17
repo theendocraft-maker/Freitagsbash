@@ -999,17 +999,18 @@
       if (currentEvent.status === 'live') {
         introSec.style.display = 'block';
         const step = currentEvent.intro_step;
-        // Slides: 0 Teilnehmer · 1 Spielpool · 2..N+1 Disziplinen · N+2 Vetos · N+3 Champions-Bann
+        // Slides: 0 Teilnehmer · 1 Spielpool · 2..N+1 Disziplinen · N+2 Vetos · N+3 Entbannung · N+4 Vetospiel
         const vetoStep = currentDisciplines.length + 2;
-        const banStep = vetoStep + 1;   // Champions-Bann-Slide (nur wenn Bann gesetzt)
+        const banStep = vetoStep + 1;          // Entbannung-Slide (immer da: erst erklären, dann enthüllen)
+        const vetospielStep = vetoStep + 2;    // Vetospiel (Dino Runner) — eigener Slide danach
+        const banHint = currentEvent.champion_ban ? 'Enthüllung läuft' : 'erst nur erklärt — Bann unten wählen';
         const btns = [`<span class="draw-label">Zeigen:</span>`,
           `<button class="phase-btn ${step === 0 ? 'active' : ''}" onclick="setIntroStep(0)">👥 Teilnehmer</button>`,
           `<button class="phase-btn ${step === 1 ? 'active' : ''}" onclick="setIntroStep(1)">🎮 Spielpool</button>`]
           .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+2 ? 'active' : ''}" onclick="setIntroStep(${i+2})">${i+1} ${d.name}</button>`))
           .concat([`<button class="phase-btn ${step === vetoStep ? 'active' : ''}" onclick="setIntroStep(${vetoStep})">🃏 Vetos</button>`])
-          .concat([currentEvent.champion_ban
-            ? `<button class="phase-btn ${step === banStep ? 'active' : ''}" onclick="setIntroStep(${banStep})" style="border-color:var(--alert-line)">💥 Entbannung</button>`
-            : `<button class="phase-btn" onclick="banNotReady()" style="border-color:var(--alert-line);opacity:0.45" title="Erst unten aktivieren">💥 Entbannung</button>`]);
+          .concat([`<button class="phase-btn ${step === banStep ? 'active' : ''}" onclick="setIntroStep(${banStep})" style="border-color:var(--alert-line)" title="${banHint}">💥 Entbannung${currentEvent.champion_ban ? '' : ' ⓘ'}</button>`])
+          .concat([`<button class="phase-btn ${step === vetospielStep ? 'active' : ''}" onclick="setIntroStep(${vetospielStep})">🦖 Vetospiel</button>`]);
         $('introControl').innerHTML = btns.join('');
         renderBanControl();
         const cb = $('copterToggleBtn');

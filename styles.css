@@ -817,6 +817,21 @@ body.ban-quake { animation: banQuake 0.4s ease; }
 .ban-act-target .ban-target { display: inline-block; }
 .ban-act-target .intro-rules { margin-top: 0.7rem; }
 
+/* Entbannung — Erklär-Modus: „King wählt jetzt sein Spiel …" (Wartezustand) */
+.ban-wait { text-align: center; margin-top: 1.1rem; }
+.ban-wait-dot { display: inline-block; width: 10px; height: 10px; margin: 0 4px; border-radius: 50%; background: var(--alert); opacity: 0.35; animation: banWaitPulse 1.2s ease-in-out infinite; }
+.ban-wait-dot:nth-child(2) { animation-delay: 0.2s; }
+.ban-wait-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes banWaitPulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+
+/* Veto-Slide: Karten-Akzente (Veto-Spieler hervorheben, King dezent) */
+.ir-card.vt-veto { border-color: var(--cool); box-shadow: 0 0 0 1px var(--cool) inset, 0 8px 24px -14px var(--cool); }
+.ir-card.vt-king { border-color: rgba(255,211,74,0.55); }
+
+/* Vetospiel-Slide: Spieler-Chips */
+.vg-players { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; align-items: center; margin-top: 0.6rem; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.vg-chip { display: inline-flex; align-items: center; padding: 0.28rem 0.7rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--ir-c, var(--border-strong)); color: var(--text); font-weight: 700; }
+
 /* Endstand: Entbannungs-Story (zerstörte Vetos) */
 .ce-banned { margin-top: 0.7rem; font-size: 0.85rem; color: var(--text-soft); background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; }
 .ce-banned b { color: var(--alert); }

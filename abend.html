@@ -2675,12 +2675,14 @@
   function renderIntro() {
     const box = document.getElementById('liveNowDetail');
     if (!box) return;
-    // Slides: 0 = Teilnehmer, 1 = Spielpool, 2..N+1 = Disziplinen, N+2 = Vetos, N+3 = Champions-Bann (nur wenn gesetzt)
-    const n = introDiscs.length + 3 + (introBan ? 1 : 0);
+    // Slides: 0 = Teilnehmer, 1 = Spielpool, 2..N+1 = Disziplinen, N+2 = Vetos,
+    //         N+3 = Entbannung (immer da: erst erklären, nach Auswahl enthüllen), N+4 = Vetospiel
+    const n = introDiscs.length + 5;
     const step = ((introIdx % n) + n) % n;
     const poolStep = 1;
     const vetoStep = introDiscs.length + 2;
     const banStep = introDiscs.length + 3;
+    const vetospielStep = introDiscs.length + 4;
     const freshPaint = introPaintedStep !== step;   // Slide gerade gewechselt → Animation abspielen
     introPaintedStep = step;
     if (step === 0) {
@@ -2722,45 +2724,80 @@
           ${introDotsHtml(step, n)}
         </div>`;
     } else if (step === vetoStep) {
-      // Vetos vorstellen
+      // Vetos vorstellen — ALLE Spieler mit ihrem Veto (oder „kein Veto")
       const vs = introVetoes || [];
-      const cardsHtml = vs.length ? vs.map(v => {
-        const p = evPlayers.find(x => x.id === v.player_id) || {};
-        const col = pColor(p.id);
-        const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
-        const kind = v.discipline_kind;
-        return `<div class="ir-card" style="--ir-c:${col}">
-            <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
-            <div class="ir-name">${p.name || '—'}</div>
-            <div class="ir-cry">🃏 vetoed <b>${discName(kind)}</b><br><small style="color:var(--cool)">spielt Dino Runner 🦖</small></div>
-          </div>`;
-      }).join('') : `<div class="ir-card" style="grid-column:1/-1;--ir-c:var(--muted)"><div class="ir-name">Niemand vetoed heute</div><div class="ir-cry">Alle spielen alle Disziplinen mit.</div></div>`;
+      const vetoByPid = {};
+      vs.forEach(v => { vetoByPid[v.player_id] = v.discipline_kind; });
+      const ps = (introRoster && introRoster.length) ? introRoster : evPlayers;
       const king = kingOfHillId ? evPlayers.find(x => x.id === kingOfHillId) : null;
       const kingCol = king ? pColor(king.id) : 'var(--muted)';
       const kingAv = king ? (king.avatar_url ? `background-image:url(${king.avatar_url});` : `background:${kingCol};`) : '';
+      // Reihenfolge: erst die Veto-Spieler (Joker!), dann der Rest — der King ganz zum Schluss als „Krone = Bürde".
+      const ordered = ps.slice().sort((a, b) => {
+        const va = vetoByPid[a.id] ? 0 : (a.id === kingOfHillId ? 2 : 1);
+        const vb = vetoByPid[b.id] ? 0 : (b.id === kingOfHillId ? 2 : 1);
+        return va - vb;
+      });
+      const cardsHtml = ordered.map(p => {
+        const col = pColor(p.id);
+        const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
+        const kind = vetoByPid[p.id];
+        const isKing = p.id === kingOfHillId;
+        let note;
+        if (kind) note = `<div class="ir-cry">🃏 vetoed <b>${discName(kind)}</b><br><small style="color:var(--cool)">spielt Dino Runner 🦖</small></div>`;
+        else if (isKing) note = `<div class="ir-cry">👑 King — <b>kein Veto</b><br><small style="color:var(--muted)">die Krone ist eine Bürde</small></div>`;
+        else note = `<div class="ir-cry" style="color:var(--muted)">✓ kein Veto<br><small>spielt alles mit</small></div>`;
+        return `<div class="ir-card${kind ? ' vt-veto' : ''}${isKing ? ' vt-king' : ''}" style="--ir-c:${col}">
+            <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
+            <div class="ir-name">${p.name || '—'}</div>
+            ${note}
+          </div>`;
+      }).join('');
       const vetoInfo = `
         <div class="intro-vinfo">
-          <div class="vinfo-card">
+          <div class="vinfo-card" style="max-width:640px">
             <div class="vinfo-ico">${king ? `<span class="ir-av" style="${kingAv};width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background-size:cover">${king.avatar_url ? '' : ini(king.name || '?')}</span>` : '👑'}</div>
             <div><b>👑 King of the Hill${king ? `: ${king.name}` : ''}</b><br><span>Wer die Saison anführt, hat <b>kein Veto</b> — die Krone ist eine Bürde. <i style="color:var(--muted)">…zumindest dachte er das. 😏</i></span></div>
-          </div>
-          <div class="vinfo-card">
-            <div class="vinfo-ico"><img src="logos/dino.png" alt="" style="width:38px;height:38px;border-radius:9px;object-fit:cover;display:block" onerror="this.outerHTML='🦖'"></div>
-            <div><b>Das Joker-Minispiel heute: Dino Runner</b><br><span>Wer vetoed, sitzt nicht rum: Dino Runner am Handy (chromedino.com) — der Highscore der Veto-Spieler wird wie eine Disziplin gewertet (10·8·6·…).</span></div>
           </div>
         </div>`;
       box.innerHTML = `
         <div class="intro">
           <div class="nd-label">Vorstellung · Vetos</div>
           <div class="intro-name">${vs.length ? '🃏 Heute mit Joker' : '✓ Volle Crew'}</div>
-          <div class="intro-mode">${vs.length} Veto${vs.length === 1 ? '' : 's'} · ${vs.length ? 'Joker-Minispiel statt der vetoten Disziplin' : 'Niemand sitzt eine Disziplin aus'}</div>
+          <div class="intro-mode">${vs.length} Veto${vs.length === 1 ? '' : 's'} · ${ps.length} Spieler${vs.length ? ' · Joker-Minispiel statt der vetoten Disziplin' : ' · niemand sitzt eine Disziplin aus'}</div>
           ${vetoInfo}
           <div class="intro-roster">${cardsHtml}</div>
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(step, n)}
         </div>`;
-    } else if (introBan && step === banStep) {
-      // === Die Entbannung — Kino-Sequenz in 4 Akten ===
+    } else if (step === banStep && !introBan) {
+      // === Entbannung — ERKLÄR-Modus (noch kein Bann gewählt) ===
+      // Der Slide ist immer da: hier wird die Mechanik erklärt, während der King live sein Spiel wählt.
+      const king = kingOfHillId ? evPlayers.find(x => x.id === kingOfHillId) : null;
+      const kCol = king ? pColor(king.id) : 'var(--alert)';
+      const kAv = king ? (king.avatar_url ? `background-image:url(${king.avatar_url});` : `background:${kCol};`) : `background:${kCol};`;
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label" style="color:var(--alert)">Champions-Privileg · Die Entbannung</div>
+          <div class="ban-act show">
+            <div class="ir-av ban-king-av" style="${kAv}">${king && !king.avatar_url ? ini(king.name || '?') : (king ? '' : '👑')}</div>
+            <div class="intro-name">👑 King of the Hill</div>
+            <div class="intro-mode"><b>${king ? king.name : 'Der Tabellenführer'}</b> führt die Saison an. Kein Veto — die Krone ist eine Bürde…</div>
+          </div>
+          <div class="ban-act show" style="margin-top:0.6rem">
+            <div class="ban-power-line">…doch die Krone hat eine <b>verborgene Macht</b>: Einmal pro Abend darf der King <b>ein Spiel ENTBANNEN</b>. Der Veto-Schutz fällt — es darf heute nicht gevetoet werden, und wer es schon vetoed hatte, <b>verliert sein Veto ersatzlos</b> und spielt trotzdem mit.</div>
+          </div>
+          <div class="ban-wait">
+            <span class="ban-wait-dot"></span><span class="ban-wait-dot"></span><span class="ban-wait-dot"></span>
+            <div class="intro-rules" style="margin-top:0.5rem">👑 <b>${king ? king.name : 'Der King'}</b> wählt jetzt sein Spiel …</div>
+          </div>
+          ${introCtl ? introCtrlHtml() : ''}
+          ${introDotsHtml(step, n)}
+        </div>`;
+      box.style.display = 'block';
+      return;
+    } else if (step === banStep) {
+      // === Die Entbannung — Kino-Sequenz in 4 Akten (Bann ist gewählt) ===
       // Akt 1: der King of the Hill wird zelebriert (Krone = Bürde, kein Veto)
       // Akt 2: die verborgene Macht wird enthüllt (er darf ein Spiel ENTBANNEN)
       // Akt 3: das Spiel erscheint, der ENTBANNT-Stempel knallt
@@ -2802,6 +2839,7 @@
               <div class="ban-stamp">ENTBANNT</div>
             </div>
             <div class="intro-rules">${discName(ban.kind)} darf heute <b>nicht gevetoet werden</b>${victims.length ? ` — und wer es vetoed hatte, verliert sein Veto <b>ersatzlos</b>:` : ' — niemand hatte es vetoed, die Macht verpufft … diesmal.'}</div>
+            ${(() => { const survivors = (introVetoes || []).filter(v => v.discipline_kind !== ban.kind); return survivors.length ? `<div class="intro-rules" style="color:var(--cool);margin-top:0.35rem">🃏 Alle anderen Vetos <b>bleiben bestehen</b> — ${survivors.length} Spieler ${survivors.length === 1 ? 'zockt' : 'zocken'} weiter Dino Runner.</div>` : ''; })()}
           </div>
           <div class="ban-act ban-act-victims${S}">
             ${victims.length ? `<div class="intro-roster">${victimCards}</div>` : ''}
@@ -2833,6 +2871,27 @@
           }, 7400 + victims.length * 1500 + 900);
         }
       }
+      box.style.display = 'block';
+      return;
+    } else if (step === vetospielStep) {
+      // === Das Vetospiel — Dino Runner vorstellen (eigener Slide nach der Entbannung) ===
+      const vs = introVetoes || [];
+      const namesHtml = vs.length
+        ? vs.map(v => { const p = evPlayers.find(x => x.id === v.player_id) || {}; const col = pColor(p.id); return `<span class="vg-chip" style="--ir-c:${col}">${p.name || '—'}</span>`; }).join('')
+        : '';
+      box.innerHTML = `
+        <div class="intro">
+          <div class="nd-label">Vorstellung · Das Vetospiel</div>
+          <div class="intro-slide" key="vetospiel-${introIdx}">
+            <img class="intro-logo" src="logos/dino.png" alt="Dino Runner" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/dino.svg'}else{this.style.display='none'}">
+            <div class="intro-name">Dino Runner 🦖</div>
+            <div class="intro-mode">Das Joker-Minispiel · chromedino.com</div>
+            <div class="intro-rules">Wer ein Spiel vetoed, sitzt nicht rum: Statt der vetoten Disziplin wird <b>Dino Runner</b> am Handy gezockt. Der <b>Highscore</b> der Veto-Spieler wird wie eine eigene Disziplin gewertet (<b>10·8·6·…</b> nach Platzierung) — Screenshot als Beweis.</div>
+            ${vs.length ? `<div class="vg-players">Heute am Joker: ${namesHtml}</div>` : `<div class="intro-rules" style="color:var(--muted)">Heute hat niemand vetoed — der Joker bleibt im Ärmel. 🃏</div>`}
+          </div>
+          ${introCtl ? introCtrlHtml() : ''}
+          ${introDotsHtml(step, n)}
+        </div>`;
       box.style.display = 'block';
       return;
     } else {
