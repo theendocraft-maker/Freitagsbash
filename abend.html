@@ -4228,7 +4228,12 @@
     if (!ov || !v) return;
     var AD_VOL = 0.4;   // gedrosselte Lautstärke, damit's nicht zu laut ist
     function showAd(){
-      ov.style.display='flex'; requestAnimationFrame(()=>ov.classList.add('show'));
+      // Sichtbarkeit NICHT von requestAnimationFrame/CSS-Klasse abhängig machen
+      // (rAF wird in Hintergrund-Tabs gedrosselt → Overlay bliebe unsichtbar, obwohl Ton läuft).
+      ov.style.display='flex';
+      void ov.offsetWidth;          // Reflow erzwingen, damit die Transition greift
+      ov.classList.add('show');
+      ov.style.opacity='1';         // harte Absicherung: sofort sichtbar
       try { v.currentTime=0; } catch(e){}
       // Stummer Autoplay ist IMMER erlaubt → Bild erscheint sofort. Ton per Knopf dazu.
       v.volume=AD_VOL; v.muted=true;
@@ -4236,7 +4241,7 @@
       const pr=v.play();
       if (pr && pr.catch) pr.catch(()=>{});   // sollte stumm nicht passieren
     }
-    function hideAd(){ try{ v.pause(); }catch(e){} ov.classList.remove('show'); setTimeout(()=>{ ov.style.display='none'; un.style.display='none'; }, 350); }
+    function hideAd(){ try{ v.pause(); }catch(e){} ov.classList.remove('show'); ov.style.opacity='0'; setTimeout(()=>{ ov.style.display='none'; un.style.display='none'; }, 350); }
     v.addEventListener('ended', hideAd);
     cl.addEventListener('click', hideAd);
     un.addEventListener('click', ()=>{ v.muted=false; v.volume=AD_VOL; v.play(); un.style.display='none'; });
@@ -4244,7 +4249,7 @@
       sb.channel('fb-ad', { config:{ broadcast:{ self:false } } })
         .on('broadcast', { event:'play' }, showAd)
         .on('broadcast', { event:'stop' }, hideAd)
-        .subscribe();
+        .subscribe((s)=>console.log('[fb-ad] Werbespot-Kanal:', s));
     } catch(e){ console.warn('Werbespot-Kanal:', e); }
   })();
 </script>
