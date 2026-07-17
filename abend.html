@@ -344,6 +344,26 @@
   @keyframes hxFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (max-width: 640px) { .hx-av { width: 66px; height: 66px; font-size: 1.5rem; } .hx-team { max-width: 42%; } }
 
+  /* Haxball Match-Sieger-Animation (beim Anklicken des Siegers) */
+  .mw-overlay { position: fixed; inset: 0; z-index: 195; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(60% 60% at 50% 40%, rgba(108,242,160,0.14), rgba(7,9,12,0.9) 70%);
+    opacity: 0; transition: opacity 0.3s ease; pointer-events: none; overflow: hidden; }
+  .mw-overlay.show { opacity: 1; pointer-events: auto; cursor: pointer; }
+  .mw-in { position: relative; z-index: 3; text-align: center; }
+  .mw-eye { font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6cf2a0;
+    opacity: 0; transform: translateY(-10px); animation: mwDrop 0.5s 0.1s forwards cubic-bezier(.2,1.3,.4,1); }
+  .mw-name { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.6rem,8vw,5rem); line-height: 0.9; text-transform: uppercase;
+    letter-spacing: 0.02em; color: var(--text); text-shadow: 0 0 40px rgba(108,242,160,0.5); margin: 0.2rem 0;
+    opacity: 0; transform: scale(0.4) rotate(-6deg); animation: mwPop 0.6s 0.25s forwards cubic-bezier(.18,1.7,.35,1); }
+  .mw-sub { font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    opacity: 0; animation: mwFade 0.5s 0.7s forwards; }
+  @keyframes mwDrop { to { opacity: 1; transform: none; } }
+  @keyframes mwPop { 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+  @keyframes mwFade { to { opacity: 1; } }
+  .mw-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 2; }
+  .mw-confetti i { position: absolute; top: -8%; height: 13px; border-radius: 2px; opacity: 0; animation: mwConf linear forwards; }
+  @keyframes mwConf { 0% { opacity: 0; transform: translateY(0) rotate(0); } 8% { opacity: 1; } 100% { opacity: 0.9; transform: translateY(105vh) rotate(680deg); } }
+
   /* „Letzte Chance"-Banner */
   .last-chance { margin-bottom: 1.25rem; background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; }
   .lc-title { font-family: var(--font-display); font-weight: 900; font-size: 1.1rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--alert); margin-bottom: 0.5rem; }
@@ -606,6 +626,31 @@
   .nd-mode-chip.done { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); }
   .lob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.9rem; margin-top: 0.6rem; }
   .lob-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; }
+  /* Meccha Chameleon: große, übersichtliche Jagd-Anzeige */
+  .cham-hunt .lob-grid { grid-template-columns: 1fr; }
+  .cham-hunt-card { border: 1px solid var(--d-cha); box-shadow: 0 0 30px -14px var(--d-cha); padding: 1.2rem 1.3rem; }
+  .cham-hunt-top { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding-bottom: 0.8rem; margin-bottom: 0.8rem; border-bottom: 1px solid var(--border); }
+  .cham-hunt-title { font-family: var(--font-display); font-weight: 900; font-size: 1.7rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); }
+  .cham-hunt-clock { margin-left: auto; font-family: var(--font-display); font-weight: 900; font-size: 2.2rem; line-height: 1; color: var(--d-cha); font-variant-numeric: tabular-nums; }
+  .cham-hunt-count { text-align: center; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); line-height: 1.1; }
+  .cham-hunt-count b { display: block; font-family: var(--font-display); font-weight: 900; font-size: 1.9rem; color: var(--text); }
+  .cham-hunt-count span { display: block; margin-top: 2px; }
+  .cham-seekers { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem; }
+  .cham-seekers .brawl-chip { font-size: 1rem; padding: 0.5rem 0.95rem; font-weight: 700; }
+  .cham-tally .lob-row { padding: 0.7rem 0.8rem; }
+  .cham-tally .lob-rk { width: 2.2rem; height: 2.2rem; font-size: 1.05rem; }
+  .cham-tally .lob-rname { font-size: 1.1rem; font-weight: 600; }
+  .cham-tally .lob-rgames { font-size: 0.8rem; }
+  .cham-tally .lob-rp { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; }
+  .cham-hunt .brawl-chip { font-size: 0.95rem; padding: 0.55rem 0.9rem; }
+  .cham-hunt .brawl-go { font-size: 0.95rem; padding: 0.7rem 1.2rem; }
+  /* Chameleon Server/Passwort — groß für alle */
+  .cham-server { background: linear-gradient(135deg, rgba(47,174,109,0.12), transparent 70%), var(--surface); border: 1px solid var(--d-cha); border-radius: var(--radius-lg); padding: 1.1rem 1.3rem; margin-bottom: 1rem; box-shadow: 0 0 30px -16px var(--d-cha); }
+  .cham-server .cs-label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--d-cha); margin-bottom: 0.7rem; }
+  .cham-server .cs-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .cham-server .cs-item { flex: 1; min-width: 160px; background: var(--bg-2); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 0.7rem 0.9rem; }
+  .cham-server .cs-k { display: block; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+  .cham-server .cs-v { font-family: var(--font-display); font-weight: 900; font-size: 1.8rem; letter-spacing: 0.03em; color: var(--text); word-break: break-word; line-height: 1; }
   .lob-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.6rem; }
   .lob-head .lh-n { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.02em; color: var(--text); }
   .lob-head .lh-meta { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
@@ -765,6 +810,9 @@
   .ad-tab th { text-align: center; padding: 0.7rem 0.4rem; }
   .ad-tab td { padding: 0.55rem 0.4rem; }
   .ad-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; animation: adChampIn 0.5s 0.8s both ease; }
+  .ad-finish-cta { text-align: center; margin-top: 1.6rem; animation: adChampIn 0.5s 1s both ease; }
+  .ad-season-btn { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; padding: 0.9rem 1.6rem; border-radius: 999px; background: var(--primary); color: #0b0d10; text-decoration: none; box-shadow: 0 10px 30px -10px var(--primary); transition: transform 0.15s, box-shadow 0.15s; }
+  .ad-season-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 36px -10px var(--primary); }
   .ad-note small { display: block; margin-top: 0.2rem; font-size: 0.72rem; opacity: 0.75; }
   @keyframes adChampIn { from { opacity: 0; transform: translateY(20px) scale(0.92); } to { opacity: 1; transform: none; } }
 
@@ -920,14 +968,28 @@
      ============================ */
   .live-layout { display: grid; grid-template-columns: 1fr; gap: 1.3rem; }
   @media (min-width: 940px) {
-    /* Spielabend-Seite breiter machen, Tabelle in den freien Raum rechts */
-    main.wrap { max-width: 1320px; }
+    main.wrap { max-width: 1160px; }
     .intro-section, #veto { max-width: 980px; margin-left: auto; margin-right: auto; }
-    .live-layout { grid-template-columns: minmax(0,1fr) 360px; align-items: start; gap: 1.8rem; }
-    .live-layout.no-aside { grid-template-columns: 1fr; }
-    .live-aside { position: sticky; top: 76px; }
   }
   .live-main { min-width: 0; }
+
+  /* Gesamtwertung als Slide-in-Overlay (per Button / nach jeder Disziplin) */
+  .live-aside { position: fixed; top: 0; right: 0; height: 100dvh; width: min(430px, 94vw); z-index: 160;
+    background: var(--bg-2); border-left: 1px solid var(--border-strong); box-shadow: -24px 0 70px -24px #000;
+    transform: translateX(105%); transition: transform 0.32s cubic-bezier(.2,.9,.25,1); overflow-y: auto; padding: 1rem 1.1rem 2rem; }
+  .live-aside.open { transform: none; }
+  .sb-aside-head { position: relative; }
+  .sb-close { position: absolute; top: -2px; right: -2px; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border-strong);
+    background: var(--surface-2); color: var(--muted); font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .sb-close:hover { color: var(--text); border-color: var(--primary-line); }
+  .sb-backdrop { position: fixed; inset: 0; z-index: 155; background: rgba(6,8,11,0.6); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+  .sb-backdrop.open { opacity: 1; pointer-events: auto; }
+  .sb-fab { position: fixed; bottom: 20px; right: 20px; z-index: 150; display: inline-flex; align-items: center; gap: 0.45rem;
+    font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+    padding: 0.75rem 1.1rem; border-radius: 999px; border: 1px solid var(--primary-line); background: var(--primary); color: #0b0d10;
+    cursor: pointer; box-shadow: 0 10px 30px -10px var(--primary); transition: transform 0.15s; }
+  .sb-fab:hover { transform: translateY(-2px); }
+  @media (max-width: 520px){ .sb-fab span { display: none; } .sb-fab { padding: 0.7rem; font-size: 1rem; } }
   /* Während der Vorstellungs-Slideshow gehört die Bühne dem Intro */
   #live.intro-on .live-hero { display: none !important; }
   .sb-aside-head { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: 0.02em; color: var(--text); margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
@@ -1444,6 +1506,8 @@
 
     <div class="hx-overlay" id="haxNext" role="status" aria-live="polite" style="display:none;"></div>
 
+    <div class="mw-overlay" id="matchWin" role="status" aria-live="polite" style="display:none;"></div>
+
     <div class="pause-banner" id="livePause" style="display:none;">
       <span class="pause-ico">☕</span>
       <span class="pause-txt">Kurze Pause</span>
@@ -1495,14 +1559,18 @@
         <div class="copter-box" id="liveCopter" style="display:none;"></div>
       </div>
 
-      <aside class="live-aside">
-        <div class="sb-aside-head" id="sbAsideHead">Tabelle</div>
-        <div class="scoreboard">
-          <div id="liveBody"></div>
-        </div>
-      </aside>
     </div>
   </section>
+
+  <!-- Gesamtwertung als Overlay (per Button / nach jeder Disziplin) -->
+  <div class="sb-backdrop" id="sbBackdrop"></div>
+  <aside class="live-aside" id="liveAside">
+    <div class="sb-aside-head" id="sbAsideHead">Tabelle<button class="sb-close" id="sbClose" aria-label="Schließen">✕</button></div>
+    <div class="scoreboard">
+      <div id="liveBody"></div>
+    </div>
+  </aside>
+  <button class="sb-fab" id="sbFab" style="display:none" aria-label="Gesamtwertung anzeigen">📊 <span>Tabelle</span></button>
 
   <!-- VETO (hidden when live) -->
   <section class="sec" id="veto">
@@ -1947,6 +2015,41 @@
     box.onclick = () => { clearTimeout(showNextMatch._t); hide(); };
   }
 
+  // Entschiedene Matches im DE-Bracket als {key, names[]} — für die Sieger-Animation
+  function deDecidedMatches(disc) {
+    const br = disc && disc.bracket; if (!br) return [];
+    const nameOf = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
+    const out = [];
+    (br.live || []).forEach((e, li) => {
+      (e.matches || []).forEach((m, mi) => {
+        if (m.w) { const ti = m.w === 'a' ? m.a : m.b; out.push({ key: `${li}:${mi}`, names: (e.teams[ti] || []).map(nameOf), pid: (e.teams[ti] || [])[0] }); }
+      });
+    });
+    if (br.gfw) out.push({ key: 'gf', names: [nameOf(br.gfw)], pid: br.gfw, champ: true });
+    return out;
+  }
+  // Sieger-Animation für ein gewonnenes Haxball-Match
+  function showMatchWinner(w) {
+    const box = document.getElementById('matchWin'); if (!box || !w) return;
+    const gc = '#6cf2a0';
+    const cols = [gc, '#d4ff3a', '#7df0ff', '#ffd34a', '#ffffff'];
+    let conf = '';
+    for (let i = 0; i < 30; i++) { const left=(Math.random()*100).toFixed(1), delay=(Math.random()*0.4+0.2).toFixed(2), dur=(Math.random()*1+1.3).toFixed(2), col=cols[(Math.random()*cols.length)|0], wdt=(Math.random()*5+5).toFixed(0); conf+=`<i style="left:${left}%;background:${col};width:${wdt}px;animation-delay:${delay}s;animation-duration:${dur}s"></i>`; }
+    box.innerHTML = `
+      <div class="mw-confetti">${conf}</div>
+      <div class="mw-in">
+        <div class="mw-eye">${w.champ ? '🏆 Haxball-Sieger' : '🏆 Match gewonnen'}</div>
+        <div class="mw-name">${w.names.join(' & ')}</div>
+        ${w.champ ? '<div class="mw-sub">holt das Turnier!</div>' : '<div class="mw-sub">⚽ weiter im Turnier</div>'}
+      </div>`;
+    const hide = () => { box.classList.remove('show'); setTimeout(() => { box.style.display = 'none'; }, 300); };
+    box.style.display = 'flex';
+    requestAnimationFrame(() => box.classList.add('show'));
+    clearTimeout(showMatchWinner._t);
+    showMatchWinner._t = setTimeout(hide, w.champ ? 4200 : 2800);
+    box.onclick = () => { clearTimeout(showMatchWinner._t); hide(); };
+  }
+
   const COLORS = [
     ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
     ['#ffd34a','#ff7a4a'], ['#6cf2a0','#d4ff3a'], ['#ff7ce0','#7df0ff'],
@@ -2157,7 +2260,13 @@
   let lastBanSeen = undefined;        // für „Champions-Bann"-Toast (undefined = erster Render, kein Toast)
   const lastDrawnByDisc = {};         // discId -> teams_drawn_at (für „Teams/Lobbies ausgelost")
   const lastDeNextKey = {};           // discId -> Key der nächsten Haxball-Partie (für die große Ankündigung)
+  let haxLiveShownFor = null;         // discId, für den die Auto-Ankündigung beim Live-Schalten schon lief
+  const lastHaxAnn = {};              // discId -> zuletzt gesehener bracket.ann (Button-Signal)
+  const haxDecidedSeen = {};          // discId -> Set der bereits gezeigten Match-Sieger-Keys
   let tallyActive = false;            // true, solange das Punkte-Tally die Tabelle animiert (blockt normales Neu-Rendern)
+  let sbUserOpen = false;             // true, wenn der Nutzer die Gesamtwertung selbst geöffnet hat (dann nicht auto-schließen)
+  function openStandings(){ const a=document.getElementById('liveAside'), bd=document.getElementById('sbBackdrop'); if(a) a.classList.add('open'); if(bd) bd.classList.add('open'); }
+  function closeStandings(){ const a=document.getElementById('liveAside'), bd=document.getElementById('sbBackdrop'); if(a) a.classList.remove('open'); if(bd) bd.classList.remove('open'); sbUserOpen=false; }
 
   // === Brawlhalla Self-Tracking (feste Lobbies, Spiele selbst eintippen) ===
   const BRAWL_PTS = [4, 3, 2, 1];
@@ -2466,10 +2575,10 @@
     // liefert die Tabelle ja selbst, und die Sidebar daneben ist nur Lärm.
     const isAbendDurch = !currentDisc;
     const showTable = !isAbendDurch && (doneCount >= 1 || !!haxLiveRows || !!brawlLiveRows);
-    const liveAside = document.querySelector('.live-aside');
-    const liveLayout = document.querySelector('.live-layout');
-    if (liveAside) liveAside.style.display = showTable ? '' : 'none';
-    if (liveLayout) liveLayout.classList.toggle('no-aside', !showTable);
+    // Tabelle ist jetzt ein Overlay: der Button erscheint, sobald es etwas zu zeigen gibt.
+    const sbFab = document.getElementById('sbFab');
+    if (sbFab) sbFab.style.display = showTable ? 'inline-flex' : 'none';
+    if (!showTable) closeStandings();
 
     // Solange das Punkte-Tally läuft, gehört die Tabelle der Animation — normales Neu-Rendern aussetzen.
     if (!tallyActive) {
@@ -2751,18 +2860,34 @@
     }
     lastBanSeen = banNow;
 
-    // Haxball „Nächste Partie": sobald ein Ergebnis eingetragen wurde, ändert sich die nächste offene
-    // Begegnung — dann groß ankündigen. Erster Render (Key noch undefined) setzt nur die Basis, kein Popup.
-    // Reload mitten im Turnier → Basis wird gesetzt, aber nicht erneut angekündigt.
+    // Haxball „Nächste Partie": einmal automatisch beim Live-Schalten des ersten Matches, danach per
+    // Admin-Button („📢 Nächste Partie", erhöht bracket.ann). Sieger-Anklicken → Sieger-Animation.
     const haxDisc = orderedDiscs.find(d => d.kind === 'haxball' && d.bracket);
-    if (haxDisc && haxDisc.status === 'live') {
-      const nm = deNextMatch(haxDisc);
-      const key = nm ? nm.key : null;
-      const prev = lastDeNextKey[haxDisc.id];
-      if (prev !== undefined && key && key !== prev && !demoFirstRender && !liveEvent.pause_msg) {
-        showNextMatch(nm);
+    if (haxDisc && haxDisc.status === 'live' && !demoFirstRender) {
+      const br = haxDisc.bracket;
+      const decided = deDecidedMatches(haxDisc);
+      const decidedKeys = new Set(decided.map(x => x.key));
+      if (haxLiveShownFor !== haxDisc.id) {
+        // Erstes Live-Schalten: Basis setzen; nur ganz am Anfang (kein Match entschieden) automatisch ankündigen
+        haxLiveShownFor = haxDisc.id;
+        lastHaxAnn[haxDisc.id] = (br.ann || 0);
+        haxDecidedSeen[haxDisc.id] = decidedKeys;
+        if (decided.length === 0 && !liveEvent.pause_msg) {
+          const nm0 = deNextMatch(haxDisc); if (nm0) setTimeout(() => showNextMatch(nm0), 500);
+        }
+      } else {
+        // (A) Admin-Button „Nächste Partie" gedrückt → bracket.ann erhöht → ankündigen
+        const ann = br.ann || 0;
+        if (lastHaxAnn[haxDisc.id] !== undefined && ann !== lastHaxAnn[haxDisc.id] && !liveEvent.pause_msg) {
+          const nm = deNextMatch(haxDisc); if (nm) showNextMatch(nm);
+        }
+        lastHaxAnn[haxDisc.id] = ann;
+        // (B) Neuer Match-Sieger (nicht das Grand Final — das übernimmt die Disziplin-Sieger-Ehrung)
+        const seen = haxDecidedSeen[haxDisc.id] || new Set();
+        const fresh = decided.filter(x => !seen.has(x.key) && !x.champ);
+        if (fresh.length && !liveEvent.pause_msg) showMatchWinner(fresh[fresh.length - 1]);
+        haxDecidedSeen[haxDisc.id] = decidedKeys;
       }
-      lastDeNextKey[haxDisc.id] = key;
     }
 
     // „Letzte Chance"-Banner: nach Disziplin 4, BEVOR die erste Runde Fall Guys gelaufen ist.
@@ -2890,10 +3015,11 @@
   // base: [{id,name,color,avatar_url,total(nach dem Spiel)}] · gamePts: {pid: in DIESEM Spiel erzielte Punkte}
   async function runStandingsTally(base, gamePts) {
     const host = document.getElementById('liveBody');
-    const aside = document.querySelector('.live-aside');
-    if (!host || !aside || aside.style.display === 'none') return;
+    const aside = document.getElementById('liveAside');
+    if (!host || !aside) return;
     const sbWrap = document.querySelector('.live-aside .scoreboard');
     tallyActive = true;
+    openStandings();                    // Overlay einblenden, damit man das Tally sieht
     const revealed = new Set();
     const scoringAsc = Object.keys(gamePts).filter(id => gamePts[id] > 0).sort((a, b) => gamePts[a] - gamePts[b]);
     const build = (highlightId, instant) => {
@@ -2924,6 +3050,8 @@
     await sbSleep(600);
     if (sbWrap) sbWrap.classList.remove('sb-tallying');
     tallyActive = false;
+    await sbSleep(2600);                 // Endstand kurz stehen lassen …
+    if (!sbUserOpen) closeStandings();   // … dann automatisch zu (außer der Nutzer hat die Tabelle selbst offen)
   }
 
   // Game-Endscore: zeigt nach jedem fertigen Spiel den Endstand DIESES Spiels (Mario-Kart-Style)
@@ -3369,6 +3497,7 @@
             ${champCry ? `<div class="ad-champ-cry">„${champCry}"</div>` : ''}
           </div>
           <div class="ad-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) und Streicher werden dort berücksichtigt.</small></div>
+          <div class="ad-finish-cta"><a href="index.html#rangliste" class="ad-season-btn">🏆 Zur Saison-Wertung →</a></div>
         </div>`;
       box.style.display = 'block';
 
@@ -3413,7 +3542,21 @@
     // --- Großer Join-Link / Code (damit niemand suchen muss) ---
     let joinLinkHtml = '';
     const jl = (currentDisc.join_link || '').trim();
-    if (jl) {
+    if (kind === 'chameleon') {
+      // Chameleon: Server + Passwort (im join_link als JSON {s,p} gespeichert) groß für alle
+      let cs = '', cp = '';
+      try { const o = JSON.parse(jl); if (o && typeof o === 'object') { cs = (o.s || '').trim(); cp = (o.p || '').trim(); } } catch (e) { cs = jl; }
+      if (cs || cp) {
+        joinLinkHtml = `
+          <div class="cham-server">
+            <div class="cs-label">🦎 Server beitreten — für alle</div>
+            <div class="cs-grid">
+              ${cs ? `<div class="cs-item"><span class="cs-k">Server</span><span class="cs-v">${cs}</span></div>` : ''}
+              ${cp ? `<div class="cs-item"><span class="cs-k">Passwort</span><span class="cs-v">${cp}</span></div>` : ''}
+            </div>
+          </div>`;
+      }
+    } else if (jl) {
       const isUrl = /^https?:\/\//i.test(jl);
       const safe = jl.replace(/'/g, "\\'");
       if (isUrl) {
@@ -3760,13 +3903,17 @@
           } else if (isDemo) {
             entry = `<div class="brawl-hint">Hier wird live eingetippt, wer gefunden wurde — Überlebende kassieren das Maximum.</div>`;
           }
-          const card = `<div class="lob-card">
-              <div class="lob-head"><span class="lh-n">🔍 Die Jagd läuft</span><span class="lh-meta">${active.at && !active.closed ? `⏱ <span class="cham-clock" data-ts="${active.at}">0:00</span> · ` : ''}${found.length}/${H} gefunden</span></div>
-              <div class="brawl-chips" style="margin:0.3rem 0 0.6rem">${seekerChips}</div>
-              <div class="lob-tally">${foundRows}${hiddenRows}</div>
+          const card = `<div class="lob-card cham-hunt-card">
+              <div class="cham-hunt-top">
+                <div class="cham-hunt-title">🔍 Die Jagd läuft</div>
+                ${active.at && !active.closed ? `<div class="cham-hunt-clock">⏱ <span class="cham-clock" data-ts="${active.at}">0:00</span></div>` : ''}
+                <div class="cham-hunt-count"><b>${found.length}</b> / ${H}<span>gefunden</span></div>
+              </div>
+              <div class="cham-seekers">${seekerChips}</div>
+              <div class="lob-tally cham-tally">${foundRows}${hiddenRows}</div>
               ${entry}
             </div>`;
-          modesListHtml += `<div class="nd-block"><div class="nd-label">Jagd · ${lblOf(active, mdefs.indexOf(active))}</div><p class="nd-sub">INFECTIOUS 🦠 — wer gefunden wird, jagt mit. Je später du fällst, desto mehr Punkte; wer nie gefunden wird, kriegt +${H + CHAM_SURVIVE_BONUS}. Start-Jäger punkten nicht (jeder startet gleich oft).</p><div class="lob-grid">${card}</div></div>`;
+          modesListHtml += `<div class="nd-block cham-hunt"><div class="nd-label">Jagd · ${lblOf(active, mdefs.indexOf(active))}</div><p class="nd-sub">INFECTIOUS 🦠 — wer gefunden wird, jagt mit. Je später du fällst, desto mehr Punkte; wer nie gefunden wird, kriegt +${H + CHAM_SURVIVE_BONUS}. Start-Jäger punkten nicht (jeder startet gleich oft).</p><div class="lob-grid">${card}</div></div>`;
         }
       }
 
@@ -4045,6 +4192,14 @@
   document.addEventListener('scroll', onScroll, { passive:true }); onScroll();
   const io = new IntersectionObserver((es)=>{ es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold:0.12, rootMargin:'0px 0px -40px 0px' });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Gesamtwertungs-Overlay: Button öffnet, ✕/Backdrop schließt
+  (function wireStandings(){
+    const fab=document.getElementById('sbFab'), cl=document.getElementById('sbClose'), bd=document.getElementById('sbBackdrop');
+    if (fab) fab.onclick = () => { sbUserOpen = true; openStandings(); };
+    if (cl) cl.onclick = closeStandings;
+    if (bd) bd.onclick = closeStandings;
+  })();
 </script>
 </body>
 </html>

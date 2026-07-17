@@ -1466,8 +1466,23 @@
     return head;
   }
 
+  // Server/Passwort aus join_link lesen (Chameleon speichert dort JSON {s,p})
+  function chamParse(d) {
+    try { const o = JSON.parse(d.join_link || ''); if (o && typeof o === 'object') return { s: o.s || '', p: o.p || '' }; } catch (e) {}
+    return { s: d.join_link || '', p: '' };
+  }
   // Eingabefeld für den Join-Link/Code (wird live auf abend.html groß angezeigt)
   function joinLinkFieldHtml(d) {
+    if (d.kind === 'chameleon') {
+      const c = chamParse(d);
+      const s = c.s.replace(/"/g, '&quot;'), p = c.p.replace(/"/g, '&quot;');
+      return `
+        <div class="join-field">
+          <label class="join-field-label">🦎 Chameleon-Server & Passwort — wird live für alle groß angezeigt</label>
+          <input type="text" class="join-field-input" id="chamSrv-${d.id}" value="${s}" placeholder="Servername" style="margin-bottom:0.4rem" onchange="setChamServer('${d.id}')">
+          <input type="text" class="join-field-input" id="chamPw-${d.id}" value="${p}" placeholder="Passwort" onchange="setChamServer('${d.id}')">
+        </div>`;
+    }
     const v = (d.join_link || '').replace(/"/g, '&quot;');
     return `
       <div class="join-field">
@@ -1485,6 +1500,17 @@
     if (error) { console.error(error); toast('Link-Update fehlgeschlagen', 'error'); return; }
     d.join_link = v;
     toast(v ? 'Join-Link gespeichert' : 'Join-Link entfernt', 'ok');
+  };
+
+  window.setChamServer = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const s = ($('chamSrv-' + discId) || {}).value ? $('chamSrv-' + discId).value.trim() : '';
+    const p = ($('chamPw-' + discId) || {}).value ? $('chamPw-' + discId).value.trim() : '';
+    const v = (s || p) ? JSON.stringify({ s, p }) : null;
+    const { error } = await sb.from('disciplines').update({ join_link: v }).eq('id', discId);
+    if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+    d.join_link = v;
+    toast('Server/Passwort gespeichert', 'ok');
   };
 
   // --- Haxball: Phasen-Steuerung + Teams (Anzeige) + Endplatzierung (Klick-Reihenfolge) ---
@@ -1640,6 +1666,14 @@
     renderDisciplineBodyFor(discId); renderOverview();
     if (m.w) toast('Sieg eingetragen', 'ok');
   };
+  window.announceHaxNext = async function(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); const br = d && deBrOf(d); if (!br) return;
+    const nb = Object.assign({}, br, { ann: (br.ann || 0) + 1 });
+    const { error } = await sb.from('disciplines').update({ bracket: nb }).eq('id', discId);
+    if (error) { console.error(error); toast('Konnte nicht ankündigen', 'error'); return; }
+    d.bracket = nb;
+    toast('📢 Nächste Partie wird live angezeigt', 'ok');
+  };
   window.setDeGfWinner = async function(discId, pid) {
     const d = currentDisciplines.find(x => x.id === discId); const br = d && deBrOf(d); if (!br) return;
     const nb = Object.assign({}, br, { gfw: br.gfw === pid ? null : pid });
@@ -1742,7 +1776,8 @@
     const reset = ` · <a onclick="resetDeBracket('${d.id}')" style="color:var(--muted);cursor:pointer;font-size:.85rem">↺ Alles neu auslosen</a>`;
     return `
       <div style="padding-top:1rem">
-        <p class="section-desc">Sieger-Team antippen. Nach jeder Runde: <b>nächste Runde auslosen</b> (Reveal läuft live). Nur die aktuelle Runde ist änderbar. ${undo}${reset}</p>
+        <p class="section-desc">Sieger-Team antippen (Sieger-Animation läuft live). Nach jeder Runde: <b>nächste Runde auslosen</b> (Reveal läuft live). Nur die aktuelle Runde ist änderbar. ${undo}${reset}</p>
+        <div class="draw-control"><button class="draw-btn" onclick="announceHaxNext('${d.id}')">📢 Nächste Partie anzeigen</button></div>
         <div class="haxball-step-title">Winner Bracket</div>${wbHtml}
         <div class="haxball-step-title">Loser Bracket — die zweite Chance</div>${lbHtml || '<p class="section-desc">Füllt sich mit den Verlierern aus Runde 1.</p>'}
         ${gfHtml}${control}
