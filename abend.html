@@ -312,10 +312,10 @@
     margin-bottom: 1.25rem;
   }
   .nd-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.5rem; }
-  .nd-logo { height: 54px; width: auto; max-width: 200px; object-fit: contain; border-radius: 8px; flex-shrink: 0; background: var(--bg-2); padding: 5px 9px; }
+  .nd-logo { height: 54px; width: auto; max-width: 200px; object-fit: cover; border-radius: 12px; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.45); }
   .intro { text-align: center; }
   .intro-slide { display: flex; flex-direction: column; align-items: center; gap: 0.55rem; padding: 1.1rem 0 1.3rem; }
-  .intro-logo { height: 68px; width: auto; max-width: 240px; object-fit: contain; }
+  .intro-logo { height: 108px; width: auto; max-width: 240px; object-fit: cover; border-radius: 18px; box-shadow: 0 10px 34px rgba(0,0,0,0.5); }
   .intro-name { font-family: var(--font-display); font-weight: 900; font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); line-height: 1; }
   .intro-mode { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cool); }
   .intro-rules { font-size: 0.95rem; line-height: 1.5; color: var(--muted); max-width: 520px; }
@@ -693,7 +693,7 @@
   .bumper-overlay.show { opacity: 1; }
   .bp-card { display: flex; align-items: center; gap: 1.6rem; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 1.6rem 2rem; box-shadow: 0 30px 80px -30px #000; transform: translateY(14px); transition: transform 0.4s ease; }
   .bumper-overlay.show .bp-card { transform: none; }
-  .bp-logo { width: 60px; height: 60px; }
+  .bp-logo { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
   .bp-kicker { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cool); }
   .bp-name { font-family: var(--font-display); font-size: 3rem; line-height: 0.95; letter-spacing: 0.03em; color: var(--text); }
   .bp-mode { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-top: 3px; }
@@ -1945,7 +1945,7 @@
     const el = document.getElementById('liveBumper'); if (!el || !disc) return;
     el.innerHTML = `
       <div class="bp-card">
-        <img class="bp-logo" src="logos/${disc.kind}.svg" alt="" onerror="this.style.display='none'">
+        <img class="bp-logo" src="logos/${disc.kind}.png" alt="" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${disc.kind}.svg'}else{this.style.display='none'}">
         <div class="bp-txt">
           <div class="bp-kicker">Als Nächstes${idx ? ' · Spiel ' + idx + ' von ' + total : ''}</div>
           <div class="bp-name">${discName(disc.kind)}</div>
@@ -2159,16 +2159,28 @@
     // genau dann, wenn der Admin intro_step gesetzt hat (0 = Teilnehmer, 1..N = Disziplinen).
     // Sobald eine Disziplin auf „läuft" geht, setzt der Admin intro_step automatisch auf null
     // und die Spielabend-Seite wechselt zur Spiel-Ansicht.
+    const anyGameStarted = orderedDiscs.some(d => d.status === 'live' || d.status === 'done');
     const showIntro = isDemo
-      ? (doneCount === 0 && !orderedDiscs.some(d => d.status === 'live' || d.status === 'done') && (!results || !results.length))
-      : (liveEvent.intro_step != null);
+      ? (doneCount === 0 && !anyGameStarted && (!results || !results.length))
+      // Live: Intro zeigen, sobald intro_step gesetzt ist — ODER solange noch KEIN Spiel gestartet
+      // wurde (verhindert den Haxball-Blitzer direkt nach dem Live-Schalten, bevor intro_step ankommt).
+      : (liveEvent.intro_step != null || !anyGameStarted);
     if (showIntro && currentDisc) {
       const roster = (evParticipants && evParticipants.length) ? evParticipants : evPlayers;
+      // Spoiler-Schutz: solange die Entbannung noch nicht enthüllt wurde (Intro läuft, Step vor dem
+      // 💥-Slide), zeigen wir die zerstörten Vetos auf dem Veto-Slide weiterhin als „intakt" an.
+      let introVetoesShow = vetoes;
+      const banSpoiler = liveEvent.champion_ban;
+      const banStepIdx = orderedDiscs.length + 3;
+      if (banSpoiler && (banSpoiler.victims || []).length && (liveEvent.intro_step == null || liveEvent.intro_step < banStepIdx)) {
+        const have = new Set((vetoes || []).map(v => v.player_id));
+        introVetoesShow = (vetoes || []).concat(banSpoiler.victims.filter(pid => !have.has(pid)).map(pid => ({ player_id: pid, discipline_kind: banSpoiler.kind })));
+      }
       if (isDemo) {
         buildIntroSlideshow(orderedDiscs, roster, { controls: true, vetoes, ban: liveEvent.champion_ban });
       } else {
         // Admin-gesteuert: zeigt genau den Slide, den der Admin gesetzt hat (intro_step). Kein Auto-Scroll.
-        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step, vetoes, ban: liveEvent.champion_ban });
+        buildIntroSlideshow(orderedDiscs, roster, { controls: false, step: liveEvent.intro_step, vetoes: introVetoesShow, ban: liveEvent.champion_ban });
       }
     } else {
       clearInterval(introTimer); introTimer = null;
@@ -2533,9 +2545,10 @@
     }
     lastCurrentDiscId = currentDisc ? currentDisc.id : null;
     orderedDiscs.forEach(d => { lastDrawnByDisc[d.id] = d.teams_drawn_at || null; });
-    // Champions-Bann frisch gesetzt → Lower-Third
+    // Entbannung frisch gesetzt → Lower-Third — aber NICHT während des Intros
+    // (dort ist der 💥-Slide die Enthüllung; ein früher Toast würde spoilern)
     const banNow = liveEvent.champion_ban ? (liveEvent.champion_ban.at || liveEvent.champion_ban.kind) : null;
-    if (lastBanSeen !== undefined && banNow && lastBanSeen !== banNow) {
+    if (lastBanSeen !== undefined && banNow && lastBanSeen !== banNow && liveEvent.intro_step == null) {
       showLiveToast(`Entbannung: ${discName(liveEvent.champion_ban.kind)} ist unantastbar — alle spielen mit`, 't-win');
     }
     lastBanSeen = banNow;
@@ -2693,7 +2706,7 @@
         const pos = lineupKinds.indexOf(v.kind);
         const inL = pos >= 0;
         return `<div class="pool-card ${inL ? 'picked' : 'benched'}${anim ? ' anim' : ' settled'}" style="--pd:${(i * 0.14).toFixed(2)}s;--pp:${(1.4 + (inL ? pos : VDISCS.length) * 0.3).toFixed(2)}s">
-            <img class="pool-logo" src="logos/${v.kind}.svg" alt="${v.name}" onerror="this.style.display='none'">
+            <img class="pool-logo" src="logos/${v.kind}.png" alt="${v.name}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${v.kind}.svg'}else{this.style.display='none'}">
             <div class="pool-name">${v.name}</div>
             <div class="pool-mode">${v.mode}</div>
             ${inL ? `<span class="pool-pos">${pos + 1}</span>` : `<span class="pool-bench">im Pool</span>`}
@@ -2732,7 +2745,7 @@
             <div><b>👑 King of the Hill${king ? `: ${king.name}` : ''}</b><br><span>Wer die Saison anführt, hat <b>kein Veto</b> — die Krone ist eine Bürde. <i style="color:var(--muted)">…zumindest dachte er das. 😏</i></span></div>
           </div>
           <div class="vinfo-card">
-            <div class="vinfo-ico">🦖</div>
+            <div class="vinfo-ico"><img src="logos/dino.png" alt="" style="width:38px;height:38px;border-radius:9px;object-fit:cover;display:block" onerror="this.outerHTML='🦖'"></div>
             <div><b>Das Joker-Minispiel heute: Dino Runner</b><br><span>Wer vetoed, sitzt nicht rum: Dino Runner am Handy (chromedino.com) — der Highscore der Veto-Spieler wird wie eine Disziplin gewertet (10·8·6·…).</span></div>
           </div>
         </div>`;
@@ -2784,7 +2797,7 @@
           </div>
           <div class="ban-act ban-act-target${S}">
             <div class="ban-target${alreadyPlayed ? ' stamped' : ''}">
-              <img class="intro-logo" src="logos/${ban.kind}.svg" alt="${discName(ban.kind)}" onerror="this.style.display='none'">
+              <img class="intro-logo" src="logos/${ban.kind}.png" alt="${discName(ban.kind)}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${ban.kind}.svg'}else{this.style.display='none'}">
               <div class="ban-target-name">${discName(ban.kind)}</div>
               <div class="ban-stamp">ENTBANNT</div>
             </div>
@@ -2830,7 +2843,7 @@
         <div class="intro">
           <div class="nd-label">Vorstellung · Spiel ${step - 1}/${introDiscs.length}</div>
           <div class="intro-slide" key="${k}-${introIdx}">
-            <img class="intro-logo" src="logos/${k}.svg" alt="${discName(k)}" onerror="this.style.display='none'">
+            <img class="intro-logo" src="logos/${k}.png" alt="${discName(k)}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${k}.svg'}else{this.style.display='none'}">
             <div class="intro-name">${discName(k)}</div>
             <div class="intro-mode">${discMode(k)}</div>
             <div class="intro-rules">${rulesTxt}</div>
@@ -3013,7 +3026,7 @@
     // Original-Logo des Spiels (Datei in logos/<kind>.png); fällt auf das Kürzel zurück, falls keins da ist
     const head = `
       <div class="nd-head">
-        <img class="nd-logo" src="logos/${kind}.svg" alt="${discName(kind)}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+        <img class="nd-logo" src="logos/${kind}.png" alt="${discName(kind)}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${kind}.svg'}else{this.style.display='none';this.nextElementSibling.style.display='inline-flex';}">
         <span class="nd-glyph" style="display:none">${discShort(kind)}</span>
         <div>
           <div class="nd-eyebrow">Aktuelles Spiel · ${discMode(kind)}</div>
