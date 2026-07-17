@@ -35,6 +35,23 @@
   .recap-btn { background: var(--primary); color: var(--bg); border: none; border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; padding: 0.6rem 1.1rem; cursor: pointer; }
   .recap-btn.ghost { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
   .empty-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem 1.6rem; text-align: center; color: var(--muted); }
+
+  /* Abend-Browser: Disziplinpunkte pro Abend */
+  .ev-pick { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.4rem; }
+  .ev-btn { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.55rem 0.95rem; cursor: pointer; color: var(--text); font-family: var(--font-display); font-size: 1.05rem; letter-spacing: 0.02em; transition: border-color 0.15s, background 0.15s; }
+  .ev-btn small { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .ev-btn:hover { border-color: var(--border-strong); }
+  .ev-btn.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+  .ev-btn.on small { color: var(--primary); }
+  .ev-meta { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.7rem; }
+  .disc-matrix th, .disc-matrix td { text-align: center; }
+  .disc-matrix th.l, .disc-matrix td.l { text-align: left; }
+  .dm-logo { width: 24px; height: 24px; object-fit: contain; display: block; margin: 0 auto 3px; border-radius: 5px; }
+  .disc-matrix td.disc-cell { font-variant-numeric: tabular-nums; }
+  .disc-matrix td.disc-win { color: var(--primary); font-weight: 800; }
+  .disc-matrix td.tot b { color: var(--text); font-size: 1rem; }
+  .disc-matrix td.rankcell { font-family: var(--font-mono); color: var(--muted); }
+  .veto-mark { font-size: 0.8em; margin-left: 2px; opacity: 0.85; }
 </style>
 </head>
 <body>
@@ -67,6 +84,19 @@
     </div>
     <div id="recapWrap" class="reveal">
       <div class="empty-box">Noch kein Abend abgeschlossen. Nach dem ersten Spielabend erscheint hier der Rückblick.</div>
+    </div>
+  </section>
+
+  <!-- ABENDE -->
+  <section class="sec">
+    <div class="sec-head reveal">
+      <div class="eyebrow"><span class="num">▦</span> Abende</div>
+      <h2>Disziplinpunkte <span class="accent">pro Abend.</span></h2>
+      <p>Wähle einen Abend — und sieh, wer in welcher Disziplin wie viele Punkte geholt hat.</p>
+    </div>
+    <div id="eventPicker" class="ev-pick reveal"></div>
+    <div id="eventDetail" class="reveal">
+      <div class="empty-box">Sobald ein Abend abgeschlossen ist, kannst du ihn hier auswählen.</div>
     </div>
   </section>
 
@@ -114,8 +144,11 @@
   const grad = i => { const c = COLORS[i % COLORS.length]; return `linear-gradient(135deg,${c[0]},${c[1]})`; };
   const ini = s => (s||'?').slice(0,2).toUpperCase();
   const DISC_NAME = { geoguessr:'GeoGuessr', haxball:'Haxball', chess:'Chess Blitz', brawlhalla:'Brawlhalla', chameleon:'Meccha Chameleon', fallguys:'Fall Guys' };
+  const DISC_SHORT = { geoguessr:'GEO', haxball:'HAX', chess:'CHS', brawlhalla:'BRA', chameleon:'CHA', fallguys:'FAL' };
   const dName = k => DISC_NAME[k] || k;
+  const dShort = k => DISC_SHORT[k] || (k||'?').slice(0,3).toUpperCase();
   const fmtDate = d => new Date(d).toLocaleDateString('de-DE', { day:'2-digit', month:'long', year:'numeric' });
+  const fmtShort = d => new Date(d).toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'2-digit' });
 
   async function load() {
     const [{ data: pl }, { data: evs }] = await Promise.all([
@@ -136,6 +169,7 @@
     const dIds = (discs || []).map(d => d.id);
     let results = [];
     if (dIds.length) { const { data } = await sb.from('results').select('*').in('discipline_id', dIds); results = data || []; }
+    const { data: vt } = await sb.from('vetoes').select('*').in('event_id', evIds);
 
     const discById = {}; (discs || []).forEach(d => discById[d.id] = d);
 
@@ -185,6 +219,58 @@
     renderStatsTable(rows, pIndex);
     renderBestCards(rows);
     renderRecap(events[events.length - 1], discs || [], results, players, pName, pAvatar, pIndex);
+    renderEventBrowser(events, discs || [], results, vt || [], pName, pAvatar, pIndex);
+  }
+
+  // ===== Abend-Browser: Disziplinpunkte pro Abend =====
+  let evBrowser = null;
+  function renderEventBrowser(events, discs, results, vetoes, pName, pAvatar, pIndex) {
+    const picker = document.getElementById('eventPicker');
+    const detail = document.getElementById('eventDetail');
+    if (!events.length) { picker.innerHTML = ''; return; }
+    const ordered = [...events].reverse(); // neuester Abend zuerst
+    evBrowser = { events: ordered, discs, results, vetoes, pName, pAvatar, pIndex, sel: ordered[0].id };
+    picker.innerHTML = ordered.map(ev => `<button class="ev-btn" data-ev="${ev.id}">${ev.name}<small>${fmtShort(ev.event_date)}</small></button>`).join('');
+    picker.querySelectorAll('.ev-btn').forEach(b => b.addEventListener('click', () => { evBrowser.sel = b.getAttribute('data-ev'); paintEvent(); }));
+    paintEvent();
+  }
+
+  function paintEvent() {
+    if (!evBrowser) return;
+    const { events, discs, results, vetoes, pName, pAvatar, pIndex, sel } = evBrowser;
+    document.querySelectorAll('#eventPicker .ev-btn').forEach(b => b.classList.toggle('on', b.getAttribute('data-ev') === sel));
+    const ev = events.find(e => e.id === sel); if (!ev) return;
+    const detail = document.getElementById('eventDetail');
+    const evDiscs = discs.filter(d => d.event_id === ev.id).sort((a,b) => (a.position||0) - (b.position||0));
+    const evDiscIds = evDiscs.map(d => d.id);
+    const evRes = results.filter(r => evDiscIds.includes(r.discipline_id));
+    // Veto-Map: pid -> Set(discipline_kind)
+    const vmap = {}; (vetoes || []).filter(v => v.event_id === ev.id).forEach(v => { (vmap[v.player_id] = vmap[v.player_id] || new Set()).add(v.discipline_kind); });
+    // Punkte je Spieler je Disziplin + Abendsumme
+    const byPlayer = {}, totals = {};
+    evRes.forEach(r => {
+      const pts = parseFloat(r.points) || 0;
+      (byPlayer[r.player_id] = byPlayer[r.player_id] || {})[r.discipline_id] = { pts, pl: parseInt(r.placement) || null };
+      totals[r.player_id] = (totals[r.player_id] || 0) + pts;
+    });
+    const pids = Object.keys(byPlayer);
+    if (!pids.length) { detail.innerHTML = '<div class="empty-box">Für diesen Abend liegen keine Ergebnisse vor.</div>'; return; }
+    const ranked = pids.sort((a,b) => totals[b] - totals[a]);
+    let rank = 0, last = -1; const rankOf = {};
+    ranked.forEach((pid,i) => { if (totals[pid] !== last) rank = i + 1; last = totals[pid]; rankOf[pid] = rank; });
+    const head = `<tr><th class="l">#</th><th class="l">Spieler</th>${evDiscs.map(d => `<th title="${dName(d.kind)}"><img class="dm-logo" src="logos/${d.kind}.png" alt="${dName(d.kind)}" onerror="this.style.display='none'">${dShort(d.kind)}</th>`).join('')}<th>Σ Abend</th></tr>`;
+    const body = ranked.map(pid => {
+      const av = pAvatar(pid) ? `background-image:url(${pAvatar(pid)});` : `background:${grad(pIndex(pid))}`;
+      const cells = evDiscs.map(d => {
+        const c = (byPlayer[pid] || {})[d.id];
+        if (!c) return `<td>–</td>`;
+        const veto = vmap[pid] && vmap[pid].has(d.kind);
+        return `<td class="disc-cell${c.pl === 1 ? ' disc-win' : ''}">${c.pts}${veto ? '<span class="veto-mark" title="Veto — Joker gespielt">🃏</span>' : ''}</td>`;
+      }).join('');
+      return `<tr><td class="l rankcell">${rankOf[pid]}</td><td class="l"><span class="st-av" style="${av}">${pAvatar(pid) ? '' : ini(pName(pid))}</span><span class="st-name">${pName(pid)}</span></td>${cells}<td class="tot"><b>${totals[pid]}</b></td></tr>`;
+    }).join('');
+    detail.innerHTML = `<div class="ev-meta">${fmtDate(ev.event_date)} · ${evDiscs.length} Disziplinen · ${ranked.length} Spieler · <span style="color:var(--primary)">Disziplin-Sieger gelb</span> · 🃏 = Veto/Joker</div>
+      <div class="leaderboard" style="overflow-x:auto"><table class="stats-table disc-matrix"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   }
 
   function renderStatsTable(rows, pIndex) {
