@@ -365,18 +365,18 @@
   @keyframes mwConf { 0% { opacity: 0; transform: translateY(0) rotate(0); } 8% { opacity: 1; } 100% { opacity: 0.9; transform: translateY(105vh) rotate(680deg); } }
 
   /* Werbespot-Overlay (Vollbild, vom Admin gestartet) */
-  .ad-overlay { position: fixed; inset: 0; z-index: 220; display: flex; align-items: center; justify-content: center;
+  .spot-stage { position: fixed; inset: 0; z-index: 220; display: flex; align-items: center; justify-content: center;
     background: #000; opacity: 0; transition: opacity 0.35s ease; }
-  .ad-overlay.show { opacity: 1; }
-  .ad-overlay video { width: 100%; height: 100%; object-fit: contain; background: #000; }
-  .ad-close { position: fixed; top: 18px; right: 18px; z-index: 2; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em;
+  .spot-stage.show { opacity: 1; }
+  .spot-stage video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .spot-x { position: fixed; top: 18px; right: 18px; z-index: 2; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em;
     text-transform: uppercase; padding: 0.55rem 1rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25);
     background: rgba(0,0,0,0.5); color: #fff; cursor: pointer; opacity: 0.55; transition: opacity 0.15s; }
-  .ad-close:hover { opacity: 1; }
-  .ad-unmute { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); z-index: 3; font-family: var(--font-display); font-weight: 900; font-size: 1.25rem; letter-spacing: 0.03em;
+  .spot-x:hover { opacity: 1; }
+  .spot-sound { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); z-index: 3; font-family: var(--font-display); font-weight: 900; font-size: 1.25rem; letter-spacing: 0.03em;
     text-transform: uppercase; padding: 0.85rem 1.9rem; border-radius: 999px; border: none; background: var(--primary); color: #0b0d10;
-    cursor: pointer; box-shadow: 0 14px 40px -10px var(--primary); animation: adUnmutePulse 1.8s ease-in-out infinite; }
-  @keyframes adUnmutePulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.06); } }
+    cursor: pointer; box-shadow: 0 14px 40px -10px var(--primary); animation: spotSoundPulse 1.8s ease-in-out infinite; }
+  @keyframes spotSoundPulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.06); } }
 
   /* „Letzte Chance"-Banner */
   .last-chance { margin-bottom: 1.25rem; background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; }
@@ -747,13 +747,13 @@
   .ad-staged .copter-endstand,
   .ad-staged .ad-table-section,
   .ad-staged .ad-champ-stage,
-  .ad-staged .ad-note {
+  .ad-staged .abd-note {
     transition: opacity 0.8s ease, transform 0.8s ease, max-height 0.8s ease, margin 0.8s ease;
   }
   /* Tabelle und Champion starten unsichtbar */
   .ad-staged .ad-table-section,
   .ad-staged .ad-champ-stage,
-  .ad-staged .ad-note {
+  .ad-staged .abd-note {
     opacity: 0;
     transform: translateY(12px);
     pointer-events: none;
@@ -803,7 +803,7 @@
     transform: scale(1.04);
     pointer-events: auto;
   }
-  .ad-staged[data-stage="2"] .ad-note {
+  .ad-staged[data-stage="2"] .abd-note {
     opacity: 1;
     transform: none;
   }
@@ -823,11 +823,11 @@
   .ad-table-wrap { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
   .ad-tab th { text-align: center; padding: 0.7rem 0.4rem; }
   .ad-tab td { padding: 0.55rem 0.4rem; }
-  .ad-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; animation: adChampIn 0.5s 0.8s both ease; }
+  .abd-note { margin-top: 0.9rem; font-size: 0.8rem; color: var(--muted); line-height: 1.4; animation: adChampIn 0.5s 0.8s both ease; }
   .ad-finish-cta { text-align: center; margin-top: 1.6rem; animation: adChampIn 0.5s 1s both ease; }
   .ad-season-btn { display: inline-flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; padding: 0.9rem 1.6rem; border-radius: 999px; background: var(--primary); color: #0b0d10; text-decoration: none; box-shadow: 0 10px 30px -10px var(--primary); transition: transform 0.15s, box-shadow 0.15s; }
   .ad-season-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 36px -10px var(--primary); }
-  .ad-note small { display: block; margin-top: 0.2rem; font-size: 0.72rem; opacity: 0.75; }
+  .abd-note small { display: block; margin-top: 0.2rem; font-size: 0.72rem; opacity: 0.75; }
   @keyframes adChampIn { from { opacity: 0; transform: translateY(20px) scale(0.92); } to { opacity: 1; transform: none; } }
 
   /* Klartext-Statuszeile: was passiert gerade (für Zuschauer) */
@@ -1523,10 +1523,10 @@
     <div class="mw-overlay" id="matchWin" role="status" aria-live="polite" style="display:none;"></div>
 
     <!-- Werbespot (vom Admin gestartet) -->
-    <div class="ad-overlay" id="adOverlay" style="display:none;">
-      <video id="adVideo" src="brolympiade-spot.mp4" playsinline preload="auto"></video>
-      <button class="ad-unmute" id="adUnmute" style="display:none;">🔊 Ton an</button>
-      <button class="ad-close" id="adClose" aria-label="Schließen">✕ Schließen</button>
+    <div class="spot-stage" id="spotStage" style="display:none;">
+      <video id="spotVideo" src="brolympiade-spot.mp4" playsinline preload="auto"></video>
+      <button class="spot-sound" id="spotSound" style="display:none;">🔊 Ton an</button>
+      <button class="spot-x" id="spotClose" aria-label="Schließen">✕ Schließen</button>
     </div>
 
     <div class="pause-banner" id="livePause" style="display:none;">
@@ -3517,7 +3517,7 @@
             <div class="ad-champ-title">Tagessieger</div>
             ${champCry ? `<div class="ad-champ-cry">„${champCry}"</div>` : ''}
           </div>
-          <div class="ad-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) und Streicher werden dort berücksichtigt.</small></div>
+          <div class="abd-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) und Streicher werden dort berücksichtigt.</small></div>
           <div class="ad-finish-cta"><a href="index.html#rangliste" class="ad-season-btn">🏆 Zur Saison-Wertung →</a></div>
         </div>`;
       box.style.display = 'block';
@@ -4224,7 +4224,7 @@
 
   // Werbespot: vom Admin per Realtime-Broadcast gestartet (Kanal 'fb-ad')
   (function wireAd(){
-    const ov=document.getElementById('adOverlay'), v=document.getElementById('adVideo'), un=document.getElementById('adUnmute'), cl=document.getElementById('adClose');
+    const ov=document.getElementById('spotStage'), v=document.getElementById('spotVideo'), un=document.getElementById('spotSound'), cl=document.getElementById('spotClose');
     if (!ov || !v) return;
     var AD_VOL = 0.4;   // gedrosselte Lautstärke, damit's nicht zu laut ist
     function showAd(){
