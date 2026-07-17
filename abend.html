@@ -364,6 +364,19 @@
   .mw-confetti i { position: absolute; top: -8%; height: 13px; border-radius: 2px; opacity: 0; animation: mwConf linear forwards; }
   @keyframes mwConf { 0% { opacity: 0; transform: translateY(0) rotate(0); } 8% { opacity: 1; } 100% { opacity: 0.9; transform: translateY(105vh) rotate(680deg); } }
 
+  /* Werbespot-Overlay (Vollbild, vom Admin gestartet) */
+  .ad-overlay { position: fixed; inset: 0; z-index: 220; display: flex; align-items: center; justify-content: center;
+    background: #000; opacity: 0; transition: opacity 0.35s ease; }
+  .ad-overlay.show { opacity: 1; }
+  .ad-overlay video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .ad-close { position: fixed; top: 18px; right: 18px; z-index: 2; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 0.55rem 1rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(0,0,0,0.5); color: #fff; cursor: pointer; opacity: 0.55; transition: opacity 0.15s; }
+  .ad-close:hover { opacity: 1; }
+  .ad-unmute { position: absolute; z-index: 3; font-family: var(--font-display); font-weight: 900; font-size: 1.4rem; letter-spacing: 0.03em;
+    text-transform: uppercase; padding: 1rem 2rem; border-radius: 999px; border: none; background: var(--primary); color: #0b0d10;
+    cursor: pointer; box-shadow: 0 14px 40px -10px var(--primary); }
+
   /* „Letzte Chance"-Banner */
   .last-chance { margin-bottom: 1.25rem; background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; }
   .lc-title { font-family: var(--font-display); font-weight: 900; font-size: 1.1rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--alert); margin-bottom: 0.5rem; }
@@ -1507,6 +1520,13 @@
     <div class="hx-overlay" id="haxNext" role="status" aria-live="polite" style="display:none;"></div>
 
     <div class="mw-overlay" id="matchWin" role="status" aria-live="polite" style="display:none;"></div>
+
+    <!-- Werbespot (vom Admin gestartet) -->
+    <div class="ad-overlay" id="adOverlay" style="display:none;">
+      <video id="adVideo" src="brolympiade-spot.mp4" playsinline preload="auto"></video>
+      <button class="ad-unmute" id="adUnmute" style="display:none;">▶ Ton aktivieren &amp; abspielen</button>
+      <button class="ad-close" id="adClose" aria-label="Schließen">✕ Schließen</button>
+    </div>
 
     <div class="pause-banner" id="livePause" style="display:none;">
       <span class="pause-ico">☕</span>
@@ -4199,6 +4219,29 @@
     if (fab) fab.onclick = () => { sbUserOpen = true; openStandings(); };
     if (cl) cl.onclick = closeStandings;
     if (bd) bd.onclick = closeStandings;
+  })();
+
+  // Werbespot: vom Admin per Realtime-Broadcast gestartet (Kanal 'fb-ad')
+  (function wireAd(){
+    const ov=document.getElementById('adOverlay'), v=document.getElementById('adVideo'), un=document.getElementById('adUnmute'), cl=document.getElementById('adClose');
+    if (!ov || !v) return;
+    function showAd(){
+      ov.style.display='flex'; requestAnimationFrame(()=>ov.classList.add('show'));
+      try { v.currentTime=0; } catch(e){}
+      v.muted=false; un.style.display='none';
+      const pr=v.play();
+      if (pr && pr.catch) pr.catch(()=>{ un.style.display='inline-flex'; });   // Autoplay/Ton geblockt → Klick-Button
+    }
+    function hideAd(){ try{ v.pause(); }catch(e){} ov.classList.remove('show'); setTimeout(()=>{ ov.style.display='none'; }, 350); }
+    v.addEventListener('ended', hideAd);
+    cl.addEventListener('click', hideAd);
+    un.addEventListener('click', ()=>{ v.muted=false; v.play(); un.style.display='none'; });
+    try {
+      sb.channel('fb-ad', { config:{ broadcast:{ self:false } } })
+        .on('broadcast', { event:'play' }, showAd)
+        .on('broadcast', { event:'stop' }, hideAd)
+        .subscribe();
+    } catch(e){ console.warn('Werbespot-Kanal:', e); }
   })();
 </script>
 </body>

@@ -660,6 +660,8 @@
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
         <button class="btn-primary" id="liveToggleBtn">▶ Abend live schalten</button>
         <button class="btn-ghost" id="pauseBtn">☕ Pause starten</button>
+        <button class="btn-ghost" id="adPlayBtn" title="Spielt den Werbespot im Vollbild auf der Live-/Beamer-Seite">🎬 Werbespot</button>
+        <button class="btn-ghost" id="adStopBtn" title="Werbespot auf der Live-Seite stoppen" style="opacity:0.7">⏹ Stop</button>
       </div>
     </div>
 
@@ -980,6 +982,13 @@
     .on('postgres_changes', { event: '*', schema: 'public', table: 'results' }, adminLiveRefresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'disciplines' }, adminLiveRefresh)
     .subscribe();
+
+  // Werbespot: per Realtime-Broadcast an die Live-/Beamer-Seite (Kanal 'fb-ad', keine DB nötig)
+  const fbAdChannel = sb.channel('fb-ad', { config: { broadcast: { self: false } } });
+  fbAdChannel.subscribe();
+  const adPlayBtn = $('adPlayBtn'), adStopBtn = $('adStopBtn');
+  if (adPlayBtn) adPlayBtn.addEventListener('click', () => { fbAdChannel.send({ type: 'broadcast', event: 'play', payload: { t: Date.now() } }); toast('🎬 Werbespot läuft auf der Live-Seite', 'ok'); });
+  if (adStopBtn) adStopBtn.addEventListener('click', () => { fbAdChannel.send({ type: 'broadcast', event: 'stop', payload: {} }); toast('⏹ Werbespot gestoppt', 'ok'); });
 
   $('backLink').addEventListener('click', () => {
     $('eventDetailView').style.display = 'none';
