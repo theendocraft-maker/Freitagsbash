@@ -686,6 +686,26 @@
   .lob-codeform { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
   .lob-codeinput { flex: 1; min-width: 0; padding: 0.55rem 0.7rem; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 1rem; }
   .lob-codeok { padding: 0.55rem 1rem; border-radius: var(--radius-sm); border: none; background: var(--cool); color: #0b0d10; font-weight: 700; cursor: pointer; }
+  /* Brawlhalla 4er-FFA-Rotation (Live) */
+  .brl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.6rem; }
+  .brl-match { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.7rem; background: var(--bg-2); }
+  .brl-match.now { border-color: #ffd34a; box-shadow: 0 0 0 1px rgba(255,211,74,0.35) inset; }
+  .brl-match.done { opacity: 0.72; }
+  .brl-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.15rem; }
+  .brl-head b { font-family: var(--font-display); font-size: 0.95rem; }
+  .brl-st { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .brl-match.now .brl-st { color: #ffd34a; }
+  .brl-sit { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .brl-rows { display: flex; flex-direction: column; gap: 0.15rem; }
+  .brl-row, .brl-strow { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 0.4rem; font-size: 0.86rem; padding: 0.12rem 0; }
+  .brl-pos { font-family: var(--font-mono); color: var(--muted); text-align: center; }
+  .brl-name { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .brl-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .brl-pts { font-family: var(--font-mono); font-weight: 700; color: #ffd34a; }
+  .brl-stand { display: flex; flex-direction: column; gap: 0.1rem; }
+  .brl-strow { font-size: 0.95rem; padding: 0.28rem 0.4rem; border-radius: 6px; }
+  .brl-strow.t1 { background: rgba(255,211,74,0.12); }
+  .brl-strow.t1 .brl-pts, .brl-strow.t1 .brl-name { color: #ffd34a; font-weight: 700; }
   .brawl-entry { border-top: 1px dashed var(--border); padding-top: 0.5rem; margin-top: 0.3rem; }
   .brawl-hint { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; }
   .brawl-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
@@ -2293,6 +2313,34 @@
   const BRAWL_PTS = [4, 3, 2, 1];
   const brawlPts = g => (Array.isArray(g) ? g : []).reduce((s, pl) => s + (pl ? (BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0) : 0), 0);
   const brawlGamesOf = (r, n) => { const a = r && r.modes && r.modes[n] && r.modes[n].games; return Array.isArray(a) ? a : []; };
+  // Brawlhalla 4er-FFA-Rotation (Live-Ansicht, read-only) — Quelle: disciplines.bracket {v:'rot5'}
+  const brawlRotOf = disc => (disc && disc.bracket && disc.bracket.v === 'rot5') ? disc.bracket : null;
+  function renderBrawlRotLive(disc) {
+    const rot = brawlRotOf(disc); if (!rot) return '';
+    const nm = pid => (evPlayers.find(p => p.id === pid) || {}).name || '—';
+    const totals = {}; rot.players.forEach(pid => totals[pid] = 0);
+    rot.matches.forEach(m => (m.order || []).forEach((pid, idx) => { totals[pid] = (totals[pid] || 0) + (BRAWL_PTS[idx] || 0); }));
+    const curIdx = rot.matches.findIndex(m => (m.order || []).length < m.players.length);
+    const matchesHtml = rot.matches.map((m, i) => {
+      const order = m.order || [];
+      const done = order.length === m.players.length;
+      const isCur = i === curIdx;
+      const st = done ? '✓ fertig' : (isCur ? '● läuft' : 'kommt');
+      const cls = done ? 'done' : (isCur ? 'now' : '');
+      const rows = m.players.map(pid => {
+        const idx = order.indexOf(pid);
+        const pl = idx >= 0 ? idx + 1 : null;
+        const pts = pl ? BRAWL_PTS[pl - 1] : null;
+        const col = pColor(pid);
+        return `<div class="brl-row"><span class="brl-pos">${pl ? pl + '.' : '–'}</span><span class="brl-name"><span class="brl-dot" style="background:${col}"></span>${nm(pid)}</span><span class="brl-pts">${pts != null ? pts : ''}</span></div>`;
+      }).join('');
+      return `<div class="brl-match ${cls}"><div class="brl-head"><b>Match ${i + 1}</b><span class="brl-st">${st}</span></div><div class="brl-sit">🪑 aus: ${nm(m.sit)}</div><div class="brl-rows">${rows}</div></div>`;
+    }).join('');
+    const stand = rot.players.map(pid => ({ pid, pts: totals[pid] || 0 })).sort((a, b) => b.pts - a.pts);
+    const standHtml = stand.map((r, i) => { const col = pColor(r.pid); return `<div class="brl-strow ${i < 3 ? 't' + (i + 1) : ''}"><span class="brl-pos">${i + 1}.</span><span class="brl-name"><span class="brl-dot" style="background:${col}"></span>${nm(r.pid)}</span><span class="brl-pts">${r.pts}</span></div>`; }).join('');
+    return `<div class="nd-block"><div class="nd-label">4er-FFA-Rotation · jeder setzt 1× aus</div><div class="brl-grid">${matchesHtml}</div></div>
+      <div class="nd-block"><div class="nd-label">Zwischenstand · Brawlhalla</div><div class="brl-stand">${standHtml}</div></div>`;
+  }
   let lastNowDisc = null, lastNowResults = null;   // für lokales Re-Render bei Tap
   // Abend-durch Reveal-State (vom Admin via events.endstand_stage gesteuert, Realtime-Sync)
   let abendStage = null;            // aktuelle Stufe: 0=Veto, 1=Tabelle, 2=Champion · null wenn nicht im Endstand
@@ -4023,7 +4071,8 @@
         </div>`;
     }
 
-    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + (mdefs.length ? (modesListHtml + modeTblHtml) : gamePtsHtml) + joinHtml;
+    const rotHtml = (currentDisc.kind === 'brawlhalla') ? renderBrawlRotLive(currentDisc) : '';
+    box.innerHTML = head + joinLinkHtml + rulesHtml + phaseHtml + teamsHtml + (rotHtml ? rotHtml : (mdefs.length ? (modesListHtml + modeTblHtml) : gamePtsHtml)) + joinHtml;
     box.style.display = 'block';
 
     // Team-Reveal-Animation nach frischer Auslosung (einmalig pro Auslosung)

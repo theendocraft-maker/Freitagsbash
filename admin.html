@@ -2508,20 +2508,58 @@
   const fgGamesOf = (discId, pid, n) => { const a = fgModeOf(discId, pid, n).games; return Array.isArray(a) ? a : []; };
   const brawlPts = games => games.reduce((s, pl) => s + (pl ? (BRAWL_PTS[Math.min(pl, BRAWL_PTS.length) - 1] || 0) : 0), 0);
 
+  // --- Brawlhalla NEU: 4er-FFA-Rotation. n Spieler → n Matches, jeder setzt genau 1× aus.
+  //     Pro Match werden die 4 Spieler in Reihenfolge (1.–4.) angeklickt → 4/3/2/1 Punkte.
+  //     Gespeichert in disciplines.bracket = { v:'rot5', players:[pid], matches:[{sit, players:[4pid], order:[pid...]}] }
+  const brawlRotOf = d => (d.bracket && d.bracket.v === 'rot5') ? d.bracket : null;
+  const brawlName = id => (players.find(p => p.id === id) || {}).name || '?';
+
   function renderBrawlhallaBody(d, participants) {
     const playing = participants.filter(p => currentVetoes[p.id] !== d.kind);
-    const rounds = (Array.isArray(d.modes) ? d.modes : []).filter(m => m.type === 'brawl');
-    const addBar = `<div class="draw-control"><span class="draw-label">+ Lobby-Phase:</span><button class="draw-btn" onclick="addMode('${d.id}','brawl')">+ Phase</button></div>`;
-    const roundsHtml = rounds.length
-      ? rounds.map((m, idx) => renderBrawlRound(d, m, idx, playing)).join('')
-      : '<div class="rank-empty">Noch keine Phase — füge 2 Lobby-Phasen hinzu (= ein Lobbywechsel dazwischen). Pro Phase werden Lobbies à max. 4 ausgelost; jede Lobby trägt ihre Spiele selbst ein.</div>';
+    const rot = brawlRotOf(d);
+    if (!rot) {
+      return `
+        <div style="padding-top:1rem">
+          <p class="section-desc">4er-FFA-Rotation: <b>${playing.length} Spieler → ${playing.length} Matches</b>, jeder setzt genau einmal aus. Pro Match klickst du die Spieler in Reihenfolge an (1. zuerst) → <b>4/3/2/1</b> Punkte. Summe über alle Matches bestimmt die Platzierung.</p>
+          <div class="draw-control"><span class="draw-label">🎲 Rotation:</span><button class="draw-btn" onclick="makeBrawlRotation('${d.id}')">${playing.length} Matches erstellen</button></div>
+          ${playing.length < 3 ? '<div class="rank-empty">Mindestens 3 aktive Spieler nötig.</div>' : ''}
+        </div>`;
+    }
     return `
       <div style="padding-top:1rem">
-        <p class="section-desc">Feste Lobbies (eigener Voice-Channel + Raum-Code). Jede Lobby spielt mehrere Spiele und tippt nach jedem Spiel die Reihenfolge ein (4/3/2/1). Empfehlung: <b>2 Phasen à ~3 Spiele</b> mit einem Lobbywechsel dazwischen ≈ 30 min. Die Spieler tragen live selbst ein — hier kannst du korrigieren.</p>
-        ${addBar}
-        ${roundsHtml}
-        ${renderBrawlStandings(d, playing)}
+        <p class="section-desc">4er-FFA-Rotation · <b>${rot.matches.length} Matches</b> · jeder setzt 1× aus. Klicke pro Match die Spieler in Reihenfolge an (1. → 4.). <a onclick="makeBrawlRotation('${d.id}',true)" style="color:var(--alert);cursor:pointer">↻ neu auslosen</a></p>
+        ${rot.matches.map((m, i) => renderBrawlMatch(d, m, i)).join('')}
+        ${renderBrawlRotStandings(d)}
       </div>`;
+  }
+
+  function renderBrawlMatch(d, m, i) {
+    const order = Array.isArray(m.order) ? m.order : [];
+    const placeOf = pid => { const idx = order.indexOf(pid); return idx >= 0 ? idx + 1 : null; };
+    const chips = m.players.map(pid => {
+      const pl = placeOf(pid);
+      const pts = pl ? BRAWL_PTS[pl - 1] : null;
+      const badge = pl ? `<b>${pl}.</b> ` : '';
+      return `<button class="brawl-chip ${pl ? 'on' : ''}" onclick="tapBrawlPlace('${d.id}',${i},'${pid}')">${badge}${brawlName(pid)}${pl ? ` · ${pts}` : ''}</button>`;
+    }).join('');
+    const done = order.length === m.players.length;
+    const reset = order.length ? `<a onclick="resetBrawlMatch('${d.id}',${i})" style="color:var(--alert);cursor:pointer;font-size:.85rem">↩ Match leeren</a>` : '';
+    return `<div class="mode-block">
+      <div class="mode-head"><span class="mode-title">Match ${i + 1} ${done ? '✓' : ''}</span><span style="color:var(--muted);font-size:.85rem">🪑 setzt aus: <b>${brawlName(m.sit)}</b></span></div>
+      <div class="brawl-hint">Reihenfolge anklicken: 1. zuerst … zuletzt der 4. Platz. (Bereits Platzierten anklicken = ab da neu.)</div>
+      <div class="brawl-chips">${chips}</div>
+      ${reset}
+    </div>`;
+  }
+
+  function renderBrawlRotStandings(d) {
+    const rot = brawlRotOf(d); if (!rot) return '';
+    const totals = {}; rot.players.forEach(pid => totals[pid] = 0);
+    rot.matches.forEach(m => (m.order || []).forEach((pid, idx) => { totals[pid] = (totals[pid] || 0) + (BRAWL_PTS[idx] || 0); }));
+    const rows = rot.players.map(pid => ({ pid, pts: totals[pid] || 0 })).sort((a, b) => b.pts - a.pts);
+    return `<div class="mode-block"><div class="mode-head"><span class="mode-title">Zwischenstand</span></div><div class="rank-list">${
+      rows.map((r, i) => `<div class="rank-row"><span class="rank-pos">${i + 1}.</span><span class="rank-name">${brawlName(r.pid)}</span><span class="rank-pts">${r.pts} Pkt</span></div>`).join('')
+    }</div></div>`;
   }
 
   function renderBrawlRound(d, m, idx, playing) {
@@ -2848,6 +2886,66 @@
     let rank = 0, last = -1;
     for (let i = 0; i < totals.length; i++) { if (totals[i].pts !== last) rank = i + 1; totals[i].rank = rank; last = totals[i].pts; }
     for (const t of totals) {
+      await upsertResultDirect(discId, t.p.id, { placement: t.pts > 0 ? t.rank : null, points: t.pts > 0 ? soloPoints(t.rank) : 0 });
+    }
+  }
+
+  // ===== Brawlhalla 4er-FFA-Rotation =====
+  window.makeBrawlRotation = async function(discId, regen) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    if (playing.length < 3) { toast('Mindestens 3 aktive Spieler nötig', 'error'); return; }
+    if (regen && brawlRotOf(d) && !confirm('Rotation neu erstellen? Alle eingetragenen Match-Ergebnisse gehen verloren.')) return;
+    const ids = playing.map(p => p.id);
+    // Match i: Spieler ids[i] setzt aus, die anderen spielen (4er-FFA). n Spieler → n Matches, jeder 1× aus.
+    const matches = ids.map(sit => ({ sit, players: ids.filter(x => x !== sit), order: [] }));
+    const br = { v: 'rot5', players: ids, matches };
+    const { error } = await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
+    if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+    d.bracket = br;
+    await recomputeBrawlRot(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+    toast(`${matches.length} Matches erstellt`, 'ok');
+  };
+
+  window.tapBrawlPlace = async function(discId, mi, pid) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d || !brawlRotOf(d)) return;
+    const br = JSON.parse(JSON.stringify(d.bracket));
+    const m = br.matches[mi]; if (!m) return;
+    const order = Array.isArray(m.order) ? m.order : [];
+    const idx = order.indexOf(pid);
+    if (idx >= 0) m.order = order.slice(0, idx);                     // schon platziert → ab hier neu (Rücknahme)
+    else if (order.length < m.players.length) m.order = order.concat([pid]);
+    else return;
+    const { error } = await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
+    if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+    d.bracket = br;
+    await recomputeBrawlRot(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  window.resetBrawlMatch = async function(discId, mi) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d || !brawlRotOf(d)) return;
+    const br = JSON.parse(JSON.stringify(d.bracket));
+    if (br.matches[mi]) br.matches[mi].order = [];
+    const { error } = await sb.from('disciplines').update({ bracket: br }).eq('id', discId);
+    if (error) { console.error(error); toast('Speichern fehlgeschlagen', 'error'); return; }
+    d.bracket = br;
+    await recomputeBrawlRot(discId);
+    renderDisciplineBodyFor(discId); renderOverview();
+  };
+
+  async function recomputeBrawlRot(discId) {
+    const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
+    const br = brawlRotOf(d);
+    const playing = players.filter(p => currentParticipantIds.has(p.id) && currentVetoes[p.id] !== d.kind);
+    const totals = {}; playing.forEach(p => totals[p.id] = 0);
+    if (br) br.matches.forEach(m => (m.order || []).forEach((pid, idx) => { if (totals[pid] != null) totals[pid] += (BRAWL_PTS[idx] || 0); }));
+    const arr = playing.map(p => ({ p, pts: totals[p.id] || 0 }));
+    arr.sort((a, b) => b.pts - a.pts);
+    let rank = 0, last = -1;
+    for (let i = 0; i < arr.length; i++) { if (arr[i].pts !== last) rank = i + 1; arr[i].rank = rank; last = arr[i].pts; }
+    for (const t of arr) {
       await upsertResultDirect(discId, t.p.id, { placement: t.pts > 0 ? t.rank : null, points: t.pts > 0 ? soloPoints(t.rank) : 0 });
     }
   }
