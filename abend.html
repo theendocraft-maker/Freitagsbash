@@ -237,6 +237,113 @@
   .cf-name { font-family: var(--font-display); font-weight: 900; font-size: 1.9rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); line-height: 1; }
   .cf-cry { font-style: italic; color: var(--muted); margin-top: 0.2rem; }
 
+  /* === Sieger-Ehrung: Vollbild-Overlay nach jedem Spiel === */
+  .wc-overlay { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(120% 120% at 50% 30%, rgba(10,12,16,0.92) 0%, rgba(7,9,12,0.97) 70%);
+    opacity: 0; transition: opacity 0.4s ease; pointer-events: none; overflow: hidden; }
+  .wc-overlay.show { opacity: 1; }
+  .wc-overlay::before { content: ""; position: absolute; inset: 0;
+    background: radial-gradient(60% 45% at 50% 32%, var(--wc-glow, rgba(212,255,58,.16)) 0%, transparent 70%);
+    opacity: 0; animation: wcSpot .8s .05s forwards ease; }
+  @keyframes wcSpot { to { opacity: 1; } }
+  .wc-rays { position: absolute; top: 34%; left: 50%; width: 150%; aspect-ratio: 1; transform: translate(-50%,-50%) scale(.4);
+    background: conic-gradient(from 0deg, transparent 0 8deg, var(--wc-glow, rgba(212,255,58,.14)) 8deg 12deg, transparent 12deg 20deg);
+    opacity: 0; animation: wcRaysIn .7s .35s forwards ease, wcRaysSpin 18s linear infinite; }
+  @keyframes wcRaysIn { to { opacity: .5; transform: translate(-50%,-50%) scale(1); } }
+  @keyframes wcRaysSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+  .wc-shock { position: absolute; top: 34%; left: 50%; width: 190px; height: 190px; transform: translate(-50%,-50%);
+    border-radius: 50%; border: 3px solid var(--pc, var(--primary)); opacity: 0; pointer-events: none;
+    animation: wcShock 1s .45s ease-out; }
+  @keyframes wcShock { 0% { opacity: .9; transform: translate(-50%,-50%) scale(.35); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(2.4); } }
+  .wc-win { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 3% 6%; max-width: 900px; }
+  .wc-label { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 0.8rem;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+    opacity: 0; transform: translateY(-14px); animation: wcDrop .55s .15s forwards cubic-bezier(.2,1.3,.4,1); }
+  .wc-label img { width: 30px; height: 30px; border-radius: 8px; object-fit: cover; box-shadow: 0 3px 10px rgba(0,0,0,.5); }
+  .wc-label b { color: var(--text); }
+  @keyframes wcDrop { to { opacity: 1; transform: none; } }
+  .wc-crown { font-size: 2.1rem; margin: 6px 0 2px; opacity: 0; transform: translateY(10px) scale(.6);
+    animation: wcCrown .6s .5s forwards cubic-bezier(.2,1.6,.35,1); }
+  @keyframes wcCrown { to { opacity: 1; transform: none; } }
+  .wc-av { position: relative; width: 150px; height: 150px; border-radius: 50%; margin: 2px 0 4px;
+    background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 900; font-size: 3.4rem; color: #0b0d10;
+    border: 5px solid var(--pc, var(--primary)); box-shadow: 0 0 0 6px rgba(255,255,255,.03), 0 0 48px -6px var(--pc, var(--primary));
+    opacity: 0; transform: scale(.25) rotate(-14deg); animation: wcAvPop .7s .45s forwards cubic-bezier(.18,1.7,.35,1); }
+  @keyframes wcAvPop { 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+  .wc-av::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--pc, var(--primary));
+    opacity: 0; animation: wcRing 2.2s 1.1s ease-in-out infinite; }
+  @keyframes wcRing { 0%,100% { opacity: .15; transform: scale(1); } 50% { opacity: .6; transform: scale(1.06); } }
+  .wc-name { font-family: var(--font-display); font-weight: 900; line-height: .92; letter-spacing: .02em; text-transform: uppercase;
+    font-size: clamp(2.8rem, 8vw, 5.4rem); color: var(--text); text-shadow: 0 4px 30px var(--pc, rgba(212,255,58,.4));
+    opacity: 0; transform: translateY(22px); animation: wcNameUp .6s .72s forwards cubic-bezier(.2,1.2,.35,1); }
+  @keyframes wcNameUp { to { opacity: 1; transform: none; } }
+  .wc-place { font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--pc, var(--primary)); margin-top: 4px; opacity: 0; animation: wcFade .5s .9s forwards; }
+  @keyframes wcFade { to { opacity: 1; } }
+  .wc-cry { position: relative; font-style: italic; font-weight: 500; font-size: clamp(1.05rem, 2.6vw, 1.7rem);
+    color: var(--text-soft); max-width: 720px; margin-top: 16px; line-height: 1.4;
+    opacity: 0; filter: blur(6px); transform: translateY(8px); animation: wcCryIn .7s 1.05s forwards ease; }
+  .wc-cry .wc-q { color: var(--pc, var(--primary)); font-family: var(--font-display); font-weight: 900; font-size: 1.4em;
+    line-height: 0; vertical-align: -0.28em; margin: 0 .12em; opacity: .8; }
+  @keyframes wcCryIn { to { opacity: 1; filter: blur(0); transform: none; } }
+  .wc-pts { position: absolute; top: 7%; right: 8%; font-family: var(--font-display); font-weight: 900; font-size: 1.6rem;
+    color: #0b0d10; background: var(--primary); border-radius: 999px; padding: .2em .7em; box-shadow: 0 8px 24px -8px var(--primary);
+    opacity: 0; transform: scale(.4) rotate(-8deg); animation: wcPtsPop .6s 1.2s forwards cubic-bezier(.2,1.7,.35,1); z-index: 4; }
+  @keyframes wcPtsPop { to { opacity: 1; transform: none; } }
+  .wc-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 2; }
+  .wc-confetti i { position: absolute; top: -8%; width: 9px; height: 14px; border-radius: 2px; opacity: 0; animation: wcConf linear forwards; }
+  @keyframes wcConf { 0% { opacity: 0; transform: translateY(0) rotate(0); } 8% { opacity: 1; } 100% { opacity: .9; transform: translateY(115vh) rotate(720deg); } }
+  @media (max-width: 640px) { .wc-av { width: 108px; height: 108px; font-size: 2.4rem; } .wc-pts { font-size: 1.2rem; } }
+
+  /* === Haxball „Nächste Partie" — Vollbild-Overlay nach jeder Ergebniseingabe === */
+  .hx-overlay { position: fixed; inset: 0; z-index: 190; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(120% 120% at 50% 22%, rgba(10,13,16,0.93) 0%, rgba(7,9,12,0.97) 66%);
+    opacity: 0; transition: opacity 0.4s ease; pointer-events: none; overflow: hidden; }
+  .hx-overlay.show { opacity: 1; pointer-events: auto; cursor: pointer; }
+  .hx-overlay::before { content: ""; position: absolute; inset: 0;
+    background: radial-gradient(70% 60% at 50% 46%, rgba(108,242,160,.10) 0%, transparent 70%); opacity: 0; animation: hxSpot .7s forwards; }
+  @keyframes hxSpot { to { opacity: 1; } }
+  .hx-pitch { position: absolute; top: 50%; left: 50%; width: 2px; height: 62%; transform: translate(-50%,-50%);
+    background: linear-gradient(var(--border-strong), transparent, var(--border-strong)); opacity: 0; animation: hxSpot .6s .1s forwards; }
+  .hx-pitch::after { content: ""; position: absolute; top: 50%; left: 50%; width: 130px; height: 130px; transform: translate(-50%,-50%); border: 2px solid var(--border-strong); border-radius: 50%; }
+  .hx-na { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1000px; padding: 2% 4%; }
+  .hx-head { text-align: center; opacity: 0; transform: translateY(-14px); animation: hxDrop .55s .12s forwards cubic-bezier(.2,1.3,.4,1); }
+  .hx-kicker { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .hx-kicker img { width: 26px; height: 26px; border-radius: 7px; object-fit: cover; }
+  .hx-kicker b { color: var(--text); }
+  .hx-round { font-family: var(--font-display); font-weight: 900; font-size: clamp(1.6rem,4vw,2.8rem); text-transform: uppercase; letter-spacing: .03em; margin-top: 2px; }
+  .hx-round .bk { color: #6cf2a0; }
+  .hx-round.gf .bk { color: var(--primary); }
+  @keyframes hxDrop { to { opacity: 1; transform: none; } }
+  .hx-body { display: flex; align-items: center; justify-content: center; gap: 3%; width: 100%; margin: 2.4% 0; }
+  .hx-team { flex: 1; max-width: 40%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .hx-team.a { animation: hxInLeft .6s .3s both cubic-bezier(.2,1.2,.35,1); }
+  .hx-team.b { animation: hxInRight .6s .3s both cubic-bezier(.2,1.2,.35,1); }
+  @keyframes hxInLeft { from { opacity: 0; transform: translateX(-70px); } to { opacity: 1; transform: none; } }
+  @keyframes hxInRight { from { opacity: 0; transform: translateX(70px); } to { opacity: 1; transform: none; } }
+  .hx-avs { display: flex; justify-content: center; }
+  .hx-av { width: 92px; height: 92px; border-radius: 50%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 900; font-size: 2.1rem; color: #0b0d10; border: 4px solid var(--tc,#fff); box-shadow: 0 0 30px -8px var(--tc,#fff); }
+  .hx-av + .hx-av { margin-left: -22px; }
+  .hx-team-name { font-family: var(--font-display); font-weight: 900; font-size: clamp(1.4rem,3.4vw,2.4rem); text-transform: uppercase; letter-spacing: .02em; line-height: 1; color: var(--text); text-shadow: 0 3px 22px var(--tc,transparent); }
+  .hx-team-pls { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .hx-pl { font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: .04em; padding: .2rem .6rem; border-radius: 999px; border: 1px solid var(--pc,var(--border-strong)); color: var(--text); }
+  .hx-lead { display: block; margin-top: 5px; font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); }
+  .hx-vs { flex: 0 0 auto; position: relative; display: flex; align-items: center; justify-content: center; }
+  .hx-vs-txt { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.4rem,7vw,4.8rem); letter-spacing: .02em; color: var(--text);
+    opacity: 0; transform: scale(.2) rotate(-12deg); animation: hxVsPop .5s .62s forwards cubic-bezier(.2,1.7,.35,1); text-shadow: 0 0 30px rgba(255,255,255,.25); }
+  @keyframes hxVsPop { to { opacity: 1; transform: none; } }
+  .hx-flash { position: absolute; width: 150px; height: 150px; border-radius: 50%; border: 3px solid #fff; opacity: 0; animation: hxFlash .6s .62s ease-out; }
+  @keyframes hxFlash { 0% { opacity: .8; transform: scale(.3); } 100% { opacity: 0; transform: scale(2); } }
+  .hx-foot { text-align: center; opacity: 0; animation: hxFadeUp .5s .95s forwards; }
+  .hx-fmt { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 0.82rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 999px; padding: .5rem 1rem; }
+  .hx-fmt .dot { width: 7px; height: 7px; border-radius: 50%; background: #6cf2a0; }
+  @keyframes hxFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 640px) { .hx-av { width: 66px; height: 66px; font-size: 1.5rem; } .hx-team { max-width: 42%; } }
+
   /* „Letzte Chance"-Banner */
   .last-chance { margin-bottom: 1.25rem; background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; }
   .lc-title { font-family: var(--font-display); font-weight: 900; font-size: 1.1rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--alert); margin-bottom: 0.5rem; }
@@ -249,6 +356,11 @@
   /* Bounce bei Aufstieg + Trichter-Flash */
   .sb-table tr.bump { animation: sbBump 0.6s ease; }
   @keyframes sbBump { 0%,100% { transform: none; } 30% { transform: translateY(-5px); } 55% { transform: translateY(0); } 72% { transform: translateY(-2px); } }
+  /* Stabile Tabelle: feste Zahlenbreiten (kein Layout-Springen) + Tally-Hervorhebung */
+  .sb-table td.total-col, .sb-table td.rank-col, .sb-table td.season-col { font-variant-numeric: tabular-nums; }
+  .scoreboard.sb-tallying { border-color: var(--primary-line); box-shadow: 0 0 0 1px var(--primary-line), 0 18px 50px -30px #000; }
+  .sb-table tr.tally-hit { animation: tallyGlow 1.1s ease; }
+  @keyframes tallyGlow { 0% { background: rgba(212,255,58,0.28); } 100% { background: transparent; } }
   .bracket.just-scored { animation: brFlash 0.7s ease; }
   @keyframes brFlash { 0% { box-shadow: 0 0 0 0 var(--primary-line); } 40% { box-shadow: 0 0 0 4px var(--primary-soft); } 100% { box-shadow: 0 0 0 0 transparent; } }
   /* Score-Bug: TV-Fußball-Stil, zeigt den aktuellen Stand präsent oben */
@@ -1327,6 +1439,10 @@
 
     <div class="bumper-overlay" id="liveBumper" role="status" aria-live="polite" style="display:none;"></div>
 
+    <div class="wc-overlay" id="winnerCel" role="status" aria-live="polite" style="display:none;"></div>
+
+    <div class="hx-overlay" id="haxNext" role="status" aria-live="polite" style="display:none;"></div>
+
     <div class="pause-banner" id="livePause" style="display:none;">
       <span class="pause-ico">☕</span>
       <span class="pause-txt">Kurze Pause</span>
@@ -1754,6 +1870,82 @@
       </div>`;
   }
 
+  // Nächste offene Haxball-Partie ermitteln (gleiche Logik wie der „⏭"-Hinweis im Baum) — für die große Ankündigung.
+  // Gibt null zurück, wenn gerade nichts Konkretes ansteht (z. B. Runde durch, nächste noch nicht ausgelost).
+  function deNextMatch(disc) {
+    const br = disc && disc.bracket;
+    if (!br) return null;
+    const rep = deReplay(br);
+    let no = 0; const nums = (br.live || []).map(e => e.matches.map(() => ++no));
+    const curLi = (br.live || []).length - 1;
+    const curE = (br.live || [])[curLi];
+    const openM = curE && curE.matches.find(m => !m.w);
+    if (openM) {
+      const pe = rep.plan[curE.pi];
+      const mi = curE.matches.indexOf(openM);
+      const aPl = (curE.teams[openM.a] || []).slice();
+      const bPl = (curE.teams[openM.b] || []).slice();
+      if (!aPl.length || !bPl.length) return null;
+      return {
+        key: `r${curLi}m${mi}:${aPl.join('-')}|${bPl.join('-')}`,
+        isGF: false,
+        bracket: pe.bracket === 'wb' ? 'Winner Bracket' : 'Loser Bracket',
+        round: `Runde ${pe.r}`,
+        kicker: `Spiel ${nums[curLi][mi]}`,
+        fmt: pe.duel ? '5 Tore · 5 Minuten · Finale' : '3 Tore · 3 Minuten',
+        a: { players: aPl }, b: { players: bPl }
+      };
+    }
+    if (rep.gf && !br.gfw) {
+      return {
+        key: `gf:${rep.gf.a}|${rep.gf.b}`,
+        isGF: true,
+        bracket: 'Grand Final', round: '1v1 · Finale', kicker: 'Das Endspiel',
+        fmt: '5 Tore · 5 Minuten · WB-Sieger startet 1:0',
+        a: { players: [rep.gf.a], lead: true }, b: { players: [rep.gf.b] }
+      };
+    }
+    return null;
+  }
+
+  // Große Ankündigung der nächsten Haxball-Partie (Vollbild-Overlay, ~4,6 s, per Klick früher weg)
+  function showNextMatch(m) {
+    const box = document.getElementById('haxNext');
+    if (!box || !m) return;
+    const pName = pid => (evPlayers.find(x => x.id === pid) || {}).name || '—';
+    const teamBlock = (t, side) => {
+      const avs = t.players.map(pid => {
+        const p = evPlayers.find(x => x.id === pid) || {};
+        const av = p.avatar_url ? `background-image:url(${p.avatar_url});background-size:cover;background-position:center;` : `background:${pColor(pid)};`;
+        return `<div class="hx-av" style="--tc:${pColor(pid)};${av}">${p.avatar_url ? '' : ini(p.name || '?')}</div>`;
+      }).join('');
+      const chips = t.players.map(pid => `<span class="hx-pl" style="--pc:${pColor(pid)}">${pName(pid)}${(t.lead && m.isGF) ? '<span class="hx-lead">startet 1:0</span>' : ''}</span>`).join('');
+      const title = t.players.map(pName).join(' & ');
+      const tc = pColor(t.players[0]);
+      return `<div class="hx-team ${side}" style="--tc:${tc}"><div class="hx-avs">${avs}</div><div class="hx-team-name">${title}</div><div class="hx-team-pls">${chips}</div></div>`;
+    };
+    box.innerHTML = `
+      <div class="hx-pitch"></div>
+      <div class="hx-na">
+        <div class="hx-head">
+          <div class="hx-kicker"><img src="logos/haxball.png" alt="" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/haxball.svg'}else{this.replaceWith(document.createTextNode('⚽'))}"> Als Nächstes am Ball · <b>${m.kicker}</b></div>
+          <div class="hx-round${m.isGF ? ' gf' : ''}"><span class="bk">${m.bracket}</span> · ${m.round}</div>
+        </div>
+        <div class="hx-body">
+          ${teamBlock(m.a, 'a')}
+          <div class="hx-vs"><div class="hx-flash"></div><div class="hx-vs-txt">VS</div></div>
+          ${teamBlock(m.b, 'b')}
+        </div>
+        <div class="hx-foot"><span class="hx-fmt"><span class="dot"></span>${m.fmt}</span></div>
+      </div>`;
+    const hide = () => { box.classList.remove('show'); setTimeout(() => { box.style.display = 'none'; }, 400); };
+    box.style.display = 'flex';
+    requestAnimationFrame(() => box.classList.add('show'));
+    clearTimeout(showNextMatch._t);
+    showNextMatch._t = setTimeout(hide, 4600);
+    box.onclick = () => { clearTimeout(showNextMatch._t); hide(); };
+  }
+
   const COLORS = [
     ['#d4ff3a','#7df0ff'], ['#7df0ff','#ff7ce0'], ['#ff3d6e','#ff7a4a'],
     ['#ffd34a','#ff7a4a'], ['#6cf2a0','#d4ff3a'], ['#ff7ce0','#7df0ff'],
@@ -1963,6 +2155,8 @@
   let lastCurrentDiscId = null;       // für „Spiel startet"
   let lastBanSeen = undefined;        // für „Champions-Bann"-Toast (undefined = erster Render, kein Toast)
   const lastDrawnByDisc = {};         // discId -> teams_drawn_at (für „Teams/Lobbies ausgelost")
+  const lastDeNextKey = {};           // discId -> Key der nächsten Haxball-Partie (für die große Ankündigung)
+  let tallyActive = false;            // true, solange das Punkte-Tally die Tabelle animiert (blockt normales Neu-Rendern)
 
   // === Brawlhalla Self-Tracking (feste Lobbies, Spiele selbst eintippen) ===
   const BRAWL_PTS = [4, 3, 2, 1];
@@ -2276,6 +2470,8 @@
     if (liveAside) liveAside.style.display = showTable ? '' : 'none';
     if (liveLayout) liveLayout.classList.toggle('no-aside', !showTable);
 
+    // Solange das Punkte-Tally läuft, gehört die Tabelle der Animation — normales Neu-Rendern aussetzen.
+    if (!tallyActive) {
     const body = document.getElementById('liveBody');
     // Tabellen-Überschrift dynamisch — damit sich Haxball-Wertung und Gesamtwertung sichtbar unterscheiden
     const headEl = document.getElementById('sbAsideHead');
@@ -2342,7 +2538,7 @@
         } else {
           sub = `<span class="sb-cur">${r.wins === 1 ? '1 Sieg' : r.wins + ' Siege'}${r.sdWins > 0 ? ` <span class="sb-sd">(+${r.sdWins} SD)</span>` : ''}</span>`;
         }
-        rowParts.push(`<tr class="${tier}${belowCls}${advancingCls}${sdCandCls}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
+        rowParts.push(`<tr class="${tier}${belowCls}${advancingCls}${sdCandCls}" data-pid="${r.player.id}" data-num="${r.wins}" style="--pc:${col};${r.hax?'opacity:.55;':''}">
             <td class="rank-col"><span class="rank-pill">${place}</span></td>
             <td class="player-col">
               <div class="sb-player">
@@ -2375,7 +2571,7 @@
         ? `<div class="sd-explain"><b>SD</b> = Sudden Death · ${sdPlayers.join(', ')} hat${sdPlayers.length === 1 ? '' : 'en'} ein Stech-Spiel gewonnen → Bonus-Sieg zählt zur Aufstiegsentscheidung.</div>`
         : '';
       const sdNote = sdCandNote + sdWonNote;
-      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Siege</th></tr></thead><tbody>${rowsHtml}</tbody></table>${sdNote}`;
+      flipScoreboard(body, `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Siege</th></tr></thead><tbody>${rowsHtml}</tbody></table>${sdNote}`);
     } else if (brawlLiveRows && doneCount === 0) {
       // Brawlhalla läuft → Bundesliga-Stil mit kumulativen Lobby-Punkten
       let rkB = 0, lastPB = -1;
@@ -2388,7 +2584,7 @@
           : `background:${col};border-color:${col};color:#0b0d10`;
         const place = r.points > 0 ? pad2(rkB) : '—';
         const sub = `<span class="sb-cur">${r.games} ${r.games === 1 ? 'Spiel' : 'Spiele'}</span>`;
-        return `<tr class="${tier}" style="--pc:${col}">
+        return `<tr class="${tier}" data-pid="${r.player.id}" data-num="${r.points}" style="--pc:${col}">
             <td class="rank-col"><span class="rank-pill">${place}</span></td>
             <td class="player-col">
               <div class="sb-player">
@@ -2402,9 +2598,9 @@
             <td class="total-col">${r.points}</td>
           </tr>`;
       }).join('');
-      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th></tr></thead><tbody>${rowsHtmlB}</tbody></table>`;
+      flipScoreboard(body, `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th></tr></thead><tbody>${rowsHtmlB}</tbody></table>`);
     } else if (rows.length === 0) {
-      body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';
+      body.innerHTML = '<div class="sb-empty">Noch keine Ergebnisse — gleich geht\'s los.</div>';   // Leerzustand: kein Glide nötig
     } else {
       // Kompakte Tabelle (Bundesliga-Stil) für die Seitenleiste: Rang · Spieler · Punkte · Saison-Vorschau
       // Bewusst KEINE Sub-Texte (Formkurve / aktueller Disziplinpunkt) — die Sidebar ist schmal,
@@ -2414,7 +2610,7 @@
         // Gleichstand-auf-0 die ganze Tabelle als „alle Tagessieger" lime.
         const tier = (r.rank <= 3 && r.total > 0) ? `tier-${r.rank}` : '';
         const flash = r.pointsDelta > 0 && !demoFirstRender ? ' flash' : '';
-        const bump = (r.delta.kind === 'up' && !demoFirstRender) ? ' bump' : '';
+        const bump = '';   // Bewegung übernimmt jetzt das FLIP-Gliding (kein hartes bump mehr)
         const col = pColor(r.player.id);
         const av = r.player.avatar_url
           ? `background-image:url(${r.player.avatar_url});border-color:${col}`
@@ -2428,7 +2624,7 @@
         // Vorschau für Rang 1-aus-Gleichstand-bei-0 irreführend (+25 für alle).
         const seasonPreview = r.total > 0 ? '+' + seasonPointsByRank(r.rank) : '—';
         return `
-          <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}" style="--pc:${col}">
+          <tr class="${tier}${flash}${bump}" data-pid="${r.player.id}" data-num="${r.total}" style="--pc:${col}">
             <td class="rank-col"><span class="rank-pill">${pad2(r.rank)}</span>${deltaBadge}</td>
             <td class="player-col">
               <div class="sb-player">
@@ -2443,8 +2639,9 @@
           </tr>`;
       }).join('');
 
-      body.innerHTML = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th><th class="season-col">Sais.</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+      flipScoreboard(body, `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th><th class="season-col">Sais.</th></tr></thead><tbody>${rowsHtml}</tbody></table>`);
     }
+    }   // Ende: if (!tallyActive)
 
     // Update snapshot AFTER rendering so deltas next time are vs this state
     const newSnapshot = {};
@@ -2553,6 +2750,20 @@
     }
     lastBanSeen = banNow;
 
+    // Haxball „Nächste Partie": sobald ein Ergebnis eingetragen wurde, ändert sich die nächste offene
+    // Begegnung — dann groß ankündigen. Erster Render (Key noch undefined) setzt nur die Basis, kein Popup.
+    // Reload mitten im Turnier → Basis wird gesetzt, aber nicht erneut angekündigt.
+    const haxDisc = orderedDiscs.find(d => d.kind === 'haxball' && d.bracket);
+    if (haxDisc && haxDisc.status === 'live') {
+      const nm = deNextMatch(haxDisc);
+      const key = nm ? nm.key : null;
+      const prev = lastDeNextKey[haxDisc.id];
+      if (prev !== undefined && key && key !== prev && !demoFirstRender && !liveEvent.pause_msg) {
+        showNextMatch(nm);
+      }
+      lastDeNextKey[haxDisc.id] = key;
+    }
+
     // „Letzte Chance"-Banner: nach Disziplin 4, BEVOR die erste Runde Fall Guys gelaufen ist.
     // Sobald irgendeine Modus-Platzierung gesetzt ist, ist die Lage entschiedener — Banner verschwindet,
     // sonst zeigt er veraltete „braucht +X für Platz 1"-Zahlen während Runde 2/3 schon läuft.
@@ -2578,36 +2789,140 @@
 
     // Schlachtruf-Moment + Endstand, wenn gerade ein Spiel fertig wurde
     if (newlyDoneDisc) {
-      const winPid = ((results || []).find(r => r.discipline_id === newlyDoneDisc.id && parseInt(r.placement) === 1) || {}).player_id;
-      const winName = winPid ? (evPlayers.find(p => p.id === winPid) || {}).name : null;
+      const winRows = (results || []).filter(r => r.discipline_id === newlyDoneDisc.id && parseInt(r.placement) === 1);
+      const winName = winRows.length ? (evPlayers.find(p => p.id === winRows[0].player_id) || {}).name : null;
       showLiveToast(winName || discName(newlyDoneDisc.kind), 't-win', winName ? `${discName(newlyDoneDisc.kind)} — Sieger` : 'Beendet');
-      if (winPid) {
-        showWinnerCry(winPid, newlyDoneDisc);
-        setTimeout(() => showGameEndscore(newlyDoneDisc, results, rows), 2600);
+      // Punkte, die in DIESEM Spiel erzielt wurden (für das Tally in der Gesamtwertung)
+      const gamePts = {};
+      (results || []).forEach(r => { if (r.discipline_id === newlyDoneDisc.id) { const pt = parseFloat(r.points) || 0; if (pt > 0) gamePts[r.player_id] = pt; } });
+      const canTally = showTable && Object.keys(gamePts).length > 0 && !(haxLiveRows && doneCount === 0) && !(brawlLiveRows && doneCount === 0);
+      if (winRows.length) {
+        showWinnerCry(newlyDoneDisc, winRows);
+        if (canTally) {
+          // Nach der Sieger-Ehrung: Gesamtwertung vom Vorspiel-Stand aufsteigend hochzählen (Letzter → Sieger)
+          const base = rows.map(r => ({ id: r.player.id, name: r.player.name, color: pColor(r.player.id), avatar_url: r.player.avatar_url, total: r.total }));
+          setTimeout(() => { runStandingsTally(base, gamePts); }, 4800);
+        } else {
+          // Kein Tally möglich (z. B. Haxball-/Brawlhalla-Live-Tabelle) → wie bisher der Spiel-Endstand
+          setTimeout(() => showGameEndscore(newlyDoneDisc, results, rows), 4900);
+        }
       } else {
         showGameEndscore(newlyDoneDisc, results, rows);
       }
     }
   }
 
-  // Schlachtruf-Splash beim Disziplin-Sieg
-  function showWinnerCry(pid, disc) {
-    const box = document.getElementById('cryFlash'); if (!box) return;
-    const idx = Math.max(0, evPlayers.findIndex(x => x.id === pid));
-    const p = evPlayers[idx] || {};
-    const av = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${grad(idx)}`;
+  // Spielfarbe je Disziplin (für Strahlen/Glow der Sieger-Ehrung)
+  const GAME_COLOR = { haxball:'#6cf2a0', geoguessr:'#5ec8ff', brawlhalla:'#ff7a4a', chess:'#ffd34a', chameleon:'#2fae6d', fallguys:'#ff7ce0' };
+  function hexAlpha(hex, a) { const h = (hex || '').replace('#',''); if (h.length < 6) return `rgba(212,255,58,${a})`; const n = parseInt(h,16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+  // Sieger-Ehrung: Vollbild-Animation nach jedem Spiel — Gewinner + Schlachtruf werden gefeiert
+  function showWinnerCry(disc, winRows) {
+    const box = document.getElementById('winnerCel');
+    if (!box || !disc || !winRows || !winRows.length) return;
+    const gc = GAME_COLOR[disc.kind] || '#d4ff3a';
+    const first = winRows[0];
+    const pid = first.player_id;
+    const p = evPlayers.find(x => x.id === pid) || {};
+    const pc = pColor(pid);
+    const av = p.avatar_url ? `background-image:url(${p.avatar_url});background-size:cover;background-position:center;` : `background:${pc};`;
+    const pts = parseFloat(first.points) || 0;
+    const others = winRows.slice(1).map(r => (evPlayers.find(x => x.id === r.player_id) || {}).name).filter(Boolean);
+    // Konfetti-Stücke (zufällige Position/Dauer/Farbe) — Zufall ist hier reine Deko, kein State
+    const cols = [pc, gc, '#d4ff3a', '#7df0ff', '#ff7ce0', '#ffd34a', '#ffffff'];
+    let conf = '';
+    for (let i = 0; i < 44; i++) {
+      const left = (Math.random()*100).toFixed(1), delay = (Math.random()*0.5+0.4).toFixed(2),
+            dur = (Math.random()*1.1+1.6).toFixed(2), col = cols[(Math.random()*cols.length)|0],
+            w = (Math.random()*5+6).toFixed(0), rot = (Math.random()*360)|0;
+      conf += `<i style="left:${left}%;background:${col};width:${w}px;animation-delay:${delay}s;animation-duration:${dur}s;transform:rotate(${rot}deg)"></i>`;
+    }
+    box.style.setProperty('--wc-glow', hexAlpha(gc, .16));
     box.innerHTML = `
-      <div class="cf-inner">
-        <div class="cf-av" style="${av}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
-        <div class="cf-txt">
-          <div class="cf-eyebrow">🏆 ${discName(disc.kind)} — Sieg!</div>
-          <div class="cf-name">${p.name || '—'}</div>
-          ${p.cry ? `<div class="cf-cry">„${p.cry}"</div>` : ''}
-        </div>
+      <div class="wc-rays" style="--wc-glow:${hexAlpha(gc,.16)}"></div>
+      <div class="wc-shock" style="--pc:${pc}"></div>
+      <div class="wc-confetti">${conf}</div>
+      <div class="wc-win" style="--pc:${pc}">
+        ${pts ? `<div class="wc-pts">+${pts}</div>` : ''}
+        <div class="wc-label"><img src="logos/${disc.kind}.png" alt="" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${disc.kind}.svg'}else{this.replaceWith(document.createTextNode('🏆'))}"> Sieger · <b>${discName(disc.kind)}</b></div>
+        <div class="wc-crown">👑</div>
+        <div class="wc-av" style="${av}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
+        <div class="wc-name">${p.name || '—'}</div>
+        <div class="wc-place">${others.length ? `🏆 gemeinsam mit ${others.join(' & ')}` : '🏆 1. Platz'}</div>
+        ${p.cry ? `<div class="wc-cry"><span class="wc-q">“</span>${p.cry}<span class="wc-q">”</span></div>` : ''}
       </div>`;
-    box.style.display = 'block';
+    box.style.display = 'flex';
+    requestAnimationFrame(() => box.classList.add('show'));
     clearTimeout(showWinnerCry._t);
-    showWinnerCry._t = setTimeout(() => { box.style.display = 'none'; }, 2500);
+    showWinnerCry._t = setTimeout(() => { box.classList.remove('show'); setTimeout(() => { box.style.display = 'none'; }, 400); }, 5200);
+  }
+
+  // === Stabile Tabelle: FLIP-Gliding + Zahl-Tick ===
+  // Zeilen werden per data-pid wiedererkannt: alte Position merken, neu einsetzen, sanft an die
+  // neue Position gleiten lassen (statt hart zu springen). Zahlen in .total-col ticken hoch/runter.
+  const sbSleep = ms => new Promise(r => setTimeout(r, ms));
+  function sbTickNum(tr, from, to) {
+    const cell = tr.querySelector('.total-col'); if (!cell) return;
+    const t0 = performance.now(), dur = 460;
+    (function step(t) { const k = Math.min(1, (t - t0) / dur); cell.textContent = String(Math.round(from + (to - from) * k)); if (k < 1) requestAnimationFrame(step); })(performance.now());
+  }
+  function flipScoreboard(host, html) {
+    if (!host) return;
+    const prev = {};
+    host.querySelectorAll('tr[data-pid]').forEach(tr => { prev[tr.dataset.pid] = { top: tr.getBoundingClientRect().top, num: tr.dataset.num }; });
+    const hadPrev = Object.keys(prev).length > 0;
+    host.innerHTML = html;
+    if (!hadPrev) return;                     // erster Aufbau: kein Glide
+    const news = [...host.querySelectorAll('tr[data-pid]')];
+    const moved = [];
+    news.forEach(tr => {
+      const p = prev[tr.dataset.pid]; if (!p) return;
+      const dy = p.top - tr.getBoundingClientRect().top;
+      if (Math.abs(dy) > 1) { tr.style.transform = `translateY(${dy}px)`; tr.style.transition = 'none'; moved.push(tr); }
+      if (p.num != null && tr.dataset.num != null && p.num !== tr.dataset.num) sbTickNum(tr, parseFloat(p.num), parseFloat(tr.dataset.num));
+    });
+    if (moved.length) requestAnimationFrame(() => requestAnimationFrame(() => {
+      moved.forEach(tr => { tr.style.transition = 'transform .5s cubic-bezier(.2,.9,.25,1)'; tr.style.transform = ''; });
+    }));
+  }
+
+  // === Punkte-Tally: nach der Sieger-Ehrung die Gesamtwertung von „vor dem Spiel" aufsteigend hochzählen ===
+  // base: [{id,name,color,avatar_url,total(nach dem Spiel)}] · gamePts: {pid: in DIESEM Spiel erzielte Punkte}
+  async function runStandingsTally(base, gamePts) {
+    const host = document.getElementById('liveBody');
+    const aside = document.querySelector('.live-aside');
+    if (!host || !aside || aside.style.display === 'none') return;
+    const sbWrap = document.querySelector('.live-aside .scoreboard');
+    tallyActive = true;
+    const revealed = new Set();
+    const scoringAsc = Object.keys(gamePts).filter(id => gamePts[id] > 0).sort((a, b) => gamePts[a] - gamePts[b]);
+    const build = (highlightId, instant) => {
+      const view = base.map(p => ({ ...p, shown: p.total - (revealed.has(p.id) ? 0 : (gamePts[p.id] || 0)) }));
+      view.sort((a, b) => (b.shown - a.shown) || (b.total - a.total) || a.name.localeCompare(b.name));
+      let rank = 0, last = -1;
+      view.forEach((p, i) => { if (p.shown !== last) { rank = i + 1; last = p.shown; } p.rank = rank; });
+      const body = view.map(p => {
+        const tier = (p.rank <= 3 && p.shown > 0) ? `tier-${p.rank}` : '';
+        const col = p.color;
+        const av = p.avatar_url ? `background-image:url(${p.avatar_url});border-color:${col}` : `background:${col};border-color:${col};color:#0b0d10`;
+        const season = p.shown > 0 ? '+' + seasonPointsByRank(p.rank) : '—';
+        const hit = p.id === highlightId ? ' tally-hit' : '';
+        return `<tr class="${tier}${hit}" data-pid="${p.id}" data-num="${p.shown}" style="--pc:${col}">
+            <td class="rank-col"><span class="rank-pill">${pad2(p.rank)}</span></td>
+            <td class="player-col"><div class="sb-player"><div class="sb-avatar" style="${av}">${p.avatar_url ? '' : ini(p.name)}</div><div class="sb-pwrap"><div class="sb-name"><span class="sb-cdot" style="background:${col}"></span>${p.name}</div></div></div></td>
+            <td class="total-col">${p.shown}</td>
+            <td class="season-col">${season}</td>
+          </tr>`;
+      }).join('');
+      const html = `<table class="sb-table sb-mini"><thead><tr><th class="rank-col">#</th><th class="player-col">Spieler</th><th class="total-col">Pkt</th><th class="season-col">Sais.</th></tr></thead><tbody>${body}</tbody></table>`;
+      if (instant) host.innerHTML = html; else flipScoreboard(host, html);
+    };
+    build(null, true);                          // Vorspiel-Stand (alle Spielpunkte noch abgezogen)
+    if (sbWrap) sbWrap.classList.add('sb-tallying');
+    await sbSleep(750);
+    for (const id of scoringAsc) { revealed.add(id); build(id, false); await sbSleep(900); }
+    await sbSleep(600);
+    if (sbWrap) sbWrap.classList.remove('sb-tallying');
+    tallyActive = false;
   }
 
   // Game-Endscore: zeigt nach jedem fertigen Spiel den Endstand DIESES Spiels (Mario-Kart-Style)
@@ -2671,6 +2986,32 @@
   }
   function introDotsHtml(step, n) {
     return `<div class="intro-dots">${Array.from({length:n}).map((_,i) => `<span class="intro-dot ${i === step ? 'on' : ''}"></span>`).join('')}</div>`;
+  }
+  // Eine Spieler-Karte für den Veto-/Entbannungs-Slide: unten das gevetote Spiel MIT Logo
+  // (kein Vetospiel-Hinweis — das kommt erst auf dem eigenen Vetospiel-Slide).
+  // opts.victim = true → Zerstörungs-Overlay (💥 Veto zerstört / spielt trotzdem mit) für die Entbannungs-Animation.
+  function introVetoCard(p, kind, isKing, opts) {
+    opts = opts || {};
+    const col = pColor(p.id);
+    const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
+    let note;
+    if (kind) {
+      note = `<div class="vt-line"><img class="vt-mini" src="logos/${kind}.png" alt="" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${kind}.svg'}else{this.style.display='none'}"><span>vetoed <b>${discName(kind)}</b></span></div>`;
+    } else if (isKing) {
+      note = `<div class="ir-cry">👑 King — <b>kein Veto</b><br><small style="color:var(--muted)">die Krone ist eine Bürde</small></div>`;
+    } else {
+      note = `<div class="ir-cry" style="color:var(--muted)">✓ kein Veto<br><small>spielt alles mit</small></div>`;
+    }
+    const isVictim = !!opts.victim;
+    const victimCls = isVictim ? ` ban-victim${opts.alreadyPlayed ? ' ban-destroyed ban-conscripted' : ''}` : '';
+    const victimAttr = isVictim ? ` data-ban-i="${opts.banIndex}"` : '';
+    const overlay = isVictim ? `<div class="ban-boom">💥</div><div class="ban-lost">VETO ZERSTÖRT</div><div class="ban-forced">😈 SPIELT TROTZDEM MIT</div>` : '';
+    return `<div class="ir-card${kind ? ' vt-veto' : ''}${isKing ? ' vt-king' : ''}${victimCls}"${victimAttr} style="--ir-c:${col}">
+        <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
+        <div class="ir-name">${p.name || '—'}</div>
+        ${note}
+        ${overlay}
+      </div>`;
   }
   function renderIntro() {
     const box = document.getElementById('liveNowDetail');
@@ -2738,21 +3079,7 @@
         const vb = vetoByPid[b.id] ? 0 : (b.id === kingOfHillId ? 2 : 1);
         return va - vb;
       });
-      const cardsHtml = ordered.map(p => {
-        const col = pColor(p.id);
-        const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
-        const kind = vetoByPid[p.id];
-        const isKing = p.id === kingOfHillId;
-        let note;
-        if (kind) note = `<div class="ir-cry">🃏 vetoed <b>${discName(kind)}</b><br><small style="color:var(--cool)">spielt Dino Runner 🦖</small></div>`;
-        else if (isKing) note = `<div class="ir-cry">👑 King — <b>kein Veto</b><br><small style="color:var(--muted)">die Krone ist eine Bürde</small></div>`;
-        else note = `<div class="ir-cry" style="color:var(--muted)">✓ kein Veto<br><small>spielt alles mit</small></div>`;
-        return `<div class="ir-card${kind ? ' vt-veto' : ''}${isKing ? ' vt-king' : ''}" style="--ir-c:${col}">
-            <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
-            <div class="ir-name">${p.name || '—'}</div>
-            ${note}
-          </div>`;
-      }).join('');
+      const cardsHtml = ordered.map(p => introVetoCard(p, vetoByPid[p.id], p.id === kingOfHillId)).join('');
       const vetoInfo = `
         <div class="intro-vinfo">
           <div class="vinfo-card" style="max-width:640px">
@@ -2797,78 +3124,66 @@
       box.style.display = 'block';
       return;
     } else if (step === banStep) {
-      // === Die Entbannung — Kino-Sequenz in 4 Akten (Bann ist gewählt) ===
-      // Akt 1: der King of the Hill wird zelebriert (Krone = Bürde, kein Veto)
-      // Akt 2: die verborgene Macht wird enthüllt (er darf ein Spiel ENTBANNEN)
-      // Akt 3: das Spiel erscheint, der ENTBANNT-Stempel knallt
-      // Akt 4: die betroffenen Vetos werden zerstört + Zwangsrekrutierung
+      // === Die Entbannung — enthüllt: ALLE Spieler bleiben sichtbar (wie auf dem Veto-Slide),
+      //     die Vetos der betroffenen Spieler werden mit derselben Animation in-place zerstört. ===
       const ban = introBan;
       const champ = evPlayers.find(x => x.id === ban.by) || {};
       const cCol = pColor(champ.id);
       const cAv = champ.avatar_url ? `background-image:url(${champ.avatar_url});` : `background:${cCol};`;
-      const victims = (ban.victims || []).map(pid => evPlayers.find(x => x.id === pid) || { id: pid, name: '?' });
+      const victimIds = ban.victims || [];
+      const victimSet = new Set(victimIds);
       const alreadyPlayed = banAnimPlayedFor === (ban.at || ban.kind);
-      const S = alreadyPlayed ? ' show' : '';
-      const victimCards = victims.map((p, i) => {
-        const col = pColor(p.id);
-        const avBg = p.avatar_url ? `background-image:url(${p.avatar_url});` : `background:${col};`;
-        return `<div class="ir-card ban-victim${alreadyPlayed ? ' ban-destroyed ban-conscripted' : ''}" data-ban-i="${i}" style="--ir-c:${col}">
-            <div class="ir-av" style="${avBg}">${p.avatar_url ? '' : ini(p.name || '?')}</div>
-            <div class="ir-name">${p.name || '—'}</div>
-            <div class="ir-cry">🃏 vetoed <b>${discName(ban.kind)}</b></div>
-            <div class="ban-boom">💥</div>
-            <div class="ban-lost">VETO ZERSTÖRT</div>
-            <div class="ban-forced">😈 SPIELT TROTZDEM MIT</div>
-          </div>`;
+      // Veto-Zuordnung wie auf dem Veto-Slide; die Opfer zeigen (noch) ihr Veto auf dem entbannten Spiel.
+      const vetoByPid = {};
+      (introVetoes || []).forEach(v => { vetoByPid[v.player_id] = v.discipline_kind; });
+      victimSet.forEach(pid => { vetoByPid[pid] = ban.kind; });
+      const ps = (introRoster && introRoster.length) ? introRoster : evPlayers;
+      // Reihenfolge: Opfer zuerst (die gleich zerstört werden), dann übrige Veto-Spieler, dann Rest, King zuletzt.
+      const rankOf = pid => victimSet.has(pid) ? 0 : (vetoByPid[pid] ? 1 : (pid === kingOfHillId ? 3 : 2));
+      const ordered = ps.slice().sort((a, b) => rankOf(a.id) - rankOf(b.id));
+      const cardsHtml = ordered.map(p => {
+        const isVictim = victimSet.has(p.id);
+        return introVetoCard(p, vetoByPid[p.id], p.id === kingOfHillId,
+          isVictim ? { victim: true, banIndex: victimIds.indexOf(p.id), alreadyPlayed } : null);
       }).join('');
+      const survivors = (introVetoes || []).filter(v => v.discipline_kind !== ban.kind && !victimSet.has(v.player_id));
+      const victimNames = victimIds.map(pid => (evPlayers.find(x => x.id === pid) || {}).name || '?');
       box.innerHTML = `
         <div class="intro">
           <div class="nd-label" style="color:var(--alert)">Champions-Privileg · Die Entbannung</div>
-          <div class="ban-act ban-act-king${S}">
+          <div class="ban-reveal-head">
             <div class="ir-av ban-king-av" style="${cAv}">${champ.avatar_url ? '' : ini(champ.name || '?')}</div>
-            <div class="intro-name">👑 King of the Hill</div>
-            <div class="intro-mode"><b>${champ.name || '—'}</b> führt die Saison an. Kein Veto — die Krone ist eine Bürde…</div>
-          </div>
-          <div class="ban-act ban-act-power${S}">
-            <div class="ban-power-line">…doch die Krone hat eine <b>verborgene Macht</b>: Einmal pro Abend darf der King ein Spiel <b>ENTBANNEN</b> — der Veto-Schutz fällt, alle spielen mit.</div>
-          </div>
-          <div class="ban-act ban-act-target${S}">
             <div class="ban-target${alreadyPlayed ? ' stamped' : ''}">
               <img class="intro-logo" src="logos/${ban.kind}.png" alt="${discName(ban.kind)}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${ban.kind}.svg'}else{this.style.display='none'}">
               <div class="ban-target-name">${discName(ban.kind)}</div>
               <div class="ban-stamp">ENTBANNT</div>
             </div>
-            <div class="intro-rules">${discName(ban.kind)} darf heute <b>nicht gevetoet werden</b>${victims.length ? ` — und wer es vetoed hatte, verliert sein Veto <b>ersatzlos</b>:` : ' — niemand hatte es vetoed, die Macht verpufft … diesmal.'}</div>
-            ${(() => { const survivors = (introVetoes || []).filter(v => v.discipline_kind !== ban.kind); return survivors.length ? `<div class="intro-rules" style="color:var(--cool);margin-top:0.35rem">🃏 Alle anderen Vetos <b>bleiben bestehen</b> — ${survivors.length} Spieler ${survivors.length === 1 ? 'zockt' : 'zocken'} weiter Dino Runner.</div>` : ''; })()}
           </div>
-          <div class="ban-act ban-act-victims${S}">
-            ${victims.length ? `<div class="intro-roster">${victimCards}</div>` : ''}
-            ${victims.length ? `<div class="ban-epilog${alreadyPlayed ? ' show' : ''}">⛓ Keine Gnade: <b>${victims.map(p => p.name).join(', ')}</b> ${victims.length === 1 ? 'tritt' : 'treten'} heute in <b>${discName(ban.kind)}</b> an — ohne Ersatzspiel.</div>` : ''}
-          </div>
+          <div class="intro-mode" style="margin-top:0.3rem">👑 <b>${champ.name || 'Der King'}</b> entbannt <b>${discName(ban.kind)}</b> — darf heute <b>nicht gevetoet werden</b>.</div>
+          <div class="intro-roster">${cardsHtml}</div>
+          ${victimIds.length
+            ? `<div class="ban-epilog${alreadyPlayed ? ' show' : ''}">⛓ Keine Gnade: <b>${victimNames.join(', ')}</b> ${victimNames.length === 1 ? 'verliert' : 'verlieren'} das Veto auf <b>${discName(ban.kind)}</b> und ${victimNames.length === 1 ? 'spielt' : 'spielen'} trotzdem mit.</div>`
+            : `<div class="intro-rules" style="margin-top:0.4rem">Niemand hatte <b>${discName(ban.kind)}</b> vetoed — die Macht verpufft … diesmal.</div>`}
+          ${survivors.length ? `<div class="intro-rules" style="color:var(--cool);margin-top:0.35rem">🃏 Alle anderen Vetos <b>bleiben bestehen</b>.</div>` : ''}
           ${introCtl ? introCtrlHtml() : ''}
           ${introDotsHtml(step, n)}
         </div>`;
       if (!alreadyPlayed) {
         banAnimPlayedFor = (ban.at || ban.kind);
-        const show = (sel, t) => setTimeout(() => { const el = box.querySelector(sel); if (el) el.classList.add('show'); }, t);
-        show('.ban-act-king', 150);          // Akt 1: der King
-        show('.ban-act-power', 2800);        // Akt 2: die verborgene Macht
-        show('.ban-act-target', 4600);       // Akt 3: das Spiel …
-        setTimeout(() => { const t = box.querySelector('.ban-target'); if (t) t.classList.add('stamped'); }, 5600);  // … Stempel!
-        show('.ban-act-victims', 6800);      // Akt 4: die Opfer
-        victims.forEach((p, i) => {
+        setTimeout(() => { const t = box.querySelector('.ban-target'); if (t) t.classList.add('stamped'); }, 500);   // Stempel knallt
+        victimIds.forEach((pid, i) => {
           setTimeout(() => {
             const card = box.querySelector(`.ban-victim[data-ban-i="${i}"]`);
             if (card) { card.classList.add('ban-destroying'); document.body.classList.add('ban-quake'); setTimeout(() => document.body.classList.remove('ban-quake'), 450); }
             setTimeout(() => { if (card) { card.classList.remove('ban-destroying'); card.classList.add('ban-destroyed'); } }, 1200);
-          }, 7400 + i * 1500);
+          }, 1700 + i * 1400);
         });
-        if (victims.length) {
+        if (victimIds.length) {
           setTimeout(() => {
             box.querySelectorAll('.ban-victim').forEach(c => c.classList.add('ban-conscripted'));
             const ep = box.querySelector('.ban-epilog'); if (ep) ep.classList.add('show');
             document.body.classList.add('ban-quake'); setTimeout(() => document.body.classList.remove('ban-quake'), 450);
-          }, 7400 + victims.length * 1500 + 900);
+          }, 1700 + victimIds.length * 1400 + 900);
         }
       }
       box.style.display = 'block';

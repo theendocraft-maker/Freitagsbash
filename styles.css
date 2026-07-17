@@ -827,6 +827,15 @@ body.ban-quake { animation: banQuake 0.4s ease; }
 /* Veto-Slide: Karten-Akzente (Veto-Spieler hervorheben, King dezent) */
 .ir-card.vt-veto { border-color: var(--cool); box-shadow: 0 0 0 1px var(--cool) inset, 0 8px 24px -14px var(--cool); }
 .ir-card.vt-king { border-color: rgba(255,211,74,0.55); }
+/* Karten-Fußzeile: gevetotes Spiel mit Original-Logo */
+.vt-line { display: flex; align-items: center; justify-content: center; gap: 0.45rem; margin-top: 0.35rem; font-size: 0.9rem; color: var(--text-soft); }
+.vt-line b { color: var(--text); }
+.vt-mini { width: 24px; height: 24px; border-radius: 7px; object-fit: cover; flex-shrink: 0; box-shadow: 0 2px 7px rgba(0,0,0,0.45); }
+
+/* Entbannung-Reveal: kompakter Kopf (King-Avatar + entbanntes Spiel mit Stempel) über dem Roster */
+.ban-reveal-head { display: flex; align-items: center; justify-content: center; gap: 1.3rem; margin: 0.7rem 0 0.2rem; flex-wrap: wrap; }
+.ban-reveal-head .ban-king-av { margin: 0; }
+.ban-reveal-head .ban-target { display: inline-block; }
 
 /* Vetospiel-Slide: Spieler-Chips */
 .vg-players { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; align-items: center; margin-top: 0.6rem; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
