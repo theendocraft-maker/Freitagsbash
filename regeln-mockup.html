@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freitags Bash · Regeln (Redesign-Mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d10; --bg-2:#0e1115; --surface:#14171d; --surface-2:#1b1f26; --surface-3:#262b35;
+  --border:rgba(255,255,255,0.07); --border-strong:rgba(255,255,255,0.14);
+  --text:#f4f5f7; --text-soft:#c8ccd4; --muted:#9aa1ae;
+  --primary:#d4ff3a; --primary-deep:#a8d428; --primary-soft:rgba(212,255,58,0.12); --primary-line:rgba(212,255,58,0.35);
+  --alert:#ff3d6e; --alert-soft:rgba(255,61,110,0.12); --alert-line:rgba(255,61,110,0.35);
+  --cool:#7df0ff;
+  --hax:#6cf2a0; --geo:#5ec8ff; --bra:#ff7a4a; --che:#ffd34a; --cha:#2fae6d; --fall:#ff7ce0;
+  --font-display:"Big Shoulders Display","Arial Narrow",sans-serif;
+  --font-body:"Geist",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  --radius:10px; --radius-lg:16px; --shadow:0 18px 50px -22px rgba(0,0,0,0.85);
+  --wrap:1080px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);line-height:1.5;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 20px}
+.eyebrow{font-family:var(--font-mono);font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:.5rem}
+.eyebrow .num{color:var(--primary)}
+.accent{color:var(--primary)}
+.btn{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:0.82rem;letter-spacing:.06em;text-transform:uppercase;
+  padding:.8rem 1.3rem;border-radius:999px;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);cursor:pointer;transition:.15s;font-weight:600}
+.btn:hover{border-color:var(--primary-line);color:var(--primary)}
+.btn-primary{background:var(--primary);color:#0b0d10;border-color:var(--primary);font-weight:700}
+.btn-primary:hover{background:var(--primary-deep);color:#0b0d10}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:40;background:rgba(11,13,16,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.hdr-in{max-width:var(--wrap);margin:0 auto;padding:.8rem 20px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:.6rem}
+.logo-mark{width:34px;height:34px;border-radius:9px;background:var(--primary);position:relative;flex-shrink:0}
+.logo-mark::after{content:"";position:absolute;inset:9px 9px auto 9px;height:5px;background:#0b0d10;border-radius:2px;box-shadow:0 8px 0 #0b0d10}
+.logo-text{font-family:var(--font-display);font-weight:900;font-size:1.15rem;letter-spacing:.02em;line-height:1;text-transform:uppercase}
+.logo-text small{display:block;font-family:var(--font-mono);font-size:.6rem;font-weight:500;letter-spacing:.14em;color:var(--muted);margin-top:2px}
+.nav{display:flex;align-items:center;gap:1.3rem;font-family:var(--font-mono);font-size:.82rem;letter-spacing:.06em}
+.nav a.active{color:var(--primary)}
+.nav .cta{background:var(--primary);color:#0b0d10;padding:.5rem 1rem;border-radius:999px;font-weight:700}
+@media(max-width:640px){ .nav a.hide-sm{display:none} }
+
+/* Hero */
+.hero{position:relative;padding:3.2rem 0 2.2rem;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 70% at 15% 0%,rgba(212,255,58,.10),transparent 60%),radial-gradient(50% 60% at 100% 20%,rgba(125,240,255,.07),transparent 60%);pointer-events:none}
+.hero-stamp{position:absolute;top:-1rem;right:0;font-family:var(--font-display);font-weight:900;font-size:clamp(9rem,24vw,20rem);line-height:.8;color:#fff;opacity:.03;pointer-events:none;user-select:none}
+.hero-in{position:relative}
+.hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(3.2rem,9vw,5.6rem);line-height:.85;letter-spacing:.01em;text-transform:uppercase;margin:.5rem 0}
+.hero-sub{color:var(--text-soft);max-width:560px;font-size:1.05rem;margin-bottom:1.3rem}
+.hero-sub b{color:var(--text)}
+.hero-cta{display:flex;gap:.7rem;flex-wrap:wrap}
+.hero-meta{display:flex;gap:1rem;align-items:center;margin-top:1.1rem;font-family:var(--font-mono);font-size:.78rem;color:var(--muted);flex-wrap:wrap}
+.hero-meta b{color:var(--text-soft)}
+
+/* Stats */
+.stats{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg-2)}
+.stats-in{max-width:var(--wrap);margin:0 auto;padding:1.3rem 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.stat{text-align:center}
+.stat b{display:block;font-family:var(--font-display);font-weight:900;font-size:2rem;line-height:1;color:var(--primary)}
+.stat span{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+@media(max-width:520px){ .stats-in{grid-template-columns:repeat(2,1fr)} }
+
+/* Section */
+.sec{padding:3rem 0 0}
+.sec-head{margin-bottom:1.4rem}
+.sec-head h2{font-family:var(--font-display);font-weight:900;font-size:clamp(1.8rem,4vw,2.6rem);text-transform:uppercase;letter-spacing:.02em;margin-top:.3rem}
+.sec-head p{color:var(--muted);margin-top:.5rem;font-size:.92rem;max-width:640px}
+.sec-head p a{color:var(--cool)}
+
+/* Steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+@media(max-width:720px){ .steps{grid-template-columns:1fr} }
+.step{position:relative;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:1.6rem;overflow:hidden}
+.step-n{position:absolute;top:.2rem;right:1rem;font-family:var(--font-display);font-weight:900;font-size:5.5rem;color:transparent;-webkit-text-stroke:1.5px var(--border-strong);pointer-events:none}
+.step h3{font-family:var(--font-display);font-weight:800;font-size:1.5rem;letter-spacing:.03em;text-transform:uppercase;margin-bottom:.4rem;position:relative}
+.step p{color:var(--text-soft);font-size:.92rem;position:relative}
+.step p b{color:var(--text)}
+
+/* Punkte-Karten */
+.points-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+@media(max-width:920px){ .points-grid{grid-template-columns:1fr} }
+.pcard{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:1.4rem 1.5rem;position:relative;overflow:hidden}
+.pcard::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--c,var(--primary))}
+.pcard h3{font-family:var(--font-display);font-weight:800;font-size:1.25rem;text-transform:uppercase;letter-spacing:.03em;line-height:1}
+.pcard .sub{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--c,var(--primary));display:block;margin:.3rem 0 1rem}
+.prow{display:grid;grid-template-columns:38px 1fr 40px;gap:.6rem;align-items:center;padding:.32rem 0}
+.prow .rk{font-family:var(--font-mono);font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.prow .bar{height:16px;background:var(--bg-2);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.prow .fill{display:block;height:100%;width:var(--w,0%);background:linear-gradient(90deg,var(--c,var(--primary)),color-mix(in srgb,var(--c,var(--primary)) 60%,transparent));animation:grow .9s cubic-bezier(.2,.8,.2,1) both}
+@keyframes grow{from{width:0}}
+.prow .val{font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:var(--c,var(--primary));text-align:right;font-variant-numeric:tabular-nums}
+.prow.gold .rk::before{content:"★ ";color:var(--c,var(--primary))}
+.pfoot{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);margin-top:.9rem;padding-top:.85rem;border-top:1px solid var(--border);line-height:1.5;letter-spacing:.02em}
+.pfoot b{font-family:var(--font-body);color:var(--text);font-weight:700}
+
+/* Disziplin-Karten */
+.disc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+.disc{background:var(--surface);border:1px solid var(--border-strong);border-left:3px solid var(--c);border-radius:var(--radius-lg);padding:1.3rem 1.4rem;transition:transform .2s,box-shadow .2s}
+.disc:hover{transform:translateY(-3px);box-shadow:0 16px 40px -18px var(--c)}
+.disc-head{display:flex;align-items:center;gap:.8rem}
+.disc-logo{width:46px;height:46px;border-radius:11px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.disc-head h3{font-family:var(--font-display);font-weight:800;font-size:1.3rem;text-transform:uppercase;letter-spacing:.03em;line-height:1}
+.disc-mode{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--c);display:block;margin-top:.25rem}
+.disc-pts{margin-left:auto;text-align:right}
+.disc-pts b{display:block;font-family:var(--font-display);font-weight:900;font-size:1.05rem;color:var(--c)}
+.disc-pts small{font-family:var(--font-mono);font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.disc-desc{color:var(--text-soft);font-size:.85rem;line-height:1.55;margin-top:.85rem}
+.disc-desc strong{color:var(--text);font-weight:600}
+.disc.joker{border-left-color:var(--primary);border-style:dashed;background:var(--bg-2);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.disc.joker img{width:52px;height:52px;border-radius:13px;object-fit:cover;margin-bottom:.5rem}
+.disc.joker h3{font-size:1.15rem}
+.disc.joker p{color:var(--text-soft);font-size:.82rem;margin-top:.3rem}
+.note{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--fall);border-radius:0 var(--radius) var(--radius) 0;padding:1rem 1.25rem;margin-top:1.1rem;color:var(--text-soft);font-size:.88rem;line-height:1.6}
+.note strong{color:var(--text)}
+
+/* Twists */
+.twists{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+@media(max-width:720px){ .twists{grid-template-columns:1fr} }
+.twist{background:var(--surface);border:1px solid var(--border-strong);border-top:2px solid var(--c);border-radius:var(--radius-lg);padding:1.5rem}
+.twist .tag{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--c);display:block;margin-bottom:.6rem}
+.twist h3{font-family:var(--font-display);font-weight:800;font-size:1.4rem;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.5rem}
+.twist p{color:var(--text-soft);font-size:.88rem;line-height:1.6}
+.twist strong{color:var(--text)}
+.twist a{color:var(--primary);font-weight:600}
+
+/* Accordion */
+.acc{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow)}
+.acc>summary{list-style:none;cursor:pointer;padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  font-family:var(--font-display);font-weight:800;font-size:1.25rem;letter-spacing:.03em;text-transform:uppercase}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary:hover{color:var(--primary)}
+.acc>summary .chev{color:var(--primary);font-family:var(--font-mono);font-size:.85rem;transition:transform .25s}
+.acc[open]>summary .chev{transform:rotate(180deg)}
+.acc-body{padding:0 1.4rem 1.2rem}
+.clause{padding:.8rem 0;border-bottom:1px solid var(--border);font-size:.88rem;line-height:1.6;color:var(--text-soft);display:flex;gap:1rem}
+.clause:last-child{border-bottom:none}
+.clause b{color:var(--text);font-weight:600}
+.clause .para{flex-shrink:0;min-width:2.6rem;font-family:var(--font-mono);font-weight:500;color:var(--primary);font-size:.76rem;letter-spacing:.06em;padding-top:1px}
+
+/* CTA */
+.cta{margin:3rem 0;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:2.6rem 2rem;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.cta::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 60% 90% at 88% 100%,var(--primary-soft),transparent 60%);pointer-events:none}
+.cta-in{position:relative;display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:end}
+@media(max-width:640px){ .cta-in{grid-template-columns:1fr} }
+.cta h2{font-family:var(--font-display);font-weight:900;font-size:clamp(2rem,5vw,3.2rem);text-transform:uppercase;line-height:.9}
+.cta h2 .lime{color:var(--primary)}
+.cta p{color:var(--text-soft);margin-top:.8rem;max-width:440px}
+.pills{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:1rem}
+.pill{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border-strong);border-radius:999px;padding:.3rem .7rem}
+
+.ftr{border-top:1px solid var(--border);margin-top:1rem;padding:1.6rem 0}
+.ftr-in{max-width:var(--wrap);margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.ftr small{font-family:var(--font-mono);font-size:.72rem;color:var(--muted)}
+.ftr nav{display:flex;gap:1.1rem;font-family:var(--font-mono);font-size:.8rem;color:var(--muted)}
+.mk-note{max-width:var(--wrap);margin:0 auto;padding:16px 20px 60px;color:var(--muted);font-size:.85rem;line-height:1.6}
+.mk-note b{color:var(--text-soft)}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <a class="logo"><span class="logo-mark"></span><span class="logo-text">Freitags Bash<small>Saison 1 · 2026</small></span></a>
+    <nav class="nav"><a class="hide-sm">Start</a><a class="hide-sm">Veto</a><a class="active">Regeln</a><a class="cta">Anmelden</a></nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-stamp">§</div>
+  <div class="wrap hero-in">
+    <div class="eyebrow"><span class="num">●</span> So läuft der Bash</div>
+    <h1>Die <span class="accent">Regeln.</span></h1>
+    <p class="hero-sub"><b>Ein Spielpool, jeder Abend anders, eine Krone.</b> Pro Abend wird ein Line-up gespielt — wer die meisten Punkte holt, gewinnt den Abend; über die Saison entsteht der Champion.</p>
+    <div class="hero-cta"><a class="btn btn-primary">Jetzt anmelden →</a><a class="btn" href="#prinzip">Wie's läuft ↓</a></div>
+    <div class="hero-meta"><span><b>Freitags</b> · 20:00 Uhr</span><span>·</span><span>Kostenlos · kein Account</span></div>
+  </div>
+</section>
+
+<div class="stats">
+  <div class="stats-in">
+    <div class="stat"><b>5</b><span>Spiele / Abend</span></div>
+    <div class="stat"><b>~3h</b><span>pro Abend</span></div>
+    <div class="stat"><b>1–2×</b><span>im Monat</span></div>
+    <div class="stat"><b>01</b><span>Champion</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- PRINZIP -->
+  <section class="sec" id="prinzip">
+    <div class="sec-head">
+      <div class="eyebrow"><span class="num">01</span> Das Prinzip</div>
+      <h2>In drei Schritten <span class="accent">zum Champion.</span></h2>
+      <p>So einfach funktioniert ein Abend — der Rest sind nur Feinheiten.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-n">1</div><h3>Jedes Spiel</h3><p>Platz 1 gibt <b>10 Punkte</b>, dann 8 · 6 · 4 · 3 · 2 · 1. Niemand geht leer aus.</p></div>
+      <div class="step"><div class="step-n">2</div><h3>Der Abend</h3><p>Alle Punkte zusammengezählt. Wer vorn liegt, <b>gewinnt den Abend</b>.</p></div>
+      <div class="step"><div class="step-n">3</div><h3>Die Saison</h3><p>Dein Abendplatz gibt Saisonpunkte (25 · 18 · 15 · 12 · 10 · 8 · 6 · 4). Wer am Ende oben steht: <b>Champion</b>.</p></div>
+    </div>
+  </section>
+
+  <!-- PUNKTE -->
+  <section class="sec">
+    <div class="sec-head">
+      <div class="eyebrow"><span class="num">02</span> Die Punkte</div>
+      <h2>Wie wird <span class="accent">gezählt.</span></h2>
+      <p>Drei Tabellen, ein Prinzip: höherer Platz = mehr Punkte. Niemand geht leer aus, der Erste kassiert ordentlich.</p>
+    </div>
+    <div class="points-grid">
+      <div class="pcard" style="--c:var(--cool)">
+        <h3>Pro Spiel</h3><span class="sub">Einzel-Disziplinen</span>
+        <div class="prow gold"><span class="rk">01</span><span class="bar"><span class="fill" style="--w:100%"></span></span><span class="val">10</span></div>
+        <div class="prow"><span class="rk">02</span><span class="bar"><span class="fill" style="--w:80%"></span></span><span class="val">8</span></div>
+        <div class="prow"><span class="rk">03</span><span class="bar"><span class="fill" style="--w:60%"></span></span><span class="val">6</span></div>
+        <div class="prow"><span class="rk">04</span><span class="bar"><span class="fill" style="--w:40%"></span></span><span class="val">4</span></div>
+        <div class="prow"><span class="rk">05</span><span class="bar"><span class="fill" style="--w:30%"></span></span><span class="val">3</span></div>
+        <div class="prow"><span class="rk">06</span><span class="bar"><span class="fill" style="--w:20%"></span></span><span class="val">2</span></div>
+        <div class="prow"><span class="rk">07+</span><span class="bar"><span class="fill" style="--w:10%"></span></span><span class="val">1</span></div>
+        <div class="pfoot">Alle Einzel-Disziplinen des Abends — und der <b>Fall-Guys-Gesamtplatz</b>.</div>
+      </div>
+      <div class="pcard" style="--c:var(--fall)">
+        <h3>Fall Guys</h3><span class="sub">Team-Modus · pro Modus</span>
+        <div class="prow gold"><span class="rk">01</span><span class="bar"><span class="fill" style="--w:100%"></span></span><span class="val">10</span></div>
+        <div class="prow"><span class="rk">02</span><span class="bar"><span class="fill" style="--w:80%"></span></span><span class="val">8</span></div>
+        <div class="prow"><span class="rk">03</span><span class="bar"><span class="fill" style="--w:60%"></span></span><span class="val">6</span></div>
+        <div class="prow"><span class="rk">04+</span><span class="bar"><span class="fill" style="--w:40%"></span></span><span class="val">4</span></div>
+        <div class="pfoot">So zählen <b>Team-Modi</b>. Solo-Modi werten 10→1. Alle Modi summiert → Fall-Guys-Gesamtplatz.</div>
+      </div>
+      <div class="pcard" style="--c:var(--primary)">
+        <h3>Pro Abend</h3><span class="sub">Saisonpunkte</span>
+        <div class="prow gold"><span class="rk">01</span><span class="bar"><span class="fill" style="--w:100%"></span></span><span class="val">25</span></div>
+        <div class="prow"><span class="rk">02</span><span class="bar"><span class="fill" style="--w:72%"></span></span><span class="val">18</span></div>
+        <div class="prow"><span class="rk">03</span><span class="bar"><span class="fill" style="--w:60%"></span></span><span class="val">15</span></div>
+        <div class="prow"><span class="rk">04</span><span class="bar"><span class="fill" style="--w:48%"></span></span><span class="val">12</span></div>
+        <div class="prow"><span class="rk">05</span><span class="bar"><span class="fill" style="--w:40%"></span></span><span class="val">10</span></div>
+        <div class="prow"><span class="rk">06</span><span class="bar"><span class="fill" style="--w:32%"></span></span><span class="val">8</span></div>
+        <div class="prow"><span class="rk">07</span><span class="bar"><span class="fill" style="--w:24%"></span></span><span class="val">6</span></div>
+        <div class="prow"><span class="rk">08+</span><span class="bar"><span class="fill" style="--w:16%"></span></span><span class="val">4</span></div>
+        <div class="pfoot">Krone-Träger:in: <b>×0,8</b> auf alle Saisonpunkte des Abends.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LINE-UP -->
+  <section class="sec">
+    <div class="sec-head">
+      <div class="eyebrow"><span class="num">03</span> Der Spielpool</div>
+      <h2>Die <span class="accent">Disziplinen.</span></h2>
+      <p>Pro Abend werden <strong>fünf Spiele aus dem Pool</strong> gespielt — welche, steht vor jedem Abend fest (siehe Spielabend-Seite). Der Pool wächst mit der Saison.</p>
+    </div>
+    <div class="disc-grid">
+      <div class="disc" style="--c:var(--hax)">
+        <div class="disc-head"><img class="disc-logo" src="logos/haxball.png" onerror="this.replaceWith(document.createTextNode('⚽'))"><div><h3>Haxball</h3><span class="disc-mode">Double Elimination</span></div><div class="disc-pts"><b>10→1</b><small>Punkte</small></div></div>
+        <p class="disc-desc">Turnierbaum mit zweiter Chance: 2v2-Teams <strong>jede Runde neu gelost</strong>, zwei Niederlagen = raus. Am Ende <strong>1v1-Grand-Final</strong> — der WB-Sieger startet 1:0.</p>
+      </div>
+      <div class="disc" style="--c:var(--geo)">
+        <div class="disc-head"><img class="disc-logo" src="logos/geoguessr.png" onerror="this.replaceWith(document.createTextNode('🌍'))"><div><h3>GeoGuessr</h3><span class="disc-mode">Einzeln · No Move</span></div><div class="disc-pts"><b>10→1</b><small>Punkte</small></div></div>
+        <p class="disc-desc">Gleicher Challenge-Link für alle, <strong>No Move</strong>. Höchste Punktzahl gewinnt.</p>
+      </div>
+      <div class="disc" style="--c:var(--bra)">
+        <div class="disc-head"><img class="disc-logo" src="logos/brawlhalla.png" onerror="this.replaceWith(document.createTextNode('⚔️'))"><div><h3>Brawlhalla</h3><span class="disc-mode">Heats + Punkte</span></div><div class="disc-pts"><b>10→1</b><small>Punkte</small></div></div>
+        <p class="disc-desc">Lobbies à max. 4 Spieler, pro Runde neu ausgelost. Pro Lobby Platz 1–4 (4/3/2/1), über 2–3 Runden summiert.</p>
+      </div>
+      <div class="disc" style="--c:var(--che)">
+        <div class="disc-head"><img class="disc-logo" src="logos/chess.png" onerror="this.replaceWith(document.createTextNode('♟️'))"><div><h3>Chess Blitz</h3><span class="disc-mode">Schweizer · 3+2</span></div><div class="disc-pts"><b>10→1</b><small>Punkte</small></div></div>
+        <p class="disc-desc">Privates Chess.com-Schweizer-Turnier (3+2). Bei 4 Spielern = 3 Runden = jeder gegen jeden. Endplatzierung = Ranking.</p>
+      </div>
+      <div class="disc" style="--c:var(--cha)">
+        <div class="disc-head"><img class="disc-logo" src="logos/chameleon.png" onerror="this.replaceWith(document.createTextNode('🦎'))"><div><h3>Meccha Chameleon</h3><span class="disc-mode">Infectious 🦠</span></div><div class="disc-pts"><b>10→1</b><small>Gesamt</small></div></div>
+        <p class="disc-desc">Bemal dich, verschmilz mit der Map — <strong>wer gefunden wird, jagt mit</strong>. Start-Jäger per Los (ab 6 Spielern 2), jeder startet gleich oft. Punkte nach Fundreihenfolge; wer <strong>nie gefunden</strong> wird, kassiert Extrapunkte.</p>
+      </div>
+      <div class="disc" style="--c:var(--fall)">
+        <div class="disc-head"><img class="disc-logo" src="logos/fallguys.png" onerror="this.replaceWith(document.createTextNode('🎡'))"><div><h3>Fall Guys</h3><span class="disc-mode">Mini-Turnier</span></div><div class="disc-pts"><b>10→1</b><small>Gesamt</small></div></div>
+        <p class="disc-desc">2–3 Modi (solo oder Team), Punkte summiert — beste Gesamtleistung gewinnt.</p>
+      </div>
+      <div class="disc joker">
+        <img src="logos/dino.png" onerror="this.replaceWith(document.createTextNode('🦖'))">
+        <h3>Joker · Dino Runner</h3>
+        <p>Per Veto tauschst du ein Spiel gegen <strong>Dino Runner</strong> — läuft den ganzen Abend am Handy.</p>
+      </div>
+    </div>
+    <div class="note"><strong>So läuft Fall Guys:</strong> Ein kleines <strong>Mini-Turnier</strong> aus <strong>2–3 Modi</strong> pro Abend (je nach Zeit). Jeder Modus ist einzeln <strong>solo</strong> (Races, Survival, Finals — 10→1) oder <strong>Team</strong> (z.B. Volleyfall, Squads — 10·8·6·4). Die Punkte aller Modi werden <strong>summiert</strong> — wer in Summe am meisten holt, gewinnt Fall Guys und bekommt die Disziplinpunkte (10→1). Welche Modi gespielt werden, richtet sich nach der Spielerzahl.</div>
+  </section>
+
+  <!-- TWISTS -->
+  <section class="sec">
+    <div class="sec-head">
+      <div class="eyebrow"><span class="num">04</span> Die Twists</div>
+      <h2>Was den Bash <span class="accent">besonders macht.</span></h2>
+      <p>Drei Mechaniken sorgen dafür, dass es bis zum Schluss spannend und fair bleibt.</p>
+    </div>
+    <div class="twists">
+      <div class="twist" style="--c:var(--cool)"><span class="tag">Mechanik · 01</span><h3>Streicher</h3><p>Dein <strong>schlechtester Abend</strong> wird gestrichen. Mal keine Zeit? Der verpasste Abend ist automatisch dein Streicher — kein Drama.</p></div>
+      <div class="twist" style="--c:var(--alert)"><span class="tag">Mechanik · 02</span><h3>Krone als Bürde</h3><p>Wer als <strong>Führender</strong> in den Abend geht, kriegt dort nur <strong>×0,8</strong> Saisonpunkte. So bleibt's eng an der Spitze.</p></div>
+      <div class="twist" style="--c:var(--primary)"><span class="tag">Mechanik · 03</span><h3>Veto &amp; Joker</h3><p><strong>1× pro Abend</strong> ein Spiel rauswerfen — stattdessen zockst du <strong>Dino Runner 🦖</strong>, das nebenbei am Handy läuft. Höchster Score gewinnt die Disziplinpunkte (per Screen-Share/Foto). Der <strong>amtierende Tabellenführer hat kein Veto</strong>.</p></div>
+    </div>
+  </section>
+
+  <!-- KLEINGEDRUCKTES -->
+  <section class="sec">
+    <div class="sec-head">
+      <div class="eyebrow"><span class="num">05</span> Zum Nachschlagen</div>
+      <h2>Das <span class="accent">Kleingedruckte.</span></h2>
+      <p>Die Feinregeln im Wortlaut — für den Zweifelsfall.</p>
+    </div>
+    <details class="acc">
+      <summary><span>§ Das Kleingedruckte (für die Juristen 🤓)</span><span class="chev">▼</span></summary>
+      <div class="acc-body">
+        <div class="clause"><span class="para">§ 01</span><span><b>Gleichstand in einer Disziplin.</b> Punktgleiche teilen den besseren Platz, der nächste entfällt. Bei Fall-Guys-Team-Modi erhalten gleiche Teams den höheren Wert.</span></div>
+        <div class="clause"><span class="para">§ 02</span><span><b>Gleichstand am Abend.</b> Erst mehr Disziplin-Siege, dann ein Stechen im vorab festgelegten Stech-Spiel des Abends (Standard: Haxball 1v1). Welches Spiel das ist, steht von Abendbeginn an fest.</span></div>
+        <div class="clause"><span class="para">§ 03</span><span><b>Gleichstand um den Titel.</b> Erst mehr Abendsiege, dann Direktvergleich, zuletzt ein 1v1-Finale.</span></div>
+        <div class="clause"><span class="para">§ 04</span><span><b>Wer trägt die Krone.</b> Der mit den meisten Saisonpunkten nach dem letzten Abend (Streicher eingerechnet). Mehrere gleichauf → alle. Abend 1: der Veranstalter.</span></div>
+        <div class="clause"><span class="para">§ 05</span><span><b>Streicher.</b> Greift ab dem 2. gewerteten Abend. Gestrichen wird das schlechteste Ergebnis, auch eine 0 wegen Abwesenheit.</span></div>
+        <div class="clause"><span class="para">§ 06</span><span><b>Was gespielt wird.</b> Immer alle fünf Disziplinen des angesetzten Line-ups (aus dem Spielpool). Einzige Ausnahme: ein Veto (dann das Ersatz-Minispiel).</span></div>
+        <div class="clause"><span class="para">§ 07</span><span><b>Zu spät / früher weg.</b> Verpasste Disziplin = 0 Punkte. Bereits Erspieltes bleibt erhalten.</span></div>
+        <div class="clause"><span class="para">§ 08</span><span><b>Technik &amp; höhere Gewalt.</b> Eigenverschuldete Ausfälle zählen wie erspielt. Fällt eine Disziplin für alle aus, wird sie wiederholt oder gestrichen — Mehrheit entscheidet.</span></div>
+        <div class="clause"><span class="para">§ 09</span><span><b>Fairplay.</b> Keine fremde Hilfe (No Move, keine Engine). Verstoß = 0 Punkte, im Wiederholungsfall der ganze Abend.</span></div>
+        <div class="clause"><span class="para">§ 10</span><span><b>Rundung.</b> Der Krone-Faktor ×0,8 wird kaufmännisch gerundet (14,4 → 14; 14,5 → 15).</span></div>
+        <div class="clause"><span class="para">§ 11</span><span><b>Regeländerungen.</b> Gelten ab dem nächsten Abend — nie rückwirkend.</span></div>
+        <div class="clause"><span class="para">§ 12</span><span><b>Letzte Instanz: der Würfel.</b> Bei Streit entscheidet die Mehrheit, bei Patt ein <b>W20</b> (höchste Augenzahl gewinnt). Niemand ist Richter in eigener Sache. 🎲</span></div>
+        <div class="clause"><span class="para">§ 13</span><span><b>Haxball-Turnierbaum (Double Elimination).</b> Die 2v2-Teams werden <b>vor jeder Runde neu ausgelost</b> (Freilose bei ungeraden Zahlen). Erste Niederlage → Loser Bracket, zweite → ausgeschieden. WB-Finale und Grand Final sind <b>1v1</b>; der ungeschlagene WB-Sieger startet <b>mit 1:0</b>. Runden: 3 Tore / 3 min · Finals: 5 Tore / 5 min.</span></div>
+        <div class="clause"><span class="para">§ 14</span><span><b>Veto &amp; Joker-Minispiel.</b> 1× pro Abend, individuell — kein Mehrheitsbeschluss. Statt der Disziplin zählt dein bester <b>Dino-Runner</b>-Score (🦖 chromedino.com), per Screen-Share oder Foto bewiesen; Ranking nach Score gibt die Disziplinpunkte. <b>Der amtierende Tabellenführer hat kein Veto.</b></span></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- CTA -->
+  <section>
+    <div class="cta">
+      <div class="cta-in">
+        <div>
+          <div class="eyebrow"><span class="num">→</span> Bereit?</div>
+          <h2>Krone <span class="lime">holen.</span></h2>
+          <p>Eine Anmeldung gilt für alle Abende der Saison — jederzeit einsteigen. Kostenlos, kein Account nötig.</p>
+          <div class="pills"><span class="pill">Hall of Fame</span><span class="pill">Champion-Titel</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.7rem;align-items:flex-end">
+          <a class="btn btn-primary">Jetzt anmelden →</a>
+          <a class="btn">Zum Spielabend →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer class="ftr">
+  <div class="ftr-in">
+    <a class="logo"><span class="logo-mark"></span><span class="logo-text">Freitags Bash<small>Saison 1 · 2026</small></span></a>
+    <nav><a>Start</a><a>Veto</a><a>Anmelden</a></nav>
+    <small>Saison 1 · 2026</small>
+  </div>
+</footer>
+
+<div class="mk-note">
+  <b>Redesign-Mockup</b> der Regelseite — alle Regeln (Prinzip, Punkte, Line-up, Twists, §01–§14) sind erhalten, nur im neuen Look mit den <b>Spiel-Logos</b>. Mai-Datum ist raus. Der <b>Champions-Bann (§15)</b> ist bewusst noch nicht drin — den trage ich nach der Enthüllung heute Abend nach. Sag mir, was rein/raus soll, dann baue ich's in die echte regeln.html.
+</div>
+</body>
+</html>
