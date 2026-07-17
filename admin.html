@@ -75,6 +75,15 @@
     font-family: var(--font-body);
   }
   .nav-back:hover { color: var(--text); }
+  .nav-right { display: flex; align-items: center; gap: 1rem; }
+  .nav-sim {
+    display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;
+    font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.04em; font-weight: 700;
+    padding: 0.5rem 0.9rem; border-radius: 999px;
+    background: var(--primary); color: #0b0d10; border: 1px solid var(--primary);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .nav-sim:hover { transform: translateY(-1px); box-shadow: 0 8px 22px -10px var(--primary); }
 
   /* Main */
   main.admin-main {
@@ -543,7 +552,10 @@
       <span class="logo-text">Freitags Bash<small>Saison 1 · 2026</small></span>
       <span class="admin-tag">● Admin</span>
     </a>
-    <a href="index.html" class="nav-back">← Hauptseite</a>
+    <div class="nav-right">
+      <a href="abend.html?demo=1" target="_blank" rel="noopener" class="nav-sim" title="Öffnet die Spielabend-Seite als Demo — ganzen Abend durchklicken">🎬 Abend simulieren</a>
+      <a href="index.html" class="nav-back">← Hauptseite</a>
+    </div>
   </div>
 </nav>
 
