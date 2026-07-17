@@ -218,7 +218,7 @@ body.admin-mode .lb-del{display:flex}
     <div class="sec-head">
       <div class="eyebrow"><span class="num">01</span> Saisonwertung</div>
       <h2>Rangliste <span class="accent">Saison 1</span></h2>
-      <p>Aktualisiert nach jedem Abend · Streicher-Ergebnis wird abgezogen. <a href="statistik.html">Statistik &amp; Rückblick →</a></p>
+      <p>Aktualisiert nach jedem Abend · alle Abende zählen voll. <a href="statistik.html">Statistik &amp; Rückblick →</a></p>
     </div>
     <div class="lb">
       <div class="lb-h"><div>#</div><div>Spieler</div><div class="r">Punkte</div><div class="r">Siege</div></div>
@@ -302,7 +302,7 @@ body.admin-mode .lb-del{display:flex}
     const byPid = {};
     (parts||[]).forEach(r=>{ if(!r.attended) return; if(!byPid[r.player_id]) byPid[r.player_id]={ptsList:[],wins:0}; byPid[r.player_id].ptsList.push(parseFloat(r.season_points)||0); if(parseInt(r.evening_rank)===1) byPid[r.player_id].wins++; });
     seasonStats = {};
-    Object.entries(byPid).forEach(([pid,d])=>{ const s=d.ptsList.slice().sort((a,b)=>a-b); if(s.length>1) s.shift(); seasonStats[pid]={pts:Math.round(s.reduce((x,v)=>x+v,0)*10)/10,wins:d.wins}; });
+    Object.entries(byPid).forEach(([pid,d])=>{ seasonStats[pid]={pts:Math.round(d.ptsList.reduce((x,v)=>x+v,0)*10)/10,wins:d.wins}; });   // kein Streicher — alle Abende zählen voll
     render();
   }
 

@@ -3565,7 +3565,7 @@
             <div class="ad-champ-title">Tagessieger</div>
             ${champCry ? `<div class="ad-champ-cry">„${champCry}"</div>` : ''}
           </div>
-          <div class="abd-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) und Streicher werden dort berücksichtigt.</small></div>
+          <div class="abd-note">Saisonpunkte werden beim Abschließen im Admin festgeschrieben. <small>Krone-Bürde (×0,8) wird dort berücksichtigt; alle Abende zählen voll.</small></div>
           <div class="ad-finish-cta"><a href="index.html#rangliste" class="ad-season-btn">🏆 Zur Saison-Wertung →</a></div>
         </div>`;
       box.style.display = 'block';
@@ -4148,7 +4148,7 @@
     });
     let best = null, bestPts = -1;
     Object.entries(perPlayer).forEach(([pid, arr]) => {
-      const a = arr.slice(); if (a.length > 1) { a.sort((x,y) => x - y); a.shift(); }
+      const a = arr.slice();   // kein Streicher — alle Abende zählen
       const tot = a.reduce((s,v) => s + v, 0);
       if (tot > bestPts) { bestPts = tot; best = pid; }
     });

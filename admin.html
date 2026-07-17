@@ -565,7 +565,7 @@
   <div id="eventListView">
     <div class="eyebrow">Saison 1</div>
     <h1 class="page-title">Abende</h1>
-    <p class="page-desc">Pro Abend werden 5 Spiele aus dem Spielpool gespielt (Line-up im Setup wählbar). Beim Abschließen werden Saisonpunkte automatisch berechnet (mit Krone-Bürde und Streicher).</p>
+    <p class="page-desc">Pro Abend werden 5 Spiele aus dem Spielpool gespielt (Line-up im Setup wählbar). Beim Abschließen werden Saisonpunkte automatisch berechnet (mit Krone-Bürde; alle Abende zählen voll).</p>
 
     <div class="event-list-header">
       <div></div>
@@ -1293,7 +1293,7 @@
       });
       let best = null, bestPts = -1;
       Object.entries(perPlayer).forEach(([pid, arr]) => {
-        const a = arr.slice(); if (a.length > 1) { a.sort((x, y) => x - y); a.shift(); }   // Streicher
+        const a = arr.slice();   // kein Streicher — alle Abende zählen
         const tot = a.reduce((sm, v) => sm + v, 0);
         if (tot > bestPts) { bestPts = tot; best = pid; }
       });
@@ -3814,12 +3814,8 @@
       byPlayer[r.player_id].push(parseFloat(r.season_points));
     });
     const totals = Object.entries(byPlayer).map(([pid, pts]) => {
-      // Sort descending, drop the lowest (streicher)
-      const sortedPts = [...pts].sort((a,b) => b - a);
-      const total = sortedPts.slice(0, -1).reduce((s,n) => s+n, 0); // ohne den letzten
-      // Aber wenn nur 1 Wert da ist, gibt's keinen Streicher (sonst hätte er 0)
-      const finalTotal = sortedPts.length === 1 ? sortedPts[0] : total;
-      return { pid, total: finalTotal };
+      const total = pts.reduce((s,n) => s+n, 0); // kein Streicher — alle Abende zählen voll
+      return { pid, total };
     });
     totals.sort((a,b) => b.total - a.total);
     return totals[0]?.pid || null;
