@@ -423,11 +423,11 @@
     padding: 1.4rem 1.5rem;
     margin-bottom: 1.25rem;
   }
-  .nd-head { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.5rem; }
-  .nd-logo { height: 54px; width: auto; max-width: 200px; object-fit: cover; border-radius: 12px; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.45); }
+  .nd-head { display: flex; align-items: center; gap: 0.95rem; margin-bottom: 0.5rem; }
+  .nd-logo { height: 62px; width: 62px; object-fit: cover; border-radius: 14px; flex-shrink: 0; box-shadow: 0 0 28px -8px var(--gc, transparent), 0 4px 14px rgba(0,0,0,0.45); }
   .intro { text-align: center; }
   .intro-slide { display: flex; flex-direction: column; align-items: center; gap: 0.55rem; padding: 1.1rem 0 1.3rem; }
-  .intro-logo { height: 108px; width: auto; max-width: 240px; object-fit: cover; border-radius: 18px; box-shadow: 0 10px 34px rgba(0,0,0,0.5); }
+  .intro-logo { height: 116px; width: auto; max-width: 240px; object-fit: cover; border-radius: 20px; box-shadow: 0 0 52px -8px var(--gc, transparent), 0 10px 34px rgba(0,0,0,0.5); }
   .intro-name { font-family: var(--font-display); font-weight: 900; font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); line-height: 1; }
   .intro-mode { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cool); }
   .intro-rules { font-size: 0.95rem; line-height: 1.5; color: var(--muted); max-width: 520px; }
@@ -459,7 +459,7 @@
   }
   .nd-eyebrow {
     font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: var(--ls-normal);
-    text-transform: uppercase; color: var(--text-soft);
+    text-transform: uppercase; color: var(--gc, var(--text-soft));
   }
   .nd-title {
     font-family: var(--font-display); font-weight: 900;
@@ -472,6 +472,7 @@
     border-left: 3px solid var(--border-strong);
   }
   .nd-block { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  .nd-block .nd-head { position: relative; }
   .nd-label {
     font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: var(--ls-normal);
     text-transform: uppercase; color: var(--text-soft); margin-bottom: 0.6rem;
@@ -805,7 +806,7 @@
   .bumper-overlay.show { opacity: 1; }
   .bp-card { display: flex; align-items: center; gap: 1.6rem; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 1.6rem 2rem; box-shadow: 0 30px 80px -30px #000; transform: translateY(14px); transition: transform 0.4s ease; }
   .bumper-overlay.show .bp-card { transform: none; }
-  .bp-logo { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+  .bp-logo { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; box-shadow: 0 0 34px -8px var(--gc, transparent), 0 6px 20px rgba(0,0,0,0.5); }
   .bp-kicker { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cool); }
   .bp-name { font-family: var(--font-display); font-size: 3rem; line-height: 0.95; letter-spacing: 0.03em; color: var(--text); }
   .bp-mode { font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-top: 3px; }
@@ -2136,7 +2137,7 @@
   function showBumper(disc, idx, total) {
     const el = document.getElementById('liveBumper'); if (!el || !disc) return;
     el.innerHTML = `
-      <div class="bp-card">
+      <div class="bp-card" style="--gc:${GAME_COLOR[disc.kind] || 'var(--primary)'}">
         <img class="bp-logo" src="logos/${disc.kind}.png" alt="" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${disc.kind}.svg'}else{this.style.display='none'}">
         <div class="bp-txt">
           <div class="bp-kicker">Als Nächstes${idx ? ' · Spiel ' + idx + ' von ' + total : ''}</div>
@@ -3048,7 +3049,7 @@
       const cards = VDISCS.map((v, i) => {
         const pos = lineupKinds.indexOf(v.kind);
         const inL = pos >= 0;
-        return `<div class="pool-card ${inL ? 'picked' : 'benched'}${anim ? ' anim' : ' settled'}" style="--pd:${(i * 0.14).toFixed(2)}s;--pp:${(1.4 + (inL ? pos : VDISCS.length) * 0.3).toFixed(2)}s">
+        return `<div class="pool-card ${inL ? 'picked' : 'benched'}${anim ? ' anim' : ' settled'}" style="--pd:${(i * 0.14).toFixed(2)}s;--pp:${(1.4 + (inL ? pos : VDISCS.length) * 0.3).toFixed(2)}s;--gc:${GAME_COLOR[v.kind] || 'var(--primary)'}">
             <img class="pool-logo" src="logos/${v.kind}.png" alt="${v.name}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${v.kind}.svg'}else{this.style.display='none'}">
             <div class="pool-name">${v.name}</div>
             <div class="pool-mode">${v.mode}</div>
@@ -3197,7 +3198,7 @@
       box.innerHTML = `
         <div class="intro">
           <div class="nd-label">Vorstellung · Das Vetospiel</div>
-          <div class="intro-slide" key="vetospiel-${introIdx}">
+          <div class="intro-slide" key="vetospiel-${introIdx}" style="--gc:${GAME_COLOR.dino}">
             <img class="intro-logo" src="logos/dino.png" alt="Dino Runner" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/dino.svg'}else{this.style.display='none'}">
             <div class="intro-name">Dino Runner 🦖</div>
             <div class="intro-mode">Das Joker-Minispiel · chromedino.com</div>
@@ -3216,7 +3217,7 @@
       box.innerHTML = `
         <div class="intro">
           <div class="nd-label">Vorstellung · Spiel ${step - 1}/${introDiscs.length}</div>
-          <div class="intro-slide" key="${k}-${introIdx}">
+          <div class="intro-slide" key="${k}-${introIdx}" style="--gc:${GAME_COLOR[k] || 'var(--primary)'}">
             <img class="intro-logo" src="logos/${k}.png" alt="${discName(k)}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${k}.svg'}else{this.style.display='none'}">
             <div class="intro-name">${discName(k)}</div>
             <div class="intro-mode">${discMode(k)}</div>
@@ -3399,7 +3400,7 @@
     if (kind === 'geoguessr' && currentDisc.rounds) rules = rules.replace(/\d+\s*Runden/, `${currentDisc.rounds} Runden`);
     // Original-Logo des Spiels (Datei in logos/<kind>.png); fällt auf das Kürzel zurück, falls keins da ist
     const head = `
-      <div class="nd-head">
+      <div class="nd-head" style="--gc:${GAME_COLOR[kind] || 'var(--primary)'}">
         <img class="nd-logo" src="logos/${kind}.png" alt="${discName(kind)}" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='logos/${kind}.svg'}else{this.style.display='none';this.nextElementSibling.style.display='inline-flex';}">
         <span class="nd-glyph" style="display:none">${discShort(kind)}</span>
         <div>
