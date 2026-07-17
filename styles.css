@@ -816,3 +816,7 @@ body.ban-quake { animation: banQuake 0.4s ease; }
 .ban-act-target { text-align: center; margin-top: 0.9rem; }
 .ban-act-target .ban-target { display: inline-block; }
 .ban-act-target .intro-rules { margin-top: 0.7rem; }
+
+/* Endstand: Entbannungs-Story (zerstörte Vetos) */
+.ce-banned { margin-top: 0.7rem; font-size: 0.85rem; color: var(--text-soft); background: var(--alert-soft); border: 1px solid var(--alert-line); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; }
+.ce-banned b { color: var(--alert); }

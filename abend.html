@@ -1988,6 +1988,10 @@
     if (mEl) mEl.textContent = clockSince.match ? fmtClock(now - new Date(clockSince.match).getTime()) : '0:00';
     const dEl = document.getElementById('clockDisc');
     if (dEl && clockSince.disc) dEl.textContent = fmtClock(now - new Date(clockSince.disc).getTime());
+    // Chameleon: laufende Runden-Uhr (Jagd-Block)
+    document.querySelectorAll('.cham-clock[data-ts]').forEach(el => {
+      el.textContent = fmtClock(now - new Date(el.getAttribute('data-ts')).getTime());
+    });
   }
   setInterval(tickClocks, 1000);
   function rerenderNow() { if (lastNowDisc) buildNowDetail(lastNowDisc, lastNowResults); }
@@ -2909,6 +2913,12 @@
       }).sort((a,b) => b.score - a.score);
       const hasCopterEndstand = copterRows.length > 0 && copterRows.some(r => r.score > 0);
       let copterEndHtml = '';
+      // Entbannungs-Story im Endstand: wessen Veto zerstört wurde (kein Ersatzspiel)
+      let banEndHtml = '';
+      const banV = liveEvent && liveEvent.champion_ban;
+      if (banV && (banV.victims || []).length) {
+        banEndHtml = `<div class="ce-banned">💥 <b>Entbannung durch 👑 ${(evPlayers.find(p => p.id === banV.by) || {}).name || '?'}:</b> ${banV.victims.map(pid => (evPlayers.find(p => p.id === pid) || {}).name || '?').join(', ')} ${banV.victims.length === 1 ? 'verlor' : 'verloren'} das Veto auf <b>${discName(banV.kind)}</b> — mitgespielt statt gezockt.</div>`;
+      }
       if (hasCopterEndstand) {
         const ceWinner = copterRows[0];
         const ceWinPlayer = evPlayers.find(p => p.id === ceWinner.pid);
@@ -2936,6 +2946,7 @@
                 </div>`;
               }).join('')}
             </div>
+            ${banEndHtml}
             <div class="ce-sep"><span>Und jetzt zur Hauptwertung</span></div>
           </div>`;
       }
@@ -2953,6 +2964,7 @@
       box.innerHTML = `
         <div class="abend-durch ad-staged" data-stage="${abendStage}">
           ${copterEndHtml}
+          ${!hasCopterEndstand && banEndHtml ? `<div class="copter-endstand">${banEndHtml}</div>` : ''}
           <div class="ad-table-section">
             <div class="ad-eyebrow">Abend durch · Endstand</div>
             <div class="ad-table-wrap">
@@ -3361,7 +3373,7 @@
             entry = `<div class="brawl-hint">Hier wird live eingetippt, wer gefunden wurde — Überlebende kassieren das Maximum.</div>`;
           }
           const card = `<div class="lob-card">
-              <div class="lob-head"><span class="lh-n">🔍 Die Jagd läuft</span><span class="lh-meta">${found.length}/${H} gefunden</span></div>
+              <div class="lob-head"><span class="lh-n">🔍 Die Jagd läuft</span><span class="lh-meta">${active.at && !active.closed ? `⏱ <span class="cham-clock" data-ts="${active.at}">0:00</span> · ` : ''}${found.length}/${H} gefunden</span></div>
               <div class="brawl-chips" style="margin:0.3rem 0 0.6rem">${seekerChips}</div>
               <div class="lob-tally">${foundRows}${hiddenRows}</div>
               ${entry}

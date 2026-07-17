@@ -656,13 +656,13 @@
       <div class="section-title">🎬 Vorstellung & Joker</div>
       <p class="section-desc">Vor den Spielen: schalte manuell durch, was auf der Spielabend-Seite gezeigt wird. Sobald du eine Disziplin auf „läuft" stellst, startet das Spiel und die Vorstellung endet.</p>
       <div class="draw-control" id="introControl"></div>
-      <div class="draw-control" style="margin-top:0.6rem">
-        <span class="draw-label">🃏 Joker-Minispiel:</span>
-        <button class="draw-btn" id="copterToggleBtn">aktivieren</button>
-      </div>
-      <!-- Champions-Bann: Sieger des letzten Bash bannt ein Spiel (unvetobar, bestehende Vetos werden zerstört) -->
+      <!-- Chronologie: erst Vetos zeigen, DANN hier die Entbannung aktivieren, dann den 💥-Slide zeigen -->
       <div class="draw-control" id="banControl" style="margin-top:0.6rem;flex-wrap:wrap;align-items:center;gap:0.5rem"></div>
       <div id="banHint" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);margin-top:0.3rem"></div>
+      <div class="draw-control" style="margin-top:0.6rem">
+        <span class="draw-label">🃏 Joker-Minispiel (nach der Entbannung — für die überlebenden Vetos):</span>
+        <button class="draw-btn" id="copterToggleBtn">aktivieren</button>
+      </div>
       <div class="draw-control" style="margin-top:0.6rem;flex-wrap:wrap;align-items:center;gap:0.5rem">
         <span class="draw-label">📺 Watch2Gether-Raum:</span>
         <input id="w2gInput" type="url" placeholder="https://www.watch2gether.com/rooms/..." style="flex:1;min-width:220px;background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.5rem 0.7rem;font-family:var(--font-mono);font-size:0.86rem">
@@ -1007,7 +1007,9 @@
           `<button class="phase-btn ${step === 1 ? 'active' : ''}" onclick="setIntroStep(1)">🎮 Spielpool</button>`]
           .concat(currentDisciplines.map((d,i) => `<button class="phase-btn ${step === i+2 ? 'active' : ''}" onclick="setIntroStep(${i+2})">${i+1} ${d.name}</button>`))
           .concat([`<button class="phase-btn ${step === vetoStep ? 'active' : ''}" onclick="setIntroStep(${vetoStep})">🃏 Vetos</button>`])
-          .concat(currentEvent.champion_ban ? [`<button class="phase-btn ${step === banStep ? 'active' : ''}" onclick="setIntroStep(${banStep})" style="border-color:var(--alert-line)">💥 Champions-Bann</button>`] : []);
+          .concat([currentEvent.champion_ban
+            ? `<button class="phase-btn ${step === banStep ? 'active' : ''}" onclick="setIntroStep(${banStep})" style="border-color:var(--alert-line)">💥 Entbannung</button>`
+            : `<button class="phase-btn" onclick="banNotReady()" style="border-color:var(--alert-line);opacity:0.45" title="Erst unten aktivieren">💥 Entbannung</button>`]);
         $('introControl').innerHTML = btns.join('');
         renderBanControl();
         const cb = $('copterToggleBtn');
@@ -1325,8 +1327,8 @@
       'Vorstellung durchsteppen',
       'In „🎬 Vorstellung & Joker" die „Zeigen"-Leiste von links nach rechts durchklicken: 👥 Teilnehmer → 🎮 Spielpool → die Spiele einzeln → 🃏 Vetos. Die Spielabend-Seite folgt jedem Klick. Endet automatisch, sobald das erste Spiel auf „läuft" geht.');
     add(2, currentEvent.champion_ban ? 'done' : (isLive && !anyStarted ? 'warn' : 'todo'),
-      currentEvent.champion_ban ? 'Champions-Bann gesetzt' : 'Champions-Bann (nach dem Veto-Slide)',
-      'Im „💥 Champions-Bann"-Block King of the Hill + sein gewähltes Spiel auswählen → „Bann aktivieren" (zerstört die betroffenen Vetos!) → dann den neuen 💥-Button in der Zeigen-Leiste drücken — die Live-Seite spielt die Enthüllung.');
+      currentEvent.champion_ban ? 'Entbannung aktiviert' : 'Entbannung (nach dem Veto-Slide)',
+      'Im „💥 Entbannung"-Block (direkt unter der Zeigen-Leiste) das Spiel des Kings wählen → „Entbannung aktivieren" (zerstört die betroffenen Vetos!) → dann den 💥-Button in der Zeigen-Leiste drücken — die Live-Seite spielt die Kino-Sequenz.');
     if (vetoCount > 0) {
       add(2, currentEvent.copter_active ? 'done' : (isLive ? 'warn' : 'todo'),
         currentEvent.copter_active ? 'Joker-Minispiel aktiv (Dino Runner)' : 'Joker-Minispiel aktivieren!',
@@ -2931,9 +2933,9 @@
     renderDisciplineBodyFor(discId); renderOverview();
   };
 
-  async function setChamSeekers(discId, n, seekers) {
+  async function setChamSeekers(discId, n, seekers, stampStart) {
     const d = currentDisciplines.find(x => x.id === discId); if (!d) return;
-    const modes = (Array.isArray(d.modes) ? d.modes : []).map(m => m.n === n ? Object.assign({}, m, { seekers }) : m);
+    const modes = (Array.isArray(d.modes) ? d.modes : []).map(m => m.n === n ? Object.assign({}, m, { seekers }, stampStart ? { at: new Date().toISOString() } : {}) : m);
     const { error } = await sb.from('disciplines').update({ modes }).eq('id', discId);
     if (error) { console.error(error); toast('Seeker speichern fehlgeschlagen', 'error'); return; }
     d.modes = modes;
@@ -2961,7 +2963,7 @@
     // so geht die Rotation bei jeder Spielerzahl in wenigen Runden exakt auf.
     const count = (baseJ === 2 && pool.length <= 3) ? pool.length : Math.min(baseJ, playing.length - 1);
     const seekers = arr.slice(0, count).map(p => p.id);
-    await setChamSeekers(discId, n, seekers);
+    await setChamSeekers(discId, n, seekers, true);   // Auslosung startet die Runden-Uhr
     const ts = new Date().toISOString();
     await sb.from('disciplines').update({ teams_drawn_at: ts }).eq('id', discId);
     d.teams_drawn_at = ts;
@@ -3412,7 +3414,7 @@
         <span class="draw-label">💥 Champions-Bann:</span>
         <span style="font-size:0.88rem"><b>${byName}</b> bannt <b>${discLabel(ban.kind)}</b> — ${victims.length ? `zerstörte Vetos: <b>${victims.join(', ')}</b>` : 'keine Vetos betroffen (Bann verpufft)'}</span>
         <a onclick="resetChampionBan()" style="color:var(--muted);cursor:pointer;font-size:0.8rem">↺ zurücksetzen</a>`;
-      if (hint) hint.textContent = 'Zum Enthüllen den 💥-Button oben in der Zeigen-Leiste drücken — die Live-Seite spielt die Zerstörungs-Animation.';
+      if (hint) hint.textContent = 'Aktiviert ✓ — jetzt oben in der Zeigen-Leiste „💥 Entbannung" drücken, die Live-Seite spielt die Kino-Sequenz. Danach den Joker für die überlebenden Vetos aktivieren.';
     } else {
       const vetoN = kind => Object.values(currentVetoes).filter(k => k === kind).length;
       const kingName = kingOfHillId ? ((players.find(p => p.id === kingOfHillId) || {}).name || '?') : null;
@@ -3424,16 +3426,20 @@
             ${players.filter(p => currentParticipantIds.has(p.id)).map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
           </select>`;
       box.innerHTML = `
-        <span class="draw-label">💥 Entbannung:</span>
+        <span class="draw-label">💥 Entbannung (nach dem Veto-Slide):</span>
         ${kingHtml}
         <select id="banKind" style="background:var(--bg-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:0.4rem 0.6rem">
           <option value="">Spiel wählen…</option>
           ${currentDisciplines.map(d => `<option value="${d.kind}">${d.name}${vetoN(d.kind) ? ` (${vetoN(d.kind)} Veto${vetoN(d.kind) === 1 ? '' : 's'} 💥)` : ''}</option>`).join('')}
         </select>
         <button class="draw-btn" onclick="setChampionBan()">💥 Entbannung aktivieren</button>`;
-      if (hint) hint.textContent = 'Die verborgene Macht der Krone: Der King of the Hill entbannt bei JEDEM Event ein Spiel — es kann nicht (mehr) gevetoet werden, bestehende Vetos darauf werden zerstört, die Betroffenen müssen mitspielen (kein Ersatzspiel!).';
+      if (hint) hint.textContent = 'Ablauf: 🃏 Vetos zeigen → HIER King-Spiel wählen & aktivieren (zerstört die betroffenen Vetos) → oben „💥 Entbannung" zeigen → danach Joker aktivieren.';
     }
   }
+
+  window.banNotReady = function() {
+    toast('Erst die Entbannung aktivieren — direkt unter dieser Leiste (King + Spiel wählen)', 'error');
+  };
 
   window.setChampionBan = async function() {
     const by = kingOfHillId || ($('banBy') && $('banBy').value);
